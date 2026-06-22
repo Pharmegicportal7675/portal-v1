@@ -1,6 +1,6 @@
 # portal-v1
 
-Pharmegic Portal — Next.js app ready for **Hostinger GitHub deployment**.
+Pharmegic Portal — Next.js app for **Hostinger Node.js Apps** deployment.
 
 ## Project structure
 
@@ -9,6 +9,7 @@ portal-v1/
 ├─ package.json
 ├─ package-lock.json
 ├─ next.config.mjs
+├─ scripts/start.mjs
 ├─ public/
 ├─ app/
 │   ├─ layout.tsx
@@ -17,8 +18,6 @@ portal-v1/
 └─ components/
 ```
 
-`package.json` and `app/` must be at the **repository root**.
-
 ## Local development
 
 ```bash
@@ -26,31 +25,24 @@ npm install
 npm run dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000).
-
-## Hostinger deployment (GitHub)
-
-1. Push this repo to GitHub (`main` branch).
-2. Hostinger hPanel → **Websites** → **Add Website** → **Node.js Apps**.
-3. Choose **Import Git Repository** and connect this repo.
-4. Use these build settings:
+## Hostinger settings (hPanel)
 
 | Setting | Value |
 |---------|-------|
 | Framework | Next.js |
-| Root directory | `/` (repo root) |
+| Root directory | `./` |
+| Branch | `main` |
 | Install command | `npm ci` |
 | Build command | `npm run build` |
-| Start command | `npm run start -- -p $PORT` |
-| Node.js version | **20** |
+| Start command | `npm run start` |
+| Node.js version | **22.x** (or 20.x) |
 | Output directory | `.next` |
 
-5. Add environment variables in Hostinger (see `.env.example`).
-6. Click **Deploy**.
+Do **not** set output directory to `out` — that is only for static export.
 
-## Production checklist
+## Deploy steps
 
-- [ ] `npm run build` succeeds locally
-- [ ] `npm run start -- -p 3000` runs without errors
-- [ ] `node_modules` is **not** committed (in `.gitignore`)
-- [ ] Secrets are in Hostinger env vars, not in the repo
+1. Push latest code to GitHub `main` branch.
+2. In Hostinger → **Deployments** → verify **Repository** is connected (not `—`).
+3. Click **Redeploy**.
+4. If site still fails, check **Runtime logs** (not build logs).
