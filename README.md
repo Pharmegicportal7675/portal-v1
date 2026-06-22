@@ -8,15 +8,16 @@ Pharmegic Portal — Next.js app ready for **Hostinger GitHub deployment**.
 portal-v1/
 ├─ package.json
 ├─ package-lock.json
-├─ next.config.ts
+├─ next.config.mjs
 ├─ public/
-├─ src/
-│   └─ app/          ← pages (App Router)
-├─ .env.example
-└─ .gitignore
+├─ app/
+│   ├─ layout.tsx
+│   ├─ page.tsx
+│   └─ globals.css
+└─ components/
 ```
 
-`package.json` must be at the **repository root** (not inside a subfolder).
+`package.json` and `app/` must be at the **repository root**.
 
 ## Local development
 
@@ -53,7 +54,3 @@ Open [http://localhost:3000](http://localhost:3000).
 - [ ] `npm run start -- -p 3000` runs without errors
 - [ ] `node_modules` is **not** committed (in `.gitignore`)
 - [ ] Secrets are in Hostinger env vars, not in the repo
-
-## Reference
-
-- [Hostinger deploy-nextjs](https://github.com/hostinger/deploy-nextjs)

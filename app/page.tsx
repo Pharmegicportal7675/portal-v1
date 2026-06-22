@@ -11,7 +11,7 @@ export default function Home() {
         <p className="mt-4 text-base leading-7 text-zinc-600 dark:text-zinc-400">
           Next.js app is ready for Hostinger GitHub deployment. Edit{" "}
           <code className="rounded bg-zinc-100 px-1.5 py-0.5 text-sm dark:bg-zinc-900">
-            src/app/page.tsx
+            app/page.tsx
           </code>{" "}
           to build your portal UI.
         </p>
