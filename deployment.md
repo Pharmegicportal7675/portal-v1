@@ -16,7 +16,8 @@ Production app: **portal.pharmegichealthcare.com**
 - Custom JWT auth (`lib/auth/session.ts`) — not Supabase Auth.
 
 ### SMTP
-- Production SMTP2GO credentials in hPanel (`SMTP_HOST`, `SMTP_PORT`, `SMTP_USER`, `SMTP_PASS`, `SMTP_FROM`).
+- **Primary:** Admin → Settings → TCC / RC Certificate Email SMTP (MySQL `admin_settings` table).
+- **Optional:** `SMTP_*` env vars in hPanel only as fallback if DB fields are empty.
 - Ensure SPF, DKIM, and DMARC are configured on your sending domain.
 
 ---
@@ -28,36 +29,44 @@ Production app: **portal.pharmegichealthcare.com**
 | Type | **Node.js Apps** (NOT static/PHP website) |
 | Install | `npm ci` |
 | Build | `npm run build` |
-| Start | `npm run start` (runs `node server.js`) |
+| **Start** | `npm run start -- -p $PORT` |
 | Entry file | `server.js` |
 | Node | 22.x |
-| Output directory | **leave empty** — do NOT serve `.next` as static files |
+| Output directory | `.next` (Hostinger build artifact path — OK) |
 
 ### CRITICAL — if `/login` shows raw text like `:HL[...]` or `0:{"tree":`
 
-Hostinger is serving **Next.js internal RSC files** as static text instead of running the Node server.
+The **Node start command is missing or not running**. Hostinger must run `next start`, not only serve build files.
 
-Fix in hPanel → your Node.js app → Settings:
+Fix in hPanel → **Settings and redeploy**:
 
-1. App type must be **Node.js** (not Website Builder / static).
-2. **Start command** must be `npm run start` (not empty).
-3. **Output directory** must be **empty** — never point the public web root at `.next`.
-4. Redeploy after saving settings.
+1. **Start command:** `npm run start -- -p $PORT`
+2. **Install command:** `npm ci`
+3. **Entry file:** `server.js`
+4. Click **Save and redeploy**
+5. Dashboard → **Clear cache**
 
-Correct: browser receives `Content-Type: text/html` with `<!DOCTYPE html>`.  
-Wrong: browser shows flight payload (`:HL`, `0:{"tree":...}`) as plain text.
+Also reconnect GitHub (dashboard shows "Disconnected from GitHub") so future pushes auto-deploy.
 
 ### Required environment variables (hPanel)
 
 | Variable | Description |
 |----------|-------------|
 | `DATABASE_URL` | MySQL connection string |
+| `NEXT_PUBLIC_APP_URL` | `https://portal.pharmegichealthcare.com` |
+| `AUTH_SECRET` | Random secret for JWT sessions (recommended) |
+
+SMTP is **not** required in hPanel if configured in **Admin → Settings** (stored in `admin_settings`).
+
+Optional env fallbacks (only if DB SMTP fields are empty):
+
+| Variable | Description |
+|----------|-------------|
 | `SMTP_HOST` | `mail.smtp2go.com` |
 | `SMTP_PORT` | `587` |
 | `SMTP_USER` | SMTP2GO username |
 | `SMTP_PASS` | SMTP2GO password |
 | `SMTP_FROM` | Sender address |
-| `NEXT_PUBLIC_APP_URL` | `https://portal.pharmegichealthcare.com` |
 
 After changing `NEXT_PUBLIC_*` vars, **redeploy** the app.
 
