@@ -50,17 +50,27 @@ Also reconnect GitHub (dashboard shows "Disconnected from GitHub") so future pus
 
 ### 503 Service Unavailable
 
-The Node process is **not running** or crashed after start.
+**503 on `/api/auth/login` (or every URL)** means the **Node process is not running** — not a wrong password. Build can succeed while the app never starts.
 
-1. hPanel → **Runtime logs** — read the latest error (build missing, port, database, etc.).
-2. **Settings and redeploy** must include:
-   - Install: `npm ci`
-   - Build: `npm run build`
-   - Start: `npm run start` or `npm run start -- -p $PORT`
-   - Entry file: `server.js`
-3. Confirm **Build** step succeeded (not only deploy).
-4. `DATABASE_URL` must be valid MySQL URL (special chars in password URL-encoded, e.g. `@` → `%40`).
-5. After fix → **Save and redeploy** → **Clear cache**.
+1. hPanel → **Runtime logs** — look for:
+   - `DATABASE_URL is not set` → add env var in hPanel, redeploy
+   - `Missing .next/BUILD_ID` → build step did not run or output path is wrong
+   - `Next.js exited with code` → paste log for debugging
+2. **Settings and redeploy** must be:
+
+| Setting | Value |
+|---------|-------|
+| Install | `npm ci` |
+| Build | `npm run build` |
+| **Start** | `npm run start -- -p $PORT` |
+| **Entry file** | `server.js` |
+| **Output directory** | **leave empty** (do not serve `.next` as static only) |
+
+3. **Environment variables** in hPanel (not `.env` files — build logs show `injected env (0)`):
+   - `DATABASE_URL` — required at **runtime** (app exits without it)
+   - `NEXT_PUBLIC_APP_URL` — `https://portal.pharmegichealthcare.com`
+4. After fix → **Save and redeploy** → **Clear cache**
+5. Confirm: `https://portal.pharmegichealthcare.com/api/health/db` returns `{"ok":true,...}` before testing login.
 
 ### Required environment variables (hPanel)
 
