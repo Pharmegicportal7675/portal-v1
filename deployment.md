@@ -98,6 +98,8 @@ mysql://u402838766_Pharmegic:Pharmegic1234@127.0.0.1:3306/u402838766_Pharmegic?c
 
 Use **`127.0.0.1`** not `localhost` (avoids socket issues on Linux). Password with `@` → `%40`.
 
+**Prisma on Hostinger:** The app uses `engineType = "client"` with `@prisma/adapter-mariadb` (no Rust query engine). This fixes `PANIC: timer has gone away` on shared hosting process limits.
+
 Verify after deploy:
 
 - `https://portal.pharmegichealthcare.com/api/health/db` → should return `{"ok":true,"users":3}` (or your user count).

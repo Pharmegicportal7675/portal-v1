@@ -4,7 +4,14 @@ const PRISMA_TRACE = ['./generated/prisma/**'];
 
 /** @type {import('next').NextConfig} */
 const nextConfig = {
-  serverExternalPackages: ['puppeteer-core', '@sparticuz/chromium-min', '@prisma/client', 'prisma'],
+  serverExternalPackages: [
+    'puppeteer-core',
+    '@sparticuz/chromium-min',
+    '@prisma/client',
+    'prisma',
+    '@prisma/adapter-mariadb',
+    'mariadb',
+  ],
   experimental: {
     optimizePackageImports: ['lucide-react', 'recharts'],
   },
