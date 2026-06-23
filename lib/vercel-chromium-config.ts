@@ -1,4 +1,4 @@
-/** Remote Chromium pack for Vercel (@sparticuz/chromium-min). */
+/** Remote Chromium pack for bundled PDF generation (@sparticuz/chromium-min). */
 export function getVercelChromiumPackUrl(): string {
   const configured = process.env.CHROMIUM_REMOTE_EXEC_PATH?.trim();
   if (configured) return configured;

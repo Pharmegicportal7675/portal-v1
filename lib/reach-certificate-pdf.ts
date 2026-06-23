@@ -3,7 +3,10 @@ import { buildReachDocxData } from '@/lib/reach-pdf-data';
 import type { ReachCertPdfInput } from '@/lib/reach-certificate-preview';
 import { generateReachCertificateHtmlPdf } from '@/lib/reach-certificate-html-pdf-server';
 import type { LoadedReachCertificateInput } from '@/lib/reach-certificate-api-input';
-import { loadReachCertificateStoredPdf } from '@/lib/reach-certificate-storage';
+import {
+  loadReachCertificateStoredPdf,
+  uploadReachCertificateFile,
+} from '@/lib/reach-certificate-storage';
 import { convertReachDocxToPdf, generateReachCertificateDocx } from '@/services/reach-certificate-docx';
 
 const PDF_CONTENT_TYPE = 'application/pdf';
@@ -48,6 +51,12 @@ export async function resolveReachCertificateDownloadFile(
 
   try {
     const pdfBuffer = await generateReachCertificateHtmlPdf(input);
+    void uploadReachCertificateFile(
+      supabase,
+      `${input.certificateNumber}.pdf`,
+      pdfBuffer,
+      PDF_CONTENT_TYPE
+    );
     return {
       buffer: pdfBuffer,
       contentType: PDF_CONTENT_TYPE,

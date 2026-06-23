@@ -2,8 +2,8 @@ import puppeteer from 'puppeteer-core';
 import type { Browser } from 'puppeteer-core';
 import { getVercelChromiumPackUrl } from '@/lib/vercel-chromium-config';
 
-/** Launch Puppeteer on Vercel using @sparticuz/chromium-min + remote pack (ESM dynamic import). */
-export async function launchVercelPuppeteerBrowser(): Promise<Browser> {
+/** Launch Puppeteer using @sparticuz/chromium-min (Vercel, Hostinger VPS, or any Linux without system Chrome). */
+export async function launchBundledChromiumBrowser(): Promise<Browser> {
   const chromiumModule = await import('@sparticuz/chromium-min');
   const chromium = chromiumModule.default;
 
@@ -25,4 +25,9 @@ export async function launchVercelPuppeteerBrowser(): Promise<Browser> {
     executablePath,
     headless: 'shell',
   });
+}
+
+/** @deprecated Use launchBundledChromiumBrowser — kept for Vercel import sites. */
+export async function launchVercelPuppeteerBrowser(): Promise<Browser> {
+  return launchBundledChromiumBrowser();
 }
