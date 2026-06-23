@@ -1,4 +1,4 @@
-import { createAdminClient } from '@/lib/supabase/admin';
+import { createAdminClient } from '@/lib/db/admin';
 import { getActiveTemplate } from '@/services/db';
 import { getAdminSettingsAction } from '@/actions/settings';
 import SettingsDashboard from '@/components/SettingsDashboard';

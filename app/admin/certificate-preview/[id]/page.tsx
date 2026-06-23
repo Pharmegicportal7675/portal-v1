@@ -1,4 +1,4 @@
-import { createAdminClient } from '@/lib/supabase/admin';
+import { createAdminClient } from '@/lib/db/admin';
 import { getSession } from '@/lib/auth/session';
 import { redirect } from 'next/navigation';
 import CertificatePreviewClient from '@/components/CertificatePreview';

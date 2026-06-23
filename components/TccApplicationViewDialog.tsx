@@ -214,7 +214,7 @@ export function TccApplicationViewDialog({
       }
 
       setChangeHistory(
-        res.entries.map((entry) => {
+        res.entries.map((entry: any) => {
           const userRow = entry.users as { email?: string } | { email?: string }[] | null;
           const adminEmail = Array.isArray(userRow) ? userRow[0]?.email : userRow?.email;
           return {

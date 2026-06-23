@@ -1,4 +1,4 @@
-import type { SupabaseClient } from '@supabase/supabase-js';
+import type { DbClient } from '@/lib/db/types';
 import { resolveRcBranding } from '@/lib/certificate-template-config';
 import {
   loadReachCertificateInputByCertificateId,
@@ -54,7 +54,7 @@ export function toReachPrintTokenPayload(input: LoadedReachCertificateInput): Re
 }
 
 export async function loadReachHtmlDataFromPrintToken(
-  supabase: SupabaseClient,
+  supabase: DbClient,
   tokenPayload: ReachPrintTokenPayload
 ): Promise<ReachCertificateHtmlData | null> {
   const templateSettings = await getActiveTemplate(supabase);
@@ -111,7 +111,7 @@ export async function loadReachHtmlDataFromPrintToken(
 }
 
 export async function loadReachHtmlDataForInput(
-  supabase: SupabaseClient,
+  supabase: DbClient,
   input: LoadedReachCertificateInput | ReachCertPdfInput
 ): Promise<ReachCertificateHtmlData> {
   const templateSettings = await getActiveTemplate(supabase);
@@ -136,7 +136,7 @@ export async function loadReachHtmlDataForInput(
 export async function generateReachCertificateHtmlPdf(
   input: LoadedReachCertificateInput
 ): Promise<Buffer> {
-  const { createAdminClient } = await import('@/lib/supabase/admin');
+  const { createAdminClient } = await import('@/lib/db/admin');
   const data = await loadReachHtmlDataForInput(createAdminClient(), input);
   const html = await renderReachCertificateHtmlDocument(data);
   return generateReachHtmlPdfFromHtml(html);

@@ -1,7 +1,6 @@
 const path = require('path');
 const bcrypt = require('bcryptjs');
 const XLSX = require('xlsx');
-const { createClient } = require('@supabase/supabase-js');
 
 require('dotenv').config({ path: path.join(process.cwd(), '.env.local') });
 require('dotenv').config();
@@ -62,13 +61,8 @@ async function main() {
   const inputPath = process.argv[2];
   if (!inputPath) throw new Error('Usage: node scripts/reimport-sheet2-only.js "<excel-path>"');
 
-  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
-  const serviceRole = process.env.SUPABASE_SERVICE_ROLE;
-  if (!supabaseUrl || !serviceRole) throw new Error('Missing Supabase env vars.');
-
-  const supabase = createClient(supabaseUrl, serviceRole, {
-    auth: { autoRefreshToken: false, persistSession: false },
-  });
+  const { createAdminClient } = await import('./lib/db-client.mjs');
+  const supabase = await createAdminClient();
 
   const records = buildSheet2Records(inputPath);
   const { data: existingUsers } = await supabase.from('users').select('id, email');

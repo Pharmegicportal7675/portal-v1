@@ -1,4 +1,4 @@
-import { SupabaseClient } from '@supabase/supabase-js';
+import type { DbClient } from '@/lib/db/types';
 import { computeTccQuotaForExportDate } from '@/lib/quota';
 import { REACH_CERTIFICATE_TYPE, getReachCertificateYear } from '@/lib/reach-certificate';
 import {
@@ -9,7 +9,7 @@ import {
 // ============================================================================
 // ADMIN DASHBOARD SERVICES
 // ============================================================================
-export async function getAdminDashboardStats(supabase: SupabaseClient) {
+export async function getAdminDashboardStats(supabase: DbClient) {
   // Run all 3 independent queries in parallel
   const [
     clientsRes,
@@ -56,14 +56,14 @@ export async function getAdminDashboardStats(supabase: SupabaseClient) {
       textColor: 'text-amber-700',
     },
   ].map((item) => {
-    const clientsInReach = activeClients.filter((client) =>
+    const clientsInReach = activeClients.filter((client: any) =>
       normalizeRegulatoryRegistrations(client.regulatory_registrations).includes(item.key)
     );
     const count = clientsInReach.length;
     const percent = activeClientCount > 0 ? Math.round((count / activeClientCount) * 100) : 0;
 
     const countryMap = new Map<string, number>();
-    clientsInReach.forEach((client) => {
+    clientsInReach.forEach((client: any) => {
       const country = client.country?.trim() || 'Unknown';
       countryMap.set(country, (countryMap.get(country) || 0) + 1);
     });
@@ -87,7 +87,7 @@ export async function getAdminDashboardStats(supabase: SupabaseClient) {
 // CLIENT MANAGEMENT SERVICES (Admin Portal)
 // ============================================================================
 export async function getClients(
-  supabase: SupabaseClient,
+  supabase: DbClient,
   search = '',
   status = 'all',
   limit = 10,
@@ -116,7 +116,7 @@ export async function getClients(
 }
 
 export async function getActiveSubstanceCountsByClient(
-  supabase: SupabaseClient,
+  supabase: DbClient,
   clientIds: string[]
 ): Promise<Record<string, number>> {
   if (clientIds.length === 0) return {};
@@ -139,7 +139,7 @@ export async function getActiveSubstanceCountsByClient(
 // ============================================================================
 // CHEMICAL INVENTORY SERVICES
 // ============================================================================
-export async function getChemicals(supabase: SupabaseClient, search = '', status = 'all') {
+export async function getChemicals(supabase: DbClient, search = '', status = 'all') {
   let query = supabase.from('chemicals').select(`
     *,
     client_chemicals (
@@ -161,7 +161,7 @@ export async function getChemicals(supabase: SupabaseClient, search = '', status
   if (error) throw error;
 
   const rows = data || [];
-  const chemicalIds = rows.map((r) => r.id as string);
+  const chemicalIds = rows.map((r: any) => r.id as string);
 
   const exportedByChemicalId: Record<string, number> = {};
   if (chemicalIds.length > 0) {
@@ -180,7 +180,7 @@ export async function getChemicals(supabase: SupabaseClient, search = '', status
     }
   }
 
-  return rows.map((row) => {
+  return rows.map((row: any) => {
     const links = (row.client_chemicals || []) as {
       status: string;
       available_quantity: number;
@@ -216,7 +216,7 @@ export async function getChemicals(supabase: SupabaseClient, search = '', status
   });
 }
 
-export async function getTrashedChemicals(supabase: SupabaseClient) {
+export async function getTrashedChemicals(supabase: DbClient) {
   const { data, error } = await supabase
     .from('chemicals')
     .select('id, chemical_name, cas_number, ec_number, tonnage_band, validity_date, status, created_at')
@@ -241,7 +241,7 @@ const TCC_APPROVED_EXPORT_SELECT =
   'id, client_id, chemical_id, quantity_mt, status, export_date, reach_certificate_id, updated_at, created_at, certificates!certificates_tcc_application_id_fkey(issued_at)';
 
 async function enrichTccApplicationsWithRcQuota(
-  supabase: SupabaseClient,
+  supabase: DbClient,
   applications: Record<string, unknown>[]
 ) {
   if (!applications.length) return applications;
@@ -269,7 +269,7 @@ async function enrichTccApplicationsWithRcQuota(
 
     const chem = Array.isArray(app.chemicals) ? app.chemicals[0] : app.chemicals;
     const quota = computeTccQuotaForExportDate({
-      reachCertificates: (reachCerts || []).filter((cert) => cert.client_id === app.client_id),
+      reachCertificates: (reachCerts || []).filter((cert: any) => cert.client_id === app.client_id),
       approvedApplications: approvedApps || [],
       chemicalId: app.chemical_id as string,
       exportDate: app.export_date as string,
@@ -289,7 +289,7 @@ async function enrichTccApplicationsWithRcQuota(
 }
 
 export async function getTccApplications(
-  supabase: SupabaseClient,
+  supabase: DbClient,
   statusFilter = 'all',
   options?: { euReachOnly?: boolean }
 ) {
@@ -317,7 +317,7 @@ export async function getTccApplications(
 // ============================================================================
 // TEMPLATE SERVICES
 // ============================================================================
-export async function getActiveTemplate(supabase: SupabaseClient) {
+export async function getActiveTemplate(supabase: DbClient) {
   const { data, error } = await supabase
     .from('templates')
     .select('*')

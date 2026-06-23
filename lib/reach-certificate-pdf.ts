@@ -1,4 +1,4 @@
-import type { SupabaseClient } from '@supabase/supabase-js';
+import type { DbClient } from '@/lib/db/types';
 import { buildReachDocxData } from '@/lib/reach-pdf-data';
 import type { ReachCertPdfInput } from '@/lib/reach-certificate-preview';
 import { generateReachCertificateHtmlPdf } from '@/lib/reach-certificate-html-pdf-server';
@@ -27,7 +27,7 @@ function buildFreshReachDocx(input: ReachCertPdfInput): Buffer {
 
 /** Always builds a PDF from the HTML certificate template — throws when generation unavailable. */
 export async function resolveReachCertificateDownloadFile(
-  supabase: SupabaseClient,
+  supabase: DbClient,
   input: ReachCertPdfInput & LoadedReachCertificateInput
 ): Promise<ReachCertificateDownloadFile> {
   try {

@@ -1,6 +1,6 @@
 'use server';
 
-import { createAdminClient } from '@/lib/supabase/admin';
+import { createAdminClient } from '@/lib/db/admin';
 import { getSession } from '@/lib/auth/session';
 import { revalidatePath } from 'next/cache';
 import type { RcTemplateKey, TccTemplateKey } from '@/lib/certificate-template-config';

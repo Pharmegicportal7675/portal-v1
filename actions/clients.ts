@@ -1,11 +1,11 @@
 'use server';
 
-import { createAdminClient } from '@/lib/supabase/admin';
+import { createAdminClient } from '@/lib/db/admin';
 import { getSession } from '@/lib/auth/session';
 import { hashPassword } from '@/lib/auth/password';
 import { formatErrorMessage } from '@/lib/format-error';
 import { normalizeDateInput, normalizeOptionalDateInput } from '@/lib/parse-flexible-date';
-import { getTonnageBandMaxQuota, sumApprovedExports, sumApprovedExportsInReachWindow, getRemainingQuotaForReachPeriod, computeAssignableQuota } from '@/lib/quota';
+import { getTonnageBandMaxQuota, sumApprovedExports, sumApprovedExportsInReachWindow, getRemainingQuotaForReachPeriod, computeAssignableQuota, type TccExportRecord } from '@/lib/quota';
 import { createReachCertificate, deleteAllReachCertificatesForClientChemical } from '@/actions/reach';
 import {
   clientHasEuReachRegistration,

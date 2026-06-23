@@ -1,4 +1,4 @@
-import type { SupabaseClient } from '@supabase/supabase-js';
+import type { DbClient } from '@/lib/db/types';
 import { buildTccCertificateStoredFile } from '@/lib/tcc-pdf-data';
 import { resolveTccPdfChemicalTonnageBand } from '@/lib/tcc-certificate-pdf';
 import type { TccPdfChemical } from '@/lib/tcc-certificate-html-data';
@@ -49,7 +49,7 @@ function parseIssueDateIso(issueDateIso: string): { issueDate: Date; issueDateRa
 }
 
 export async function upsertTccCertificateForApplication(
-  supabase: SupabaseClient,
+  supabase: DbClient,
   params: {
     application: TccIssuanceApplication & Record<string, unknown>;
     issueDateIso: string;
@@ -149,7 +149,7 @@ export async function upsertTccCertificateForApplication(
   return { certId: cert.id, certNumber, created: true };
 }
 
-export async function reconcileMissingTccCertificates(supabase: SupabaseClient): Promise<number> {
+export async function reconcileMissingTccCertificates(supabase: DbClient): Promise<number> {
   const { data: apps, error } = await supabase
     .from('tcc_applications')
     .select(`

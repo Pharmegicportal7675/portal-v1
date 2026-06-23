@@ -1,5 +1,5 @@
 import { getSession } from '@/lib/auth/session';
-import { createAdminClient } from '@/lib/supabase/admin';
+import { createAdminClient } from '@/lib/db/admin';
 import TccApplicationForm from '@/components/TccApplicationForm';
 import { redirect } from 'next/navigation';
 

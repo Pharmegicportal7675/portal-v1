@@ -1,4 +1,4 @@
-import { createAdminClient } from '@/lib/supabase/admin';
+import { createAdminClient } from '@/lib/db/admin';
 import { Shield, CheckCircle2, XCircle, AlertTriangle, Building, FlaskConical, Calendar, Hash, ExternalLink } from 'lucide-react';
 import Link from 'next/link';
 

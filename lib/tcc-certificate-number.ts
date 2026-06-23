@@ -1,4 +1,4 @@
-import type { SupabaseClient } from '@supabase/supabase-js';
+import type { DbClient } from '@/lib/db/types';
 
 const TCC_CERT_NUMBER_PREFIX = 'TCC';
 const MAX_GENERATION_ATTEMPTS = 30;
@@ -10,7 +10,7 @@ function buildTccCertificateNumberCandidate(year: number): string {
 
 /** Generates a certificate number that is not present in certificates (including revoked). */
 export async function generateUniqueTccCertificateNumber(
-  supabase: SupabaseClient
+  supabase: DbClient
 ): Promise<string> {
   const year = new Date().getFullYear();
 

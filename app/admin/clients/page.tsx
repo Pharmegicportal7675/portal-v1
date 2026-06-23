@@ -1,4 +1,4 @@
-import { createAdminClient } from '@/lib/supabase/admin';
+import { createAdminClient } from '@/lib/db/admin';
 import { getClients, getChemicals, getActiveSubstanceCountsByClient } from '@/services/db';
 import { getSession } from '@/lib/auth/session';
 import ClientsDashboard from '@/components/ClientsDashboard';
@@ -14,11 +14,11 @@ export default async function ClientsPage() {
   const [substanceCounts, chemicals] = await Promise.all([
     getActiveSubstanceCountsByClient(
       supabase,
-      clients.map((client) => client.id)
+      clients.map((client: any) => client.id)
     ),
     getChemicals(supabase, '', 'active'),
   ]);
-  const clientsWithSubstanceCounts = clients.map((client) => ({
+  const clientsWithSubstanceCounts = clients.map((client: any) => ({
     ...client,
     substance_count: substanceCounts[client.id] || 0,
   }));

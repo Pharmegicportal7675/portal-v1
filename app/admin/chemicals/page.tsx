@@ -1,5 +1,5 @@
 import { redirect } from 'next/navigation';
-import { createAdminClient } from '@/lib/supabase/admin';
+import { createAdminClient } from '@/lib/db/admin';
 import { getSession } from '@/lib/auth/session';
 import { getChemicals, getTrashedChemicals } from '@/services/db';
 import ChemicalsDashboard from '@/components/ChemicalsDashboard';

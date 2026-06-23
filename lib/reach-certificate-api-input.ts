@@ -1,4 +1,4 @@
-import type { SupabaseClient } from '@supabase/supabase-js';
+import type { DbClient } from '@/lib/db/types';
 import {
   getLastDateOfYear,
   getTodayDateString,
@@ -15,7 +15,7 @@ export type LoadedReachCertificateInput = ReachCertPdfInput & {
 };
 
 export async function loadReachCertificateInputByCertificateId(
-  supabase: SupabaseClient,
+  supabase: DbClient,
   certificateId: string
 ): Promise<LoadedReachCertificateInput | null> {
   const { data: cert, error } = await supabase
@@ -79,7 +79,7 @@ export async function loadReachCertificateInputByCertificateId(
 }
 
 export async function loadReachCertificateInputByClientChemical(
-  supabase: SupabaseClient,
+  supabase: DbClient,
   params: {
     clientId: string;
     chemicalId: string;

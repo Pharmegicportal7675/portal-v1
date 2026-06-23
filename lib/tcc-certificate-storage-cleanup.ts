@@ -1,5 +1,5 @@
-import type { SupabaseClient } from '@supabase/supabase-js';
-import { createAdminClient } from '@/lib/supabase/admin';
+import type { DbClient } from '@/lib/db/types';
+import { createAdminClient } from '@/lib/db/admin';
 import { CERTIFICATES_BUCKET } from '@/lib/storage';
 import {
   buildTccCertificatePdfInputFromCert,
@@ -19,7 +19,7 @@ type CleanupOptions = {
   regeneratePdfs?: boolean;
 };
 
-function pdfPublicUrl(supabase: SupabaseClient, certificateNumber: string): string {
+function pdfPublicUrl(supabase: DbClient, certificateNumber: string): string {
   const {
     data: { publicUrl },
   } = supabase.storage.from(CERTIFICATES_BUCKET).getPublicUrl(`${certificateNumber}.pdf`);
@@ -101,7 +101,7 @@ export async function cleanupLegacyTccDocxStorage(
     });
   }
 
-  const processed = new Set((certs ?? []).map((c) => c.certificate_number?.trim()).filter(Boolean));
+  const processed = new Set((certs ?? []).map((c: any) => c.certificate_number?.trim()).filter(Boolean));
   const { data: storageFiles, error: listError } = await adminSupabase.storage
     .from(CERTIFICATES_BUCKET)
     .list('', { limit: 1000 });
@@ -136,7 +136,7 @@ export async function cleanupLegacyTccDocxStorage(
 }
 
 async function cleanupOneTccDocx(
-  adminSupabase: SupabaseClient,
+  adminSupabase: DbClient,
   certNumber: string,
   cert: {
     id: string;

@@ -1,5 +1,5 @@
 import { redirect } from 'next/navigation';
-import { createAdminClient } from '@/lib/supabase/admin';
+import { createAdminClient } from '@/lib/db/admin';
 import { getSession } from '@/lib/auth/session';
 import ReachCertificatePreviewClient from '@/components/ReachCertificatePreviewClient';
 import { getLastDateOfYear, getTodayDateString, isReachCertificateType, getDefaultReachPeriodForYear } from '@/lib/reach-certificate';
@@ -100,7 +100,7 @@ export default async function ReachCertificatePreviewPage({
     await regenerateReachCertificateFile(resolvedCert.id).catch(() => undefined);
   }
 
-  const contactEmails = (contacts || []).map((c) => c.email).filter(Boolean);
+  const contactEmails = (contacts || []).map((c: any) => c.email).filter(Boolean);
   const mailSentHistory = resolvedCert
     ? await loadCertificateMailSentHistory(adminSupabase, resolvedCert.id, resolvedCert, REACH_MAIL_LOG_ACTIONS)
     : [];

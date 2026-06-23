@@ -1,4 +1,4 @@
-import type { SupabaseClient } from '@supabase/supabase-js';
+import type { DbClient } from '@/lib/db/types';
 import { CERTIFICATES_BUCKET } from '@/lib/storage';
 
 const PDF_CONTENT_TYPE = 'application/pdf';
@@ -7,7 +7,7 @@ const DOCX_CONTENT_TYPE =
 
 /** Remove cached certificate files so stale Template 1 PDFs cannot be served. */
 export async function clearReachCertificateStorageFiles(
-  supabase: SupabaseClient,
+  supabase: DbClient,
   certificateNumber: string
 ): Promise<void> {
   await supabase.storage
@@ -16,7 +16,7 @@ export async function clearReachCertificateStorageFiles(
 }
 
 export async function downloadReachCertificateFile(
-  supabase: SupabaseClient,
+  supabase: DbClient,
   fileName: string
 ): Promise<Buffer | null> {
   const { data, error } = await supabase.storage.from(CERTIFICATES_BUCKET).download(fileName);
@@ -25,7 +25,7 @@ export async function downloadReachCertificateFile(
 }
 
 export async function uploadReachCertificateFile(
-  supabase: SupabaseClient,
+  supabase: DbClient,
   fileName: string,
   buffer: Buffer,
   contentType: string

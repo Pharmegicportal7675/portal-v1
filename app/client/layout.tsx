@@ -2,7 +2,7 @@ import { Suspense } from 'react';
 import Sidebar from '@/components/Sidebar';
 import { getSession } from '@/lib/auth/session';
 import { redirectToLoginPage, redirectToRoleHome } from '@/lib/auth/redirects';
-import { createAdminClient } from '@/lib/supabase/admin';
+import { createAdminClient } from '@/lib/db/admin';
 import { ClientTopBar } from '@/components/layout/ClientTopBar';
 import { TopNavbarSkeleton } from '@/components/layout/TopNavbarSkeleton';
 import { normalizeRegulatoryRegistrations } from '@/lib/regulatory-registrations';

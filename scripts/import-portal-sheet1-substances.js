@@ -11,7 +11,6 @@
 
 const path = require('path');
 const XLSX = require('xlsx');
-const { createClient } = require('@supabase/supabase-js');
 
 require('dotenv').config({ path: path.join(process.cwd(), '.env.local') });
 require('dotenv').config();
@@ -119,13 +118,8 @@ async function main() {
   const dryRun = process.argv.includes('--dry-run');
   const filePath = path.resolve(args[0] || path.join(process.cwd(), 'data', 'portal-data.xlsx'));
 
-  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
-  const serviceRole = process.env.SUPABASE_SERVICE_ROLE;
-  if (!supabaseUrl || !serviceRole) throw new Error('Missing Supabase env variables.');
-
-  const adminSupabase = createClient(supabaseUrl, serviceRole, {
-    auth: { autoRefreshToken: false, persistSession: false },
-  });
+  const { createAdminClient } = await import('./lib/db-client.mjs');
+  const adminSupabase = await createAdminClient();
 
   const sheet1 = loadSheet1(filePath);
   const { data: clients, error: clientErr } = await adminSupabase

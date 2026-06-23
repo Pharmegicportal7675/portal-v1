@@ -1,4 +1,4 @@
-import type { SupabaseClient } from '@supabase/supabase-js';
+import type { DbClient } from '@/lib/db/types';
 import type { TccPdfApplication, TccPdfChemical, TccPdfClient } from '@/lib/tcc-pdf-data';
 import { CERTIFICATES_BUCKET } from '@/lib/storage';
 import { generateTccCertificateHtmlPdf } from '@/lib/tcc-certificate-html-pdf-server';
@@ -30,7 +30,7 @@ export type TccCertificateDownloadFile = {
 };
 
 async function downloadStorageFile(
-  supabase: SupabaseClient,
+  supabase: DbClient,
   fileName: string
 ): Promise<Buffer | null> {
   const { data, error } = await supabase.storage.from(CERTIFICATES_BUCKET).download(fileName);
@@ -39,7 +39,7 @@ async function downloadStorageFile(
 }
 
 function cachePdfToStorage(
-  supabase: SupabaseClient,
+  supabase: DbClient,
   certificateNumber: string,
   pdfBuffer: Buffer
 ): void {
@@ -58,7 +58,7 @@ function cachePdfToStorage(
 
 /** Resolves the best available TCC certificate PDF for download/email. */
 export async function resolveTccCertificateDownloadFile(
-  supabase: SupabaseClient,
+  supabase: DbClient,
   input: TccCertPdfInput
 ): Promise<TccCertificateDownloadFile> {
   const certNumber = input.certificateNumber;
@@ -89,7 +89,7 @@ export async function resolveTccCertificateDownloadFile(
 }
 
 export async function resolveTccCertificatePdfBuffer(
-  supabase: SupabaseClient,
+  supabase: DbClient,
   input: TccCertPdfInput
 ): Promise<Buffer> {
   const file = await resolveTccCertificateDownloadFile(supabase, input);
@@ -97,7 +97,7 @@ export async function resolveTccCertificatePdfBuffer(
 }
 
 export async function resolveTccPdfChemicalTonnageBand(
-  supabase: SupabaseClient,
+  supabase: DbClient,
   params: {
     clientId: string;
     chemicalId: string;
@@ -116,7 +116,7 @@ export async function resolveTccPdfChemicalTonnageBand(
 
   const reachCert =
     (params.reachCertificateId
-      ? (reachCerts || []).find((c) => c.id === params.reachCertificateId)
+      ? (reachCerts || []).find((c: any) => c.id === params.reachCertificateId)
       : null) ||
     (params.exportDate
       ? findReachCertificateForExportDate(reachCerts || [], params.chemicalId, params.exportDate)
@@ -129,7 +129,7 @@ export async function resolveTccPdfChemicalTonnageBand(
 }
 
 export async function buildTccCertificatePdfInputFromStoredCert(
-  supabase: SupabaseClient,
+  supabase: DbClient,
   cert: {
     certificate_number: string;
     expires_at?: string | null;
@@ -199,7 +199,7 @@ export function buildTccCertificatePdfInputFromCert(cert: {
 }
 
 export async function buildTccApplicationPreviewInput(
-  supabase: SupabaseClient,
+  supabase: DbClient,
   applicationId: string
 ): Promise<TccCertPdfInput> {
   const { data: app, error } = await supabase
@@ -261,7 +261,7 @@ export async function buildTccApplicationPreviewInput(
 
   const reachCert =
     (app.reach_certificate_id
-      ? (reachCerts || []).find((c) => c.id === app.reach_certificate_id)
+      ? (reachCerts || []).find((c: any) => c.id === app.reach_certificate_id)
       : null) ||
     (app.export_date
       ? findReachCertificateForExportDate(reachCerts || [], app.chemical_id, app.export_date)

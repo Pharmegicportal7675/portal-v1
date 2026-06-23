@@ -1,14 +1,14 @@
 # portal-v1 — Pharmegic Portal (Live)
 
-Production app for **portal.pharmegichealthcare.com** — Hostinger Node.js + MySQL.
+Production app for **portal.pharmegichealthcare.com** — Hostinger Node.js + **MySQL only**.
 
 ## Stack
 
 - Next.js 16 + TypeScript + Tailwind
-- MySQL (Hostinger) + Prisma
+- **MySQL** (Hostinger) + Prisma (`lib/db/query-client.ts`)
 - Local file storage (`public/uploads/certificates/`)
 - SMTP2GO (unchanged)
-- Custom JWT auth (not Supabase Auth)
+- Custom JWT auth
 
 ## Local development
 
@@ -45,7 +45,7 @@ NEXT_PUBLIC_APP_URL=http://localhost:3000
 
 ```bash
 npm run db:import          # create tables (first time)
-npm run db:migrate-from-supabase  # one-time data from Supabase
+npx tsx scripts/seed-admins.js   # seed admin logins
 ```
 
-See `MIGRATION.md` for full migration details.
+See `deployment.md` for full Hostinger setup.

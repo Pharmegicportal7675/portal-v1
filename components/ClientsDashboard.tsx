@@ -3,7 +3,7 @@
 import { useState, useTransition, useEffect, useMemo } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
-import { createClient } from '@/lib/supabase/client';
+import { createClient } from '@/lib/db/browser';
 import { updateClientAction, deleteClientAction, getClientChemicalIdsForEditAction } from '@/actions/clients';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from './ui/Card';
 import { Button } from './ui/Button';

@@ -1,4 +1,4 @@
-import { createAdminClient } from '@/lib/supabase/admin';
+import { createAdminClient } from '@/lib/db/admin';
 import { getChemicals } from '@/services/db';
 import WizardPageClient from './WizardPageClient';
 

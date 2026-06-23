@@ -1,4 +1,4 @@
-import type { SupabaseClient } from '@supabase/supabase-js';
+import type { DbClient } from '@/lib/db/types';
 import { resolveTccBranding } from '@/lib/certificate-template-config';
 import {
   buildTccHtmlData,
@@ -39,7 +39,7 @@ function withAbsoluteAssetUrls(
 }
 
 export async function loadTccHtmlDataForInput(
-  supabase: SupabaseClient,
+  supabase: DbClient,
   input: BuildTccHtmlDataInput
 ): Promise<TccCertificateHtmlData> {
   const templateSettings = await getActiveTemplate(supabase);
@@ -58,7 +58,7 @@ export async function loadTccHtmlDataForInput(
 }
 
 export async function loadTccHtmlDataByCertificateId(
-  supabase: SupabaseClient,
+  supabase: DbClient,
   certificateId: string
 ): Promise<TccCertificateHtmlData | null> {
   const { data: cert, error } = await supabase
@@ -111,7 +111,7 @@ export async function loadTccHtmlDataByCertificateId(
 }
 
 export async function loadTccHtmlDataByApplicationId(
-  supabase: SupabaseClient,
+  supabase: DbClient,
   applicationId: string
 ): Promise<TccCertificateHtmlData> {
   const input = await buildTccApplicationPreviewInput(supabase, applicationId);
@@ -121,7 +121,7 @@ export async function loadTccHtmlDataByApplicationId(
 export async function generateTccCertificateHtmlPdf(
   input: BuildTccHtmlDataInput
 ): Promise<Buffer> {
-  const { createAdminClient } = await import('@/lib/supabase/admin');
+  const { createAdminClient } = await import('@/lib/db/admin');
   const data = await loadTccHtmlDataForInput(createAdminClient(), input);
   const html = await renderTccCertificateHtmlDocument(data);
   return generateTccHtmlPdfFromHtml(html);

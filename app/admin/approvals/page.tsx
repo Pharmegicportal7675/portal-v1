@@ -1,4 +1,4 @@
-import { createAdminClient } from '@/lib/supabase/admin';
+import { createAdminClient } from '@/lib/db/admin';
 import { reconcileMissingTccCertificates } from '@/lib/tcc-certificate-issuance';
 import { getTccApplications } from '@/services/db';
 import ApprovalsDashboard from '@/components/ApprovalsDashboard';

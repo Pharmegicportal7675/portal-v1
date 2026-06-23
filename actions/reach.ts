@@ -1,6 +1,6 @@
 'use server';
 
-import { createAdminClient } from '@/lib/supabase/admin';
+import { createAdminClient } from '@/lib/db/admin';
 import { getSession } from '@/lib/auth/session';
 import { buildReachCertificateStoredFile } from '@/lib/reach-pdf-data';
 import { buildCertificateRecipients } from '@/lib/certificate-email-recipients';
@@ -1052,7 +1052,7 @@ export async function sendBulkReachCertificatesEmailAction(
     });
 
     const attachmentItems = await Promise.all(
-      certs.map(async (cert) => {
+      certs.map(async (cert: any) => {
         const attachment = await downloadReachCertificateAttachment(adminSupabase, cert);
         return {
           certificateNumber: cert.certificate_number,
@@ -1186,7 +1186,7 @@ export async function deleteAllReachCertificatesForClientChemical(
   const rcCerts = (certs || []).filter(isReachCertificateType);
   if (rcCerts.length === 0) return 0;
 
-  const storageFiles = rcCerts.flatMap((cert) => [
+  const storageFiles = rcCerts.flatMap((cert: any) => [
     `${cert.certificate_number}.pdf`,
     `${cert.certificate_number}.docx`,
   ]);
@@ -1197,7 +1197,7 @@ export async function deleteAllReachCertificatesForClientChemical(
     .delete()
     .in(
       'id',
-      rcCerts.map((cert) => cert.id)
+      rcCerts.map((cert: any) => cert.id)
     );
 
   if (deleteError) throw deleteError;

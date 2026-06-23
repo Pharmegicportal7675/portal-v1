@@ -1,4 +1,4 @@
-import type { SupabaseClient } from '@supabase/supabase-js';
+import type { DbClient } from '@/lib/db/types';
 import {
   buildReachBooleanColumns,
   formatTonnageBandForExport,
@@ -25,7 +25,7 @@ function unwrapRelation<T>(value: T | T[] | null | undefined): T | null {
 }
 
 export async function buildClientDirectoryExportBuffer(
-  supabase: SupabaseClient,
+  supabase: DbClient,
   clientIds: string[]
 ): Promise<ArrayBuffer> {
   if (clientIds.length === 0) {
@@ -63,10 +63,10 @@ export async function buildClientDirectoryExportBuffer(
   }
 
   const clientNameById = new Map(
-    (clients || []).map((client) => [client.id as string, client.company_name as string])
+    (clients || []).map((client: any) => [client.id as string, client.company_name as string])
   );
-  const loginByClientId = new Map(
-    (users || []).map((user) => [user.client_id as string, user])
+  const loginByClientId = new Map<string, any>(
+    (users || []).map((user: any) => [user.client_id as string, user])
   );
 
   const tonnageByClientChemical = new Map<string, string>();
@@ -77,7 +77,7 @@ export async function buildClientDirectoryExportBuffer(
     }
   }
 
-  const clientRows: ExportRow[] = (clients || []).map((client) => {
+  const clientRows: ExportRow[] = (clients || []).map((client: any) => {
     const login = loginByClientId.get(client.id);
     return {
       'Company Name': client.company_name ?? '',
@@ -98,7 +98,7 @@ export async function buildClientDirectoryExportBuffer(
     };
   });
 
-  const contactRows: ExportRow[] = (contacts || []).map((contact) => ({
+  const contactRows: ExportRow[] = (contacts || []).map((contact: any) => ({
     'Company Name': clientNameById.get(contact.client_id) ?? '',
     'First Name': contact.first_name ?? '',
     'Last Name': contact.last_name ?? '',
@@ -107,7 +107,7 @@ export async function buildClientDirectoryExportBuffer(
     'Position / Role': contact.role ?? '',
   }));
 
-  const authorizedChemicalRows: ExportRow[] = (clientChemicals || []).map((row) => {
+  const authorizedChemicalRows: ExportRow[] = (clientChemicals || []).map((row: any) => {
     const chemical = unwrapRelation(row.chemicals) as ChemicalRef | null;
     const tonnageKey = `${row.client_id}:${row.chemical_id}`;
     const tonnageBand = resolveDisplayedTonnageBand(

@@ -1,6 +1,6 @@
 'use server';
 
-import { createAdminClient } from '@/lib/supabase/admin';
+import { createAdminClient } from '@/lib/db/admin';
 import { getSession } from '@/lib/auth/session';
 import { formatErrorMessage } from '@/lib/format-error';
 import { buildClientDirectoryExportBuffer } from '@/services/client-directory-export';

@@ -1,4 +1,4 @@
-import { createAdminClient } from '@/lib/supabase/admin';
+import { createAdminClient } from '@/lib/db/admin';
 import { redirect } from 'next/navigation';
 import EditClientClient from './EditClientClient';
 

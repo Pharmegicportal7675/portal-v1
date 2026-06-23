@@ -1,4 +1,4 @@
-import { createAdminClient } from '@/lib/supabase/admin';
+import { createAdminClient } from '@/lib/db/admin';
 import { getSession } from '@/lib/auth/session';
 import { redirect } from 'next/navigation';
 import { getLatestReachCertForChemical, type ReachCertificateRecord } from '@/lib/reach-certificate';
@@ -125,7 +125,7 @@ export async function loadClientProfileData(clientId: string) {
       senderEmail: adminSettings?.smtp_from ?? null,
       contactEmails: (contacts || [])
         .map((c: { email?: string }) => c.email)
-        .filter((email): email is string => Boolean(email)),
+        .filter((email: string | undefined): email is string => Boolean(email)),
     },
   };
 }

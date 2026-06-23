@@ -1,4 +1,4 @@
-import type { SupabaseClient } from '@supabase/supabase-js';
+import type { DbClient } from '@/lib/db/types';
 import { hashPassword } from '@/lib/auth/password';
 import { createReachCertificate } from '@/actions/reach';
 import { getTonnageBandMaxQuota } from '@/lib/quota';
@@ -63,7 +63,7 @@ function slugify(value: string): string {
 }
 
 async function resolveUuidNumber(
-  adminSupabase: SupabaseClient,
+  adminSupabase: DbClient,
   client: ParsedClientImportRow,
   index: number
 ): Promise<string> {
@@ -178,7 +178,7 @@ function clientPayloadDiffers(
 }
 
 async function findExistingClient(
-  adminSupabase: SupabaseClient,
+  adminSupabase: DbClient,
   client: ParsedClientImportRow
 ): Promise<ExistingClientRecord | null> {
   const { data: byEmail } = await adminSupabase
@@ -200,7 +200,7 @@ async function findExistingClient(
 }
 
 async function updateExistingClient(
-  adminSupabase: SupabaseClient,
+  adminSupabase: DbClient,
   existing: ExistingClientRecord,
   client: ParsedClientImportRow,
   dryRun: boolean
@@ -258,7 +258,7 @@ async function updateExistingClient(
 }
 
 async function importClientRow(
-  adminSupabase: SupabaseClient,
+  adminSupabase: DbClient,
   client: ParsedClientImportRow,
   index: number,
   dryRun: boolean
@@ -354,7 +354,7 @@ async function importClientRow(
 }
 
 async function findClientIdByCompanyName(
-  adminSupabase: SupabaseClient,
+  adminSupabase: DbClient,
   companyName: string,
   cache: Map<string, string | null>
 ): Promise<string | null> {
@@ -374,7 +374,7 @@ async function findClientIdByCompanyName(
 }
 
 async function resolveClientId(
-  adminSupabase: SupabaseClient,
+  adminSupabase: DbClient,
   companyName: string,
   clientCache: Map<string, string | null>,
   pendingClients: ParsedClientImportRow[],
@@ -397,7 +397,7 @@ async function resolveClientId(
 }
 
 async function ensureChemicalId(
-  adminSupabase: SupabaseClient,
+  adminSupabase: DbClient,
   substance: ParsedSubstanceImportRow,
   dryRun: boolean
 ): Promise<string | null> {
@@ -440,7 +440,7 @@ async function ensureChemicalId(
 }
 
 async function hasActiveReachCertificate(
-  adminSupabase: SupabaseClient,
+  adminSupabase: DbClient,
   clientId: string,
   chemicalId: string
 ): Promise<boolean> {
@@ -458,7 +458,7 @@ async function hasActiveReachCertificate(
 }
 
 async function issueReachCertificateForImportedSubstance(
-  adminSupabase: SupabaseClient,
+  adminSupabase: DbClient,
   clientId: string,
   chemicalId: string,
   substance: ParsedSubstanceImportRow,
@@ -497,7 +497,7 @@ async function issueReachCertificateForImportedSubstance(
 }
 
 async function importSubstanceRow(
-  adminSupabase: SupabaseClient,
+  adminSupabase: DbClient,
   substance: ParsedSubstanceImportRow,
   clientCache: Map<string, string | null>,
   pendingClients: ParsedClientImportRow[],
@@ -701,7 +701,7 @@ async function importSubstanceRow(
 }
 
 async function importContactRow(
-  adminSupabase: SupabaseClient,
+  adminSupabase: DbClient,
   contact: ParsedContactImportRow,
   clientCache: Map<string, string | null>,
   pendingClients: ParsedClientImportRow[],
@@ -814,7 +814,7 @@ async function importContactRow(
 }
 
 export async function importClientDirectoryRows(
-  adminSupabase: SupabaseClient,
+  adminSupabase: DbClient,
   input: {
     clients: ParsedClientImportRow[];
     contacts: ParsedContactImportRow[];

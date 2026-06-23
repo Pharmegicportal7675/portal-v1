@@ -1,5 +1,5 @@
 import TopNavbar from '@/components/TopNavbar';
-import { createAdminClient } from '@/lib/supabase/admin';
+import { createAdminClient } from '@/lib/db/admin';
 import type { SessionPayload } from '@/lib/auth/session';
 
 export async function ClientTopBar({ session }: { session: SessionPayload }) {

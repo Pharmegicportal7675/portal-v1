@@ -1,4 +1,4 @@
-import type { SupabaseClient } from '@supabase/supabase-js';
+import type { DbClient } from '@/lib/db/types';
 import {
   DOCX_CONTENT_TYPE,
   PDF_CONTENT_TYPE,
@@ -32,7 +32,7 @@ function toLoadedInput(input: ReachCertPdfInput & LoadedReachCertificateInput): 
  * Resolves RC preview PDF via Puppeteer HTML render; falls back to DOCX upload for legacy embed.
  */
 export async function resolveReachCertificatePreview(
-  supabase: SupabaseClient,
+  supabase: DbClient,
   input: ReachCertPdfInput & LoadedReachCertificateInput
 ): Promise<ReachCertificatePreviewResult> {
   const certNumber = input.certificateNumber;

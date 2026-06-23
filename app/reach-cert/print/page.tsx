@@ -1,5 +1,5 @@
 import { notFound } from 'next/navigation';
-import { createAdminClient } from '@/lib/supabase/admin';
+import { createAdminClient } from '@/lib/db/admin';
 import { loadReachHtmlDataFromPrintToken } from '@/lib/reach-certificate-html-pdf-server';
 import { verifyReachPrintToken } from '@/lib/reach-certificate-print-token';
 import ReachCertificatePrintClient from './ReachCertificatePrintClient';

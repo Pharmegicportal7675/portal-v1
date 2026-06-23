@@ -1,5 +1,5 @@
 import { getSession } from '@/lib/auth/session';
-import { createAdminClient } from '@/lib/supabase/admin';
+import { createAdminClient } from '@/lib/db/admin';
 import CertificatesList from '@/components/CertificatesList';
 import { redirect } from 'next/navigation';
 import { clientHasEuReachRegistration } from '@/lib/regulatory-registrations';

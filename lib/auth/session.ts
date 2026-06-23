@@ -1,7 +1,7 @@
 import { cache } from 'react';
 import { jwtVerify } from 'jose';
 import { cookies } from 'next/headers';
-import { createAdminClient } from '@/lib/supabase/admin';
+import { createAdminClient } from '@/lib/db/admin';
 import { SESSION_COOKIE, getAuthSecret } from '@/lib/auth/constants';
 import { SESSION_COOKIE_OPTIONS } from '@/lib/auth/cookie-options';
 import { signSessionToken } from '@/lib/auth/sign-session';

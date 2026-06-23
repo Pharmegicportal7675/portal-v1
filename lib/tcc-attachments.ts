@@ -1,4 +1,4 @@
-import type { SupabaseClient } from '@supabase/supabase-js';
+import type { DbClient } from '@/lib/db/types';
 import { CERTIFICATES_BUCKET, ensureCertificatesBucket } from '@/lib/storage';
 
 const MAX_BO_BYTES = 10 * 1024 * 1024; // 10 MB
@@ -53,7 +53,7 @@ export function validateBoAttachment(file: File): { ok: true } | { ok: false; er
 }
 
 export async function uploadBoAttachment(
-  supabase: SupabaseClient,
+  supabase: DbClient,
   file: File,
   clientId: string,
   applicationId: string

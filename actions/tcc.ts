@@ -1,6 +1,6 @@
 'use server';
 
-import { createAdminClient } from '@/lib/supabase/admin';
+import { createAdminClient } from '@/lib/db/admin';
 import { getSession } from '@/lib/auth/session';
 import {
   resolveTccCertificateDownloadFile,
@@ -643,7 +643,7 @@ async function syncQuotaForClientChemical(
     .eq('status', 'approved');
 
   const totalExported = (globalApproved || []).reduce(
-    (sum, row) => sum + Number(row.quantity_mt),
+    (sum: number, row: any) => sum + Number(row.quantity_mt),
     0
   );
 
@@ -1073,7 +1073,7 @@ export async function processTccAction(
 
       const reachCert =
         (app.reach_certificate_id
-          ? (reachCerts || []).find((c) => c.id === app.reach_certificate_id)
+          ? (reachCerts || []).find((c: any) => c.id === app.reach_certificate_id)
           : null) ||
         findReachCertificateForExportDate(reachCerts || [], app.chemical_id, app.export_date);
 

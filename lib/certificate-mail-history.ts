@@ -1,4 +1,4 @@
-import type { SupabaseClient } from '@supabase/supabase-js';
+import type { DbClient } from '@/lib/db/types';
 
 export const REACH_MAIL_LOG_ACTIONS = [
   'REACH_CERTIFICATE_EMAIL_SENT',
@@ -34,7 +34,7 @@ export function resolveMailSentHistoryFallback(cert: {
 }
 
 export async function loadCertificateMailSentHistory(
-  supabase: SupabaseClient,
+  supabase: DbClient,
   certificateId: string,
   cert: {
     mail_sent_at?: string | null;
@@ -54,7 +54,7 @@ export async function loadCertificateMailSentHistory(
     .order('created_at', { ascending: true });
 
   if (logs && logs.length > 0) {
-    return logs.map((log) => log.created_at).filter(Boolean);
+    return logs.map((log: any) => log.created_at).filter(Boolean);
   }
 
   return resolveMailSentHistoryFallback(cert);

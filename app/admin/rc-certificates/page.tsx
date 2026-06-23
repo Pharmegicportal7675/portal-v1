@@ -1,5 +1,5 @@
 import { redirect } from 'next/navigation';
-import { createAdminClient } from '@/lib/supabase/admin';
+import { createAdminClient } from '@/lib/db/admin';
 import { getSession } from '@/lib/auth/session';
 import { REACH_CERTIFICATE_TYPE } from '@/lib/reach-certificate';
 import RcCertificatesDashboard from '@/components/RcCertificatesDashboard';
@@ -84,7 +84,7 @@ export default async function AdminRcCertificatesPage() {
     clients: Array.isArray(row.clients) ? row.clients[0] : row.clients,
   }));
 
-  const normalized = (certificates || []).map((row) => ({
+  const normalized = (certificates || []).map((row: any) => ({
     ...row,
     clients: Array.isArray(row.clients) ? row.clients[0] : row.clients,
     chemicals: Array.isArray(row.chemicals) ? row.chemicals[0] : row.chemicals,

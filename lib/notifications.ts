@@ -1,4 +1,4 @@
-import type { SupabaseClient } from '@supabase/supabase-js';
+import type { DbClient } from '@/lib/db/types';
 
 export type NotificationRow = {
   id: string;
@@ -10,7 +10,7 @@ export type NotificationRow = {
 };
 
 export async function notifyUser(
-  supabase: SupabaseClient,
+  supabase: DbClient,
   userId: string,
   title: string,
   message: string,
@@ -27,7 +27,7 @@ export async function notifyUser(
 }
 
 export async function notifyAllAdmins(
-  supabase: SupabaseClient,
+  supabase: DbClient,
   title: string,
   message: string,
   link?: string | null
@@ -40,7 +40,7 @@ export async function notifyAllAdmins(
   if (fetchErr) throw fetchErr;
   if (!admins?.length) return;
 
-  const rows = admins.map((a) => ({
+  const rows = admins.map((a: any) => ({
     user_id: a.id,
     title,
     message,

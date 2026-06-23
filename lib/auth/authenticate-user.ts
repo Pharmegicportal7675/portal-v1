@@ -1,4 +1,4 @@
-import { createAdminClient } from '@/lib/supabase/admin';
+import { createAdminClient } from '@/lib/db/admin';
 import { verifyPassword } from '@/lib/auth/password';
 import { loginSchema } from '@/lib/validations';
 import type { SessionPayload } from '@/lib/auth/session';

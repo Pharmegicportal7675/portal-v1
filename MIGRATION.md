@@ -1,25 +1,18 @@
-# Pharmegic Portal — Hostinger MySQL Migration
+# Pharmegic Portal — Hostinger MySQL
 
 ## Database
 
 - **Provider:** MySQL on Hostinger (`DATABASE_URL`)
 - **ORM:** Prisma (`prisma/schema.prisma`)
-- **Compatibility layer:** `lib/db/supabase-compat.ts` — existing code keeps `supabase.from()` calls unchanged
+- **Query client:** `lib/db/query-client.ts` — chainable `.from()` API used across the app
 
 ## Auth
 
-Custom JWT session (`lib/auth/session.ts`) — **not** Supabase Auth. No auth changes required.
+Custom JWT session (`lib/auth/session.ts`). No external auth provider.
 
 ## Storage
 
 Certificate files: `public/uploads/certificates/` (served at `/uploads/certificates/`)
-
-## One-time data migration from Supabase
-
-```bash
-# Set SUPABASE_DATABASE_URL (PostgreSQL) and DATABASE_URL (MySQL) in .env
-npm run db:migrate-from-supabase
-```
 
 ## Hostinger deploy settings
 
@@ -35,5 +28,12 @@ npm run db:migrate-from-supabase
 
 ```bash
 npm install
+npm run db:import   # first time only
 npm run dev
+```
+
+## Admin seed
+
+```bash
+npx tsx scripts/seed-admins.js
 ```

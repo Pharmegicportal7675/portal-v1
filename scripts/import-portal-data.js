@@ -13,7 +13,6 @@ const fs = require('fs');
 const path = require('path');
 const bcrypt = require('bcryptjs');
 const XLSX = require('xlsx');
-const { createClient } = require('@supabase/supabase-js');
 
 require('dotenv').config({ path: path.join(process.cwd(), '.env.local') });
 require('dotenv').config();
@@ -77,15 +76,9 @@ function normalizeTonnage(value) {
   return band.replace(/\s+/g, '');
 }
 
-function createAdminClient() {
-  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
-  const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE;
-  if (!supabaseUrl || !serviceRoleKey) {
-    throw new Error('NEXT_PUBLIC_SUPABASE_URL and SUPABASE_SERVICE_ROLE are required in .env.local');
-  }
-  return createClient(supabaseUrl, serviceRoleKey, {
-    auth: { autoRefreshToken: false, persistSession: false },
-  });
+async function createAdminClient() {
+  const { createAdminClient: createDb } = await import('./lib/db-client.mjs');
+  return createDb();
 }
 
 function readWorkbook(filePath) {
@@ -330,7 +323,7 @@ async function main() {
 
   const { sheet1, sheet2 } = readWorkbook(filePath);
   const clientRecords = buildClientRecords(sheet1, sheet2);
-  const adminSupabase = createAdminClient();
+  const adminSupabase = await createAdminClient();
   const existingClients = await loadExistingClients(adminSupabase);
   const chemicalByCas = await loadExistingChemicals(adminSupabase);
   const usedEmails = new Set(existingClients.byEmail);

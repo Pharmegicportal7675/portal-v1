@@ -1,4 +1,4 @@
-import type { SupabaseClient } from '@supabase/supabase-js';
+import type { DbClient } from '@/lib/db/types';
 import { Prisma } from '@/generated/prisma';
 import { prisma } from '@/lib/prisma';
 import { createLocalStorage } from '@/lib/db/local-storage';
@@ -41,10 +41,22 @@ function toError(err: unknown): DbError {
   return { message: 'Unknown database error' };
 }
 
+function isDecimal(value: unknown): value is Prisma.Decimal {
+  if (value instanceof Prisma.Decimal) return true;
+  return (
+    typeof value === 'object' &&
+    value !== null &&
+    'd' in value &&
+    'e' in value &&
+    's' in value &&
+    typeof (value as { toNumber?: unknown }).toNumber === 'function'
+  );
+}
+
 function serializeValue(value: unknown): unknown {
   if (value === null || value === undefined) return value;
   if (typeof value === 'bigint') return Number(value);
-  if (value instanceof Prisma.Decimal) return Number(value);
+  if (isDecimal(value)) return Number(value);
   if (value instanceof Date) return value.toISOString();
   if (Array.isArray(value)) return value.map(serializeValue);
   if (typeof value === 'object') {
@@ -69,6 +81,10 @@ function serializeRow(row: Record<string, unknown>): Record<string, unknown> {
       continue;
     }
     const alias = RELATION_ALIASES[key] ?? key;
+    if (isDecimal(value)) {
+      out[alias] = Number(value);
+      continue;
+    }
     if (value && typeof value === 'object' && !Array.isArray(value) && !(value instanceof Date)) {
       out[alias] = serializeRow(value as Record<string, unknown>);
     } else if (Array.isArray(value)) {
@@ -86,6 +102,7 @@ type Filter =
   | { kind: 'eq'; field: string; value: unknown }
   | { kind: 'neq'; field: string; value: unknown }
   | { kind: 'in'; field: string; value: unknown[] }
+  | { kind: 'ilike'; field: string; pattern: string }
   | { kind: 'or'; expr: string }
   | { kind: 'is'; field: string; value: null };
 
@@ -115,6 +132,7 @@ function buildWhere(filters: Filter[]): Record<string, unknown> {
     if (filter.kind === 'eq') where[filter.field] = filter.value;
     if (filter.kind === 'neq') where[filter.field] = { not: filter.value };
     if (filter.kind === 'in') where[filter.field] = { in: filter.value };
+    if (filter.kind === 'ilike') where[filter.field] = { contains: filter.pattern, mode: 'insensitive' };
     if (filter.kind === 'is' && filter.value === null) where[filter.field] = null;
     if (filter.kind === 'or') orGroups.push(parseOrExpression(filter.expr));
   }
@@ -181,26 +199,36 @@ function parseSelectContent(
   return result;
 }
 
+function toPrismaRelationShape(
+  parsed: { select?: Record<string, boolean>; include?: Record<string, unknown> }
+): Record<string, unknown> | boolean {
+  const hasSelect = parsed.select && Object.keys(parsed.select).length > 0;
+  const hasInclude = parsed.include && Object.keys(parsed.include).length > 0;
+
+  if (hasSelect && hasInclude) {
+    // Prisma forbids select + include at the same level — nest relations inside select.
+    const select: Record<string, unknown> = { ...parsed.select };
+    for (const [key, val] of Object.entries(parsed.include!)) {
+      select[key] = val;
+    }
+    return { select };
+  }
+
+  if (hasInclude) return { include: parsed.include };
+  if (hasSelect) return { select: parsed.select };
+  return true;
+}
+
 function buildRelationInclude(
   fields: string,
   table: string,
-  relationName: string
+  _relationName: string
 ): Record<string, unknown> | boolean {
   const trimmed = fields.trim();
   if (trimmed === '*') return true;
 
   if (trimmed.includes('(')) {
-    const parsed = parseSelectContent(trimmed, table);
-    if (parsed.select && parsed.include) {
-      return { select: parsed.select, include: parsed.include };
-    }
-    if (parsed.include && Object.keys(parsed.include).length > 0) {
-      return { include: parsed.include };
-    }
-    if (parsed.select) {
-      return { select: parsed.select };
-    }
-    return true;
+    return toPrismaRelationShape(parseSelectContent(trimmed, table));
   }
 
   const fieldSelect = parseFieldsList(trimmed);
@@ -229,7 +257,7 @@ function parseRelationSegment(segment: string): { name: string; hint?: string; f
 function parseSelect(
   select: string,
   table: string
-): { include?: Record<string, unknown>; select?: Record<string, boolean> } {
+): { include?: Record<string, unknown>; select?: Record<string, unknown> } {
   const trimmed = select.trim();
   if (trimmed === '*') return {};
 
@@ -243,8 +271,19 @@ function parseSelect(
     }
   }
 
+  const hasLeadingStar = /^\*,/.test(trimmed) || /^\*\n/.test(trimmed);
+
+  // e.g. "id, client_id, clients ( company_name )" — top-level select, not include
+  if (!hasLeadingStar) {
+    const shape = toPrismaRelationShape(parseSelectContent(trimmed, table));
+    if (shape === true) return {};
+    if (typeof shape === 'object' && 'select' in shape) return { select: shape['select'] as Record<string, unknown> };
+    if (typeof shape === 'object' && 'include' in shape) return { include: shape['include'] as Record<string, unknown> };
+    return {};
+  }
+
   const include: Record<string, unknown> = {};
-  const top = trimmed.replace(/^\*,\s*/s, '');
+  const top = trimmed.replace(/^\*,\s*/, '');
 
   for (const segment of splitTopLevelSegments(top)) {
     const { name, hint, fields } = parseRelationSegment(segment);
@@ -266,6 +305,7 @@ function getDelegate(table: string) {
     count: (args?: unknown) => Promise<number>;
     create: (args: unknown) => Promise<unknown>;
     createMany: (args: unknown) => Promise<unknown>;
+    upsert: (args: unknown) => Promise<unknown>;
     update: (args: unknown) => Promise<unknown>;
     updateMany: (args: unknown) => Promise<unknown>;
     delete: (args: unknown) => Promise<unknown>;
@@ -280,8 +320,9 @@ class QueryBuilder {
   private take?: number;
   private selectStr = '*';
   private countOnly = false;
-  private mode: 'select' | 'insert' | 'update' | 'delete' = 'select';
+  private mode: 'select' | 'insert' | 'update' | 'delete' | 'upsert' = 'select';
   private payload: unknown;
+  private upsertConflictField?: string;
   private wantSingle = false;
   private wantMaybeSingle = false;
   private returning = false;
@@ -302,6 +343,13 @@ class QueryBuilder {
   insert(payload: unknown) {
     this.mode = 'insert';
     this.payload = payload;
+    return this;
+  }
+
+  upsert(payload: unknown, options?: { onConflict?: string }) {
+    this.mode = 'upsert';
+    this.payload = payload;
+    this.upsertConflictField = options?.onConflict;
     return this;
   }
 
@@ -328,6 +376,11 @@ class QueryBuilder {
 
   in(field: string, value: unknown[]) {
     this.filters.push({ kind: 'in', field, value });
+    return this;
+  }
+
+  ilike(field: string, pattern: string) {
+    this.filters.push({ kind: 'ilike', field, pattern });
     return this;
   }
 
@@ -397,6 +450,15 @@ class QueryBuilder {
         return { data: rows, error: null };
       }
 
+      if (this.mode === 'upsert') {
+        const data = this.payload as Record<string, unknown>;
+        const conflictField = this.upsertConflictField ?? 'id';
+        const conflictValue = data[conflictField];
+        const upsertWhere = { [conflictField]: conflictValue };
+        const upserted = await delegate.upsert({ where: upsertWhere, create: data, update: data });
+        return { data: serializeRow(upserted as Record<string, unknown>), error: null };
+      }
+
       if (this.mode === 'update') {
         const id = where.id;
         if (id !== undefined) {
@@ -457,7 +519,7 @@ class QueryBuilder {
   }
 }
 
-export function createCompatClient(): SupabaseClient {
+export function createDbClient(): DbClient {
   const storage = createLocalStorage();
   const client = {
     from: (table: string) => new QueryBuilder(table),
@@ -467,5 +529,5 @@ export function createCompatClient(): SupabaseClient {
       signOut: async () => ({ error: null }),
     },
   };
-  return client as unknown as SupabaseClient;
+  return client as unknown as DbClient;
 }

@@ -12,7 +12,6 @@ const fs = require('fs');
 const path = require('path');
 const bcrypt = require('bcryptjs');
 const XLSX = require('xlsx');
-const { createClient } = require('@supabase/supabase-js');
 
 require('dotenv').config({ path: path.join(process.cwd(), '.env.local') });
 require('dotenv').config();
@@ -142,15 +141,9 @@ function readExcelRows(filePath) {
   return { sheetName, clients };
 }
 
-function createAdminClient() {
-  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
-  const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE;
-  if (!supabaseUrl || !serviceRoleKey) {
-    throw new Error('NEXT_PUBLIC_SUPABASE_URL and SUPABASE_SERVICE_ROLE are required in .env.local');
-  }
-  return createClient(supabaseUrl, serviceRoleKey, {
-    auth: { autoRefreshToken: false, persistSession: false },
-  });
+async function createAdminClient() {
+  const { createAdminClient: createDb } = await import('./lib/db-client.mjs');
+  return createDb();
 }
 
 async function importClient(adminSupabase, client, dryRun) {
@@ -239,7 +232,7 @@ async function main() {
   console.log(dryRun ? 'Mode: DRY RUN (no database changes)' : 'Mode: IMPORT');
   console.log('---');
 
-  const adminSupabase = createAdminClient();
+  const adminSupabase = await createAdminClient();
   const summary = { created: 0, skipped: 0, failed: 0 };
 
   for (const client of clients) {

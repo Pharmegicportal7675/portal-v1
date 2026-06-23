@@ -1,7 +1,6 @@
 const path = require('path');
 const bcrypt = require('bcryptjs');
 const XLSX = require('xlsx');
-const { createClient } = require('@supabase/supabase-js');
 
 require('dotenv').config({ path: path.join(process.cwd(), '.env.local') });
 require('dotenv').config();
@@ -65,13 +64,8 @@ async function main() {
     throw new Error('Usage: node scripts/add-missing-clients-from-portal-sheet2.js "<excel-path>"');
   }
 
-  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
-  const serviceRole = process.env.SUPABASE_SERVICE_ROLE;
-  if (!supabaseUrl || !serviceRole) throw new Error('Missing Supabase env variables.');
-
-  const supabase = createClient(supabaseUrl, serviceRole, {
-    auth: { autoRefreshToken: false, persistSession: false },
-  });
+  const { createAdminClient } = await import('./lib/db-client.mjs');
+  const supabase = await createAdminClient();
 
   const sheet2Clients = loadSheet2Records(inputPath);
   const { data: existingClients, error: clientLoadErr } = await supabase

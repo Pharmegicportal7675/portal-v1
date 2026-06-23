@@ -1,4 +1,4 @@
-import type { SupabaseClient } from '@supabase/supabase-js';
+import type { DbClient } from '@/lib/db/types';
 import { buildTccSmtpConfig } from '@/lib/certificate-smtp-settings';
 import { parseEmailList } from '@/lib/certificate-email-recipients';
 import { sendTccApplicationNotificationEmail } from '@/services/email';
@@ -43,7 +43,7 @@ export function validateTccNotificationEmails(raw?: string | null): string | nul
 }
 
 export async function notifyTccApplicationByEmail(
-  adminSupabase: SupabaseClient,
+  adminSupabase: DbClient,
   details: TccApplicationNotificationDetails
 ): Promise<void> {
   const [{ data: settings }, { data: template }] = await Promise.all([
