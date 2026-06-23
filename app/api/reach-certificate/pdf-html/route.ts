@@ -1,15 +1,16 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createAdminClient } from '@/lib/db/admin';
 import { getSession } from '@/lib/auth/session';
-import { generateReachCertificateHtmlPdf } from '@/lib/reach-certificate-html-pdf-server';
+import { formatErrorMessage } from '@/lib/format-error';
+import { resolveReachCertificateDownloadFile } from '@/lib/reach-certificate-pdf';
 import {
   loadReachCertificateInputByCertificateId,
   loadReachCertificateInputByClientChemical,
   parseReachTonnageBandParam,
 } from '@/lib/reach-certificate-api-input';
-import { isReachPuppeteerPdfAvailable } from '@/services/reach-certificate-puppeteer-pdf';
+import { isReachCertificateType } from '@/lib/reach-certificate';
 
-/** Server-side HTML → PDF (Puppeteer) — same layout as on-screen certificate preview. */
+/** Server-side RC certificate PDF — stored file first, then HTML/DOCX generation. */
 export const runtime = 'nodejs';
 export const maxDuration = 60;
 
@@ -24,39 +25,43 @@ function pdfResponse(buffer: Buffer, fileName: string) {
   });
 }
 
-/** Server-side HTML → PDF (Puppeteer) — same layout as on-screen certificate preview. */
 export async function GET(request: NextRequest) {
-  const session = await getSession();
-  if (!session) {
-    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-  }
-
-  if (!isReachPuppeteerPdfAvailable()) {
-    return NextResponse.json(
-      { error: 'HTML PDF generation is disabled on this server.' },
-      { status: 503 }
-    );
-  }
-
-  const { searchParams } = new URL(request.url);
-  const certificateId = searchParams.get('certificateId');
-  const adminSupabase = createAdminClient();
-
   try {
+    const session = await getSession();
+    if (!session) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
+
+    const { searchParams } = new URL(request.url);
+    const certificateId = searchParams.get('certificateId');
+    const adminSupabase = createAdminClient();
+
     if (certificateId) {
+      const { data: cert, error: certError } = await adminSupabase
+        .from('certificates')
+        .select('id, client_id, certificate_number, file_url, type')
+        .eq('id', certificateId)
+        .single();
+
+      if (certError || !cert || !isReachCertificateType(cert)) {
+        return NextResponse.json({ error: 'RC certificate not found.' }, { status: 404 });
+      }
+
+      const isAdmin = session.role === 'MASTER_ADMIN' || session.role === 'SUPER_ADMIN';
+      const isOwner = session.role === 'CLIENT' && session.clientId === cert.client_id;
+      if (!isAdmin && !isOwner) {
+        return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+      }
+
       const input = await loadReachCertificateInputByCertificateId(adminSupabase, certificateId);
       if (!input) {
         return NextResponse.json({ error: 'RC certificate not found.' }, { status: 404 });
       }
 
-      const isAdmin = session.role === 'MASTER_ADMIN' || session.role === 'SUPER_ADMIN';
-      const isOwner = session.role === 'CLIENT' && session.clientId === input.clientId;
-      if (!isAdmin && !isOwner) {
-        return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-      }
-
-      const pdfBuffer = await generateReachCertificateHtmlPdf(input);
-      return pdfResponse(pdfBuffer, `${input.certificateNumber}.pdf`);
+      const file = await resolveReachCertificateDownloadFile(adminSupabase, input, {
+        fileUrl: cert.file_url,
+      });
+      return pdfResponse(file.buffer, file.fileName);
     }
 
     if (session.role !== 'MASTER_ADMIN' && session.role !== 'SUPER_ADMIN') {
@@ -85,11 +90,23 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: 'Client substance not found.' }, { status: 404 });
     }
 
-    const pdfBuffer = await generateReachCertificateHtmlPdf(input);
-    return pdfResponse(pdfBuffer, `${input.certificateNumber}.pdf`);
+    const { data: existingCert } = await adminSupabase
+      .from('certificates')
+      .select('file_url')
+      .eq('client_id', clientId)
+      .eq('chemical_id', chemicalId)
+      .eq('type', 'REACH')
+      .order('issued_at', { ascending: false })
+      .limit(1)
+      .maybeSingle();
+
+    const file = await resolveReachCertificateDownloadFile(adminSupabase, input, {
+      fileUrl: existingCert?.file_url,
+    });
+    return pdfResponse(file.buffer, file.fileName);
   } catch (err: unknown) {
-    const message =
-      err instanceof Error ? err.message : 'Certificate PDF generation failed.';
+    console.error('[reach-certificate/pdf-html]', err);
+    const message = formatErrorMessage(err) || 'Certificate PDF generation failed.';
     return NextResponse.json({ error: message }, { status: 503 });
   }
 }

@@ -1,6 +1,6 @@
 'use client';
 
-import { createClientAction, updateClientWizardAction } from '@/actions/clients';
+import { createClientAction, updateClientWizardAction } from '@/actions/client-wizard';
 import { formatErrorMessage } from '@/lib/format-error';
 import { formatMobileNumberInput, getMobileNumberError } from '@/lib/mobile-number';
 import { Button } from './ui/Button';

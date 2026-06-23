@@ -13,9 +13,10 @@ const JSON_FIELDS = new Set([
 ]);
 
 const DATE_ONLY_PATTERN = /^\d{4}-\d{2}-\d{2}$/;
+const DATE_FIELD_PATTERN = /(_at|_date)$/;
 
 /** Prisma DateTime/@db.Date fields reject bare YYYY-MM-DD — convert for MySQL writes. */
-function toPrismaDateTime(value: unknown): unknown {
+function toPrismaDateTime(value: unknown, fieldKey?: string): unknown {
   if (value === null || value === undefined) return value;
   if (value instanceof Date) return value;
   if (typeof value === 'string') {
@@ -24,6 +25,13 @@ function toPrismaDateTime(value: unknown): unknown {
     if (DATE_ONLY_PATTERN.test(trimmed)) {
       return new Date(`${trimmed}T00:00:00.000Z`);
     }
+    const parsed = Date.parse(trimmed);
+    if (
+      !Number.isNaN(parsed) &&
+      (trimmed.includes('T') || (fieldKey ? DATE_FIELD_PATTERN.test(fieldKey) : false))
+    ) {
+      return new Date(parsed);
+    }
   }
   return value;
 }
@@ -31,7 +39,7 @@ function toPrismaDateTime(value: unknown): unknown {
 function prepareValueForWrite(key: string, value: unknown): unknown {
   if (value === null || value === undefined) return value;
 
-  const dateValue = toPrismaDateTime(value);
+  const dateValue = toPrismaDateTime(value, key);
   if (dateValue !== value) return dateValue;
 
   if (JSON_FIELDS.has(key) && typeof value !== 'string') {
@@ -490,8 +498,12 @@ class QueryBuilder {
           const data = serializeRow(created as Record<string, unknown>);
           return { data: this.wantSingle || this.wantMaybeSingle ? data : [data], error: null };
         }
-        await delegate.createMany({ data: rows });
-        return { data: rows, error: null };
+        const createdRows: Record<string, unknown>[] = [];
+        for (const row of rows) {
+          const created = await delegate.create({ data: row });
+          createdRows.push(serializeRow(created as Record<string, unknown>));
+        }
+        return { data: createdRows, error: null };
       }
 
       if (this.mode === 'upsert') {

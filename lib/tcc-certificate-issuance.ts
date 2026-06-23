@@ -178,36 +178,40 @@ export async function reconcileMissingTccCertificates(supabase: DbClient): Promi
     const hasCert = Array.isArray(certs) ? certs.length > 0 : Boolean(certs);
     if (hasCert) continue;
 
-    let registrationNumber: string | null = null;
-    if (app.reach_certificate_id) {
-      const { data: reachCert } = await supabase
-        .from('certificates')
-        .select('registration_number')
-        .eq('id', app.reach_certificate_id)
-        .maybeSingle();
-      registrationNumber = reachCert?.registration_number ?? null;
+    try {
+      let registrationNumber: string | null = null;
+      if (app.reach_certificate_id) {
+        const { data: reachCert } = await supabase
+          .from('certificates')
+          .select('registration_number')
+          .eq('id', app.reach_certificate_id)
+          .maybeSingle();
+        registrationNumber = reachCert?.registration_number ?? null;
+      }
+
+      const issueDateIso = app.certificate_issue_date
+        ? String(app.certificate_issue_date).split('T')[0]
+        : app.updated_at
+          ? new Date(app.updated_at).toISOString().split('T')[0]
+          : new Date().toISOString().split('T')[0];
+
+      if (!app.certificate_issue_date) {
+        await supabase
+          .from('tcc_applications')
+          .update({ certificate_issue_date: issueDateIso })
+          .eq('id', app.id);
+      }
+
+      await upsertTccCertificateForApplication(supabase, {
+        application: app,
+        issueDateIso,
+        registrationNumber,
+      });
+
+      repaired += 1;
+    } catch (error) {
+      console.error(`[tcc-reconcile] Failed for application ${app.id}:`, error);
     }
-
-    const issueDateIso = app.certificate_issue_date
-      ? String(app.certificate_issue_date).split('T')[0]
-      : app.updated_at
-        ? new Date(app.updated_at).toISOString().split('T')[0]
-        : new Date().toISOString().split('T')[0];
-
-    if (!app.certificate_issue_date) {
-      await supabase
-        .from('tcc_applications')
-        .update({ certificate_issue_date: issueDateIso })
-        .eq('id', app.id);
-    }
-
-    await upsertTccCertificateForApplication(supabase, {
-      application: app,
-      issueDateIso,
-      registrationNumber,
-    });
-
-    repaired += 1;
   }
 
   return repaired;

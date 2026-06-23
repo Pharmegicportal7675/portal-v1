@@ -1,5 +1,4 @@
 import { createAdminClient } from '@/lib/db/admin';
-import { reconcileMissingTccCertificates } from '@/lib/tcc-certificate-issuance';
 import { getTccApplications } from '@/services/db';
 import ApprovalsDashboard from '@/components/ApprovalsDashboard';
 
@@ -7,8 +6,6 @@ export const revalidate = 0; // Live updates for admin approvals
 
 export default async function ApprovalsPage() {
   const supabase = createAdminClient();
-
-  await reconcileMissingTccCertificates(supabase);
 
   const [applications, { data: adminSettings }] = await Promise.all([
     getTccApplications(supabase, 'all', { euReachOnly: true }),

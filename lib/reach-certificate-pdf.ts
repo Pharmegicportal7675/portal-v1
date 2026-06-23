@@ -3,6 +3,7 @@ import { buildReachDocxData } from '@/lib/reach-pdf-data';
 import type { ReachCertPdfInput } from '@/lib/reach-certificate-preview';
 import { generateReachCertificateHtmlPdf } from '@/lib/reach-certificate-html-pdf-server';
 import type { LoadedReachCertificateInput } from '@/lib/reach-certificate-api-input';
+import { loadReachCertificateStoredPdf } from '@/lib/reach-certificate-storage';
 import { convertReachDocxToPdf, generateReachCertificateDocx } from '@/services/reach-certificate-docx';
 
 const PDF_CONTENT_TYPE = 'application/pdf';
@@ -25,11 +26,26 @@ function buildFreshReachDocx(input: ReachCertPdfInput): Buffer {
   );
 }
 
-/** Always builds a PDF from the HTML certificate template — throws when generation unavailable. */
+/** Builds a PDF — prefers stored upload, then HTML/Puppeteer, then DOCX conversion. */
 export async function resolveReachCertificateDownloadFile(
   supabase: DbClient,
-  input: ReachCertPdfInput & LoadedReachCertificateInput
+  input: ReachCertPdfInput & LoadedReachCertificateInput,
+  options?: { fileUrl?: string | null }
 ): Promise<ReachCertificateDownloadFile> {
+  const stored = await loadReachCertificateStoredPdf(
+    supabase,
+    input.certificateNumber,
+    options?.fileUrl
+  );
+  if (stored) {
+    return {
+      buffer: stored.buffer,
+      contentType: PDF_CONTENT_TYPE,
+      fileName: stored.fileName,
+      format: 'pdf',
+    };
+  }
+
   try {
     const pdfBuffer = await generateReachCertificateHtmlPdf(input);
     return {

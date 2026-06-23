@@ -9,6 +9,9 @@ export function formatErrorMessage(err: unknown): string {
     const record = err as Record<string, unknown>;
     if (typeof record.message === 'string' && record.message.trim()) {
       const msg = record.message;
+      if (msg.includes('pool timeout')) {
+        return 'Database connection timed out. Check DATABASE_URL uses 127.0.0.1 on Hostinger, then redeploy.';
+      }
       if (msg.includes('client_chemicals_assigned_by_fkey') || msg.includes('is not present in table "users"')) {
         return 'Your login session is out of date. Please log out, log in again, then retry.';
       }

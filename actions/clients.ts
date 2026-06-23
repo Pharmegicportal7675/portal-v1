@@ -6,12 +6,11 @@ import { hashPassword } from '@/lib/auth/password';
 import { formatErrorMessage } from '@/lib/format-error';
 import { normalizeDateInput, normalizeOptionalDateInput } from '@/lib/parse-flexible-date';
 import { getTonnageBandMaxQuota, sumApprovedExports, sumApprovedExportsInReachWindow, getRemainingQuotaForReachPeriod, computeAssignableQuota, type TccExportRecord } from '@/lib/quota';
-import { createReachCertificate, deleteAllReachCertificatesForClientChemical } from '@/actions/reach';
 import {
   clientHasEuReachRegistration,
   EU_REACH_CERTIFICATE_REQUIRED_MESSAGE,
 } from '@/lib/regulatory-registrations';
-import { clientWizardSchema, clientWizardEditSchema, internalNoteSchema, changeEmailSchema, changePasswordSchema } from '@/lib/validations';
+import { internalNoteSchema, changeEmailSchema, changePasswordSchema } from '@/lib/validations';
 import { revalidatePath } from 'next/cache';
 
 // ============================================================================
@@ -38,111 +37,6 @@ async function getClientYearExportedMt(
     .eq('status', 'approved');
 
   return sumApprovedExports(data || [], chemicalId);
-}
-
-// ============================================================================
-// CREATE CLIENT
-// ============================================================================
-export async function createClientAction(prevState: unknown, data: unknown) {
-  const session = await requireAdmin();
-  if (!session) return { success: false, error: 'Unauthorized. Admins only.' };
-
-  const parsed = clientWizardSchema.safeParse(data);
-  if (!parsed.success) {
-    return { success: false, error: parsed.error.issues[0].message };
-  }
-
-  const adminSupabase = createAdminClient();
-  const { profile, contacts } = parsed.data;
-
-  try {
-    // 1. Check email uniqueness
-    const { data: existing } = await adminSupabase
-      .from('clients')
-      .select('id')
-      .eq('email', profile.email.toLowerCase())
-      .maybeSingle();
-    if (existing) return { success: false, error: 'A client with this email already exists.' };
-
-    // 2. Hash password
-    const password_hash = await hashPassword(profile.password);
-
-    // 3. Create client record
-    const { data: client, error: clientError } = await adminSupabase
-      .from('clients')
-      .insert({
-        company_name: profile.company_name,
-        legal_name: null,
-        registration_number: null,
-        uuid_number: profile.uuid_number.trim(),
-        owner_name: profile.owner_name || null,
-        email: profile.email.toLowerCase(),
-        phone: profile.phone || null,
-        primary_contact_first_name: profile.primary_contact_first_name,
-        primary_contact_last_name: profile.primary_contact_last_name,
-        cc_emails: profile.cc_emails || null,
-        cc_phones: profile.cc_phones || null,
-        address: profile.address.trim(),
-        city: profile.city.trim(),
-        state: profile.state.trim(),
-        country: profile.country.trim(),
-        postal_code: profile.postal_code.trim(),
-        status: profile.status,
-        regulatory_registrations: profile.regulatory_registrations,
-      })
-      .select()
-      .single();
-
-    if (clientError || !client) throw clientError || new Error('Failed to create client');
-
-    // 4. Create user login record
-    const { data: user, error: userError } = await adminSupabase
-      .from('users')
-      .insert({
-        email: profile.email.toLowerCase(),
-        password_hash,
-        login_password: profile.password,
-        role: 'CLIENT',
-        client_id: client.id,
-        is_disabled: false,
-      })
-      .select()
-      .single();
-
-    if (userError || !user) {
-      await adminSupabase.from('clients').delete().eq('id', client.id);
-      throw userError || new Error('Failed to create user login record');
-    }
-
-    // 5. Insert secondary contacts
-    if (contacts.length > 0) {
-      const contactRows = contacts.map((c) => ({
-        client_id: client.id,
-        first_name: c.first_name,
-        last_name: c.last_name,
-        email: c.email,
-        phone: c.phone || null,
-        role: c.role || null,
-      }));
-      await adminSupabase.from('client_contacts').insert(contactRows);
-    }
-
-    // 6. Activity log
-    await adminSupabase.from('activity_logs').insert({
-      client_id: client.id,
-      user_id: session.userId,
-      action: 'CLIENT_CREATED',
-      entity_type: 'clients',
-      entity_id: client.id,
-      description: `Client ${client.company_name} created by admin`,
-    });
-
-    revalidatePath('/admin/clients');
-    return { success: true, message: 'Client created and login credentials set successfully.', clientId: client.id };
-  } catch (err) {
-    console.error('[CLIENT CREATE ERROR]:', err);
-    return { success: false, error: formatErrorMessage(err) };
-  }
 }
 
 // ============================================================================
@@ -196,69 +90,6 @@ export async function updateClientAction(clientId: string, profile: Record<strin
   } catch (err) {
     const message = err instanceof Error ? err.message : String(err);
     return { success: false, error: message };
-  }
-}
-
-export async function updateClientWizardAction(
-  clientId: string,
-  data: unknown
-) {
-  const session = await requireAdmin();
-  if (!session) return { success: false, error: 'Unauthorized.' };
-
-  const parsed = clientWizardEditSchema.safeParse(data);
-  if (!parsed.success) {
-    return { success: false, error: parsed.error.issues[0].message };
-  }
-
-  const adminSupabase = createAdminClient();
-  const { profile, contacts } = parsed.data;
-
-  try {
-    const { password: _password, ...clientProfile } = profile;
-
-    const { error } = await adminSupabase
-      .from('clients')
-      .update({
-        ...clientProfile,
-        email: profile.email.toLowerCase(),
-        updated_at: new Date().toISOString(),
-      })
-      .eq('id', clientId);
-
-    if (error) throw error;
-
-    await adminSupabase.from('client_contacts').delete().eq('client_id', clientId);
-
-    if (contacts.length > 0) {
-      const contactRows = contacts.map((contact) => ({
-        client_id: clientId,
-        first_name: contact.first_name,
-        last_name: contact.last_name,
-        email: contact.email,
-        phone: contact.phone || null,
-        role: contact.role || null,
-      }));
-      const { error: contactError } = await adminSupabase.from('client_contacts').insert(contactRows);
-      if (contactError) throw contactError;
-    }
-
-    await adminSupabase.from('activity_logs').insert({
-      client_id: clientId,
-      user_id: session.userId,
-      action: 'CLIENT_UPDATED',
-      entity_type: 'clients',
-      entity_id: clientId,
-      description: 'Client profile and contacts updated by admin',
-    });
-
-    revalidatePath(`/admin/clients/${clientId}`);
-    revalidatePath(`/admin/clients/${clientId}/edit`);
-    revalidatePath('/admin/clients');
-    return { success: true, message: 'Client profile updated successfully.' };
-  } catch (err) {
-    console.error('[CLIENT UPDATE ERROR]:', err);
-    return { success: false, error: formatErrorMessage(err) };
   }
 }
 
@@ -552,7 +383,9 @@ export async function addNewChemicalToClientAction(clientId: string, data: any) 
       const allocatedQty = data.available_quantity
         ? Number(data.available_quantity)
         : (allocatedBandMax ?? 0);
-      const rcResult = await createReachCertificate({
+      const rcResult = await (
+        await import('@/actions/reach')
+      ).createReachCertificate({
         clientId,
         chemicalId,
         userId: session.userId,
@@ -667,7 +500,9 @@ export async function addNewChemicalToClientAction(clientId: string, data: any) 
     const allocatedQtyNew = data.available_quantity
       ? Number(data.available_quantity)
       : (bandMaxNew ?? 0);
-    const rcResult = await createReachCertificate({
+    const rcResult = await (
+      await import('@/actions/reach')
+    ).createReachCertificate({
       clientId,
       chemicalId,
       userId: session.userId,
@@ -801,7 +636,9 @@ export async function permanentDeleteClientChemicalAction(clientId: string, chem
 
   const adminSupabase = createAdminClient();
   try {
-    const deletedCertCount = await deleteAllReachCertificatesForClientChemical(
+    const deletedCertCount = await (
+      await import('@/actions/reach')
+    ).deleteAllReachCertificatesForClientChemical(
       adminSupabase,
       clientId,
       chemicalId
