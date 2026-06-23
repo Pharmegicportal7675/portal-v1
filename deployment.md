@@ -25,11 +25,27 @@ Production app: **portal.pharmegichealthcare.com**
 
 | Setting | Value |
 |---------|-------|
+| Type | **Node.js Apps** (NOT static/PHP website) |
 | Install | `npm ci` |
 | Build | `npm run build` |
-| Start | `npm run start` |
+| Start | `npm run start` (runs `node server.js`) |
+| Entry file | `server.js` |
 | Node | 22.x |
-| Output | `.next` |
+| Output directory | **leave empty** — do NOT serve `.next` as static files |
+
+### CRITICAL — if `/login` shows raw text like `:HL[...]` or `0:{"tree":`
+
+Hostinger is serving **Next.js internal RSC files** as static text instead of running the Node server.
+
+Fix in hPanel → your Node.js app → Settings:
+
+1. App type must be **Node.js** (not Website Builder / static).
+2. **Start command** must be `npm run start` (not empty).
+3. **Output directory** must be **empty** — never point the public web root at `.next`.
+4. Redeploy after saving settings.
+
+Correct: browser receives `Content-Type: text/html` with `<!DOCTYPE html>`.  
+Wrong: browser shows flight payload (`:HL`, `0:{"tree":...}`) as plain text.
 
 ### Required environment variables (hPanel)
 

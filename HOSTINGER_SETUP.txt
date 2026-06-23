@@ -23,11 +23,12 @@ AFTER PUSHING LATEST CODE, try Git again:
   3. Select atulpatoliya/Pharmegic-1
   4. Build settings:
      - Framework: Next.js (or Other)
-     - Node.js: 20
+     - Node.js: 22
      - Install: npm ci
      - Build: npm run build
      - Start: npm run start
-     - Output directory: .next
+     - Entry file: server.js
+     - Output directory: LEAVE EMPTY (do not serve .next as static files)
 
 ZIP UPLOAD (recommended if Git still fails)
 -------------------------------------------
@@ -35,7 +36,7 @@ ZIP UPLOAD (recommended if Git still fails)
 2. Upload pharmegic-hostinger-deploy.zip (project root folder)
 3. Framework: select **Next.js** or **Other**
 4. If Other:
-   - Output directory: .next
+   - Output directory: LEAVE EMPTY
    - Entry file: server.js
    - Install: npm ci
    - Build: npm run build

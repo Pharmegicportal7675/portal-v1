@@ -1,6 +1,8 @@
 import LoginForm from '@/components/LoginForm';
 import { Suspense } from 'react';
 
+export const dynamic = 'force-dynamic';
+
 export default function LoginPage() {
   return (
     <div className="flex-1 flex flex-col justify-center items-center px-4 py-12 bg-white" suppressHydrationWarning>

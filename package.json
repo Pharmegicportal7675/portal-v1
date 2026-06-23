@@ -9,7 +9,7 @@
     "dev": "next dev",
     "build": "prisma generate && next build",
     "postinstall": "prisma generate",
-    "start": "node scripts/start.mjs",
+    "start": "node server.js",
     "db:import": "prisma db execute --file prisma/database.mysql.sql --schema prisma/schema.prisma",
     "lint": "eslint",
     "import:clients": "node scripts/import-clients-from-excel.js",
