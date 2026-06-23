@@ -299,7 +299,7 @@ VALUES
 (UUID(), 'Trichloroethylene', '79-01-6', '201-167-4', '1-10 tonnes', '2026-12-31', 8.50, 1.20, 'active'),
 (UUID(), 'Dimethylformamide (DMF)', '68-12-2', '200-679-5', '100-1000 tonnes', '2027-09-15', 500.00, 0.00, 'active');
 
-INSERT IGNORE INTO users (id, email, password_hash, role, is_disabled)
+INSERT IGNORE INTO users (id, email, password_hash, login_password, role, is_disabled)
 VALUES
-(UUID(), 'atul.patoliya@gmail.com', '$2b$12$nFbwz4f2OVFV.oISYd028emI1rdc58Zoi5BxRnfXtbaKFa9D3u9pm', 'SUPER_ADMIN', 0),
-(UUID(), 'directoratulpatoliya@gmail.com', '$2b$12$oe./N.URUVDKV90AQARTieIOl0MmvZ68jX9skCUtEtTK6ppWHnxOq', 'MASTER_ADMIN', 0);
+(UUID(), 'atul.patoliya@gmail.com', '$2b$12$nFbwz4f2OVFV.oISYd028emI1rdc58Zoi5BxRnfXtbaKFa9D3u9pm', 'Admin@1234', 'SUPER_ADMIN', 0),
+(UUID(), 'directoratulpatoliya@gmail.com', '$2b$12$oe./N.URUVDKV90AQARTieIOl0MmvZ68jX9skCUtEtTK6ppWHnxOq', 'Admin@1234', 'MASTER_ADMIN', 0);

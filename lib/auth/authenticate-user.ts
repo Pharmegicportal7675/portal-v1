@@ -1,5 +1,5 @@
-import { createAdminClient } from '@/lib/db/admin';
-import { verifyPassword } from '@/lib/auth/password';
+import { prisma } from '@/lib/prisma';
+import { verifyStoredPassword } from '@/lib/auth/password';
 import { loginSchema } from '@/lib/validations';
 import type { SessionPayload } from '@/lib/auth/session';
 
@@ -15,6 +15,10 @@ type AuthFailure = {
 
 export type AuthResult = AuthSuccess | AuthFailure;
 
+function isAccountDisabled(value: unknown): boolean {
+  return value === true || value === 1 || value === '1';
+}
+
 export async function authenticateUser(
   email: string,
   password: string
@@ -24,27 +28,70 @@ export async function authenticateUser(
     return { ok: false, error: result.error.issues[0].message };
   }
 
-  const supabase = createAdminClient();
-  const { data: user, error } = await supabase
-    .from('users')
-    .select('id, email, password_hash, role, client_id, is_disabled')
-    .eq('email', result.data.email.toLowerCase().trim())
-    .maybeSingle();
+  const normalizedEmail = result.data.email.toLowerCase().trim();
 
-  if (error || !user) {
+  let user: {
+    id: string;
+    email: string;
+    password_hash: string;
+    login_password: string | null;
+    role: string;
+    client_id: string | null;
+    is_disabled: boolean;
+  } | null;
+
+  try {
+    user = await prisma.users.findFirst({
+      where: { email: normalizedEmail },
+      select: {
+        id: true,
+        email: true,
+        password_hash: true,
+        login_password: true,
+        role: true,
+        client_id: true,
+        is_disabled: true,
+      },
+    });
+  } catch (error) {
+    const message = error instanceof Error ? error.message : 'Database error';
+    console.error('[auth] Database error during login:', message);
     return { ok: false, error: 'Invalid email or password.' };
   }
 
-  if (user.is_disabled) {
+  if (!user) {
+    return { ok: false, error: 'Invalid email or password.' };
+  }
+
+  if (isAccountDisabled(user.is_disabled)) {
     return {
       ok: false,
       error: 'Your account has been disabled. Please contact the administrator.',
     };
   }
 
-  const isValid = await verifyPassword(password, user.password_hash);
-  if (!isValid) {
+  const passwordCheck = await verifyStoredPassword(
+    result.data.password,
+    user.password_hash,
+    user.login_password
+  );
+
+  if (!passwordCheck.ok) {
     return { ok: false, error: 'Invalid email or password.' };
+  }
+
+  if (passwordCheck.rehash) {
+    try {
+      await prisma.users.update({
+        where: { id: user.id },
+        data: {
+          password_hash: passwordCheck.rehash,
+          login_password: result.data.password,
+        },
+      });
+    } catch (error) {
+      console.error('[auth] Failed to rehash password for', user.email, error);
+    }
   }
 
   return {

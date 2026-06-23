@@ -19,6 +19,7 @@ async function seed() {
     const { error: superError } = await adminSupabase.from('users').insert({
       email: superEmail,
       password_hash: superHash,
+      login_password: superPass,
       role: 'SUPER_ADMIN',
       is_disabled: false,
     });
@@ -29,7 +30,10 @@ async function seed() {
     }
   } else {
     // Update password
-    await adminSupabase.from('users').update({ password_hash: superHash }).eq('email', superEmail);
+    await adminSupabase
+      .from('users')
+      .update({ password_hash: superHash, login_password: superPass })
+      .eq('email', superEmail);
     console.log(`SUPER_ADMIN (${superEmail}) password updated!`);
   }
 
@@ -48,6 +52,7 @@ async function seed() {
     const { error: masterError } = await adminSupabase.from('users').insert({
       email: masterEmail,
       password_hash: masterHash,
+      login_password: masterPass,
       role: 'MASTER_ADMIN',
       is_disabled: false,
     });
@@ -58,7 +63,10 @@ async function seed() {
     }
   } else {
     // Update password
-    await adminSupabase.from('users').update({ password_hash: masterHash }).eq('email', masterEmail);
+    await adminSupabase
+      .from('users')
+      .update({ password_hash: masterHash, login_password: masterPass })
+      .eq('email', masterEmail);
     console.log(`MASTER_ADMIN (${masterEmail}) password updated!`);
   }
 }

@@ -66,9 +66,36 @@ The Node process is **not running** or crashed after start.
 
 | Variable | Description |
 |----------|-------------|
-| `DATABASE_URL` | MySQL connection string |
+| `DATABASE_URL` | MySQL connection string (see below) |
 | `NEXT_PUBLIC_APP_URL` | `https://portal.pharmegichealthcare.com` |
 | `AUTH_SECRET` | Random secret for JWT sessions (recommended) |
+
+### DATABASE_URL — critical for login on Hostinger
+
+Local dev may use the external host (`srvXXXX.hstgr.io`). **The Node app on Hostinger must use the internal host** from hPanel → Databases → MySQL:
+
+```
+mysql://DB_USER:DB_PASSWORD@localhost:3306/DB_NAME
+```
+
+Rules:
+
+1. Password contains `@` → URL-encode as `%40` (e.g. `Pharmegic@1234` → `Pharmegic%401234`).
+2. Do **not** paste the raw password with `@` — the URL breaks and login shows "Invalid email or password" even when phpMyAdmin has users.
+3. After changing `DATABASE_URL` → **Save and redeploy**.
+
+Verify after deploy:
+
+- `https://portal.pharmegichealthcare.com/api/health/db` → should return `{"ok":true,"users":3}` (or your user count).
+- Runtime logs should show: `[portal] MySQL connected (N users in database)`.
+
+If login still fails after DB is connected, reset admin passwords once (SSH or local with production `DATABASE_URL`):
+
+```bash
+npx tsx scripts/seed-admins.js
+```
+
+Default admins: `atul.patoliya@gmail.com` / `directoratulpatoliya@gmail.com` — password `Admin@1234`.
 
 SMTP is **not** required in hPanel if configured in **Admin → Settings** (stored in `admin_settings`).
 
