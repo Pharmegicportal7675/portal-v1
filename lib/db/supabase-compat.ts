@@ -1,0 +1,400 @@
+import type { SupabaseClient } from '@supabase/supabase-js';
+import { Prisma } from '@/generated/prisma';
+import { prisma } from '@/lib/prisma';
+import { createLocalStorage } from '@/lib/db/local-storage';
+
+type DbError = { message: string; code?: string; details?: string };
+type DbResult<T> = { data: T; error: DbError | null; count?: number | null };
+
+const JSON_FIELDS = new Set([
+  'regulatory_registrations',
+  'metadata',
+  'mail_sent_history',
+]);
+
+const RELATION_ALIASES: Record<string, string> = {
+  certificates_certificates_tcc_application_idTotcc_applications: 'certificates',
+  tcc_applications_certificates_tcc_application_idTotcc_applications: 'tcc_applications',
+  certificates_tcc_applications_reach_certificate_idTocertificates: 'reach_certificate',
+};
+
+const FK_HINTS: Record<string, Record<string, { relation: string; alias: string }>> = {
+  tcc_applications: {
+    certificates_tcc_application_id_fkey: {
+      relation: 'certificates_certificates_tcc_application_idTotcc_applications',
+      alias: 'certificates',
+    },
+  },
+  certificates: {
+    certificates_tcc_application_id_fkey: {
+      relation: 'tcc_applications_certificates_tcc_application_idTotcc_applications',
+      alias: 'tcc_applications',
+    },
+  },
+  internal_notes: {
+    internal_notes_author_id_fkey: { relation: 'users', alias: 'users' },
+  },
+};
+
+function toError(err: unknown): DbError {
+  if (err instanceof Error) return { message: err.message, code: (err as { code?: string }).code };
+  return { message: 'Unknown database error' };
+}
+
+function serializeValue(value: unknown): unknown {
+  if (value === null || value === undefined) return value;
+  if (typeof value === 'bigint') return Number(value);
+  if (value instanceof Prisma.Decimal) return Number(value);
+  if (value instanceof Date) return value.toISOString();
+  if (Array.isArray(value)) return value.map(serializeValue);
+  if (typeof value === 'object') {
+    const out: Record<string, unknown> = {};
+    for (const [k, v] of Object.entries(value as Record<string, unknown>)) {
+      out[k] = serializeValue(v);
+    }
+    return out;
+  }
+  return value;
+}
+
+function serializeRow(row: Record<string, unknown>): Record<string, unknown> {
+  const out: Record<string, unknown> = {};
+  for (const [key, value] of Object.entries(row)) {
+    if (JSON_FIELDS.has(key) && typeof value === 'string') {
+      try {
+        out[key] = JSON.parse(value);
+      } catch {
+        out[key] = value;
+      }
+      continue;
+    }
+    const alias = RELATION_ALIASES[key] ?? key;
+    if (value && typeof value === 'object' && !Array.isArray(value) && !(value instanceof Date)) {
+      out[alias] = serializeRow(value as Record<string, unknown>);
+    } else if (Array.isArray(value)) {
+      out[alias] = value.map((item) =>
+        item && typeof item === 'object' ? serializeRow(item as Record<string, unknown>) : serializeValue(item)
+      );
+    } else {
+      out[alias] = serializeValue(value);
+    }
+  }
+  return out;
+}
+
+type Filter =
+  | { kind: 'eq'; field: string; value: unknown }
+  | { kind: 'neq'; field: string; value: unknown }
+  | { kind: 'in'; field: string; value: unknown[] }
+  | { kind: 'or'; expr: string }
+  | { kind: 'is'; field: string; value: null };
+
+type Order = { field: string; ascending: boolean };
+
+function parseOrExpression(expr: string): Record<string, unknown>[] {
+  return expr.split(',').map((part) => {
+    const trimmed = part.trim();
+    const isNull = trimmed.match(/^([^.]+)\.is\.null$/);
+    if (isNull) return { [isNull[1]]: null };
+    const eq = trimmed.match(/^([^.]+)\.eq\.(.+)$/);
+    if (eq) return { [eq[1]]: eq[2] };
+    const ilike = trimmed.match(/^([^.]+)\.ilike\.(.+)$/);
+    if (ilike) {
+      const pattern = ilike[2].replace(/%/g, '');
+      return { [ilike[1]]: { contains: pattern, mode: 'insensitive' as const } };
+    }
+    return {};
+  });
+}
+
+function buildWhere(filters: Filter[]): Record<string, unknown> {
+  const where: Record<string, unknown> = {};
+  const orGroups: Record<string, unknown>[][] = [];
+
+  for (const filter of filters) {
+    if (filter.kind === 'eq') where[filter.field] = filter.value;
+    if (filter.kind === 'neq') where[filter.field] = { not: filter.value };
+    if (filter.kind === 'in') where[filter.field] = { in: filter.value };
+    if (filter.kind === 'is' && filter.value === null) where[filter.field] = null;
+    if (filter.kind === 'or') orGroups.push(parseOrExpression(filter.expr));
+  }
+
+  if (orGroups.length === 1) where.OR = orGroups[0];
+  else if (orGroups.length > 1) where.AND = orGroups.map((group) => ({ OR: group }));
+
+  return where;
+}
+
+function parseFieldsList(fields: string): Record<string, boolean> | true {
+  const trimmed = fields.trim();
+  if (trimmed === '*') return true;
+  const select: Record<string, boolean> = {};
+  for (const field of trimmed.split(',').map((f) => f.trim()).filter(Boolean)) {
+    select[field] = true;
+  }
+  return select;
+}
+
+function parseRelationSegment(segment: string): { name: string; hint?: string; fields: string } {
+  const bang = segment.indexOf('!');
+  if (bang === -1) {
+    const paren = segment.indexOf('(');
+    if (paren === -1) return { name: segment.trim(), fields: '*' };
+    return {
+      name: segment.slice(0, paren).trim(),
+      fields: segment.slice(paren + 1, -1).trim() || '*',
+    };
+  }
+  const name = segment.slice(0, bang).trim();
+  const rest = segment.slice(bang + 1);
+  const paren = rest.indexOf('(');
+  const hint = paren === -1 ? rest.trim() : rest.slice(0, paren).trim();
+  const fields = paren === -1 ? '*' : rest.slice(paren + 1, -1).trim() || '*';
+  return { name, hint, fields };
+}
+
+function parseSelect(select: string, table: string): { include?: Record<string, unknown> } {
+  if (select === '*') return {};
+  const include: Record<string, unknown> = {};
+  const top = select.replace(/^\*,\s*/, '');
+  if (top === select && !select.includes('(')) return {};
+
+  const segments: string[] = [];
+  let depth = 0;
+  let current = '';
+  for (const char of top) {
+    if (char === '(') depth++;
+    if (char === ')') depth--;
+    if (char === ',' && depth === 0) {
+      if (current.trim()) segments.push(current.trim());
+      current = '';
+      continue;
+    }
+    current += char;
+  }
+  if (current.trim()) segments.push(current.trim());
+
+  for (const segment of segments) {
+    const { name, hint, fields } = parseRelationSegment(segment);
+    const hintMap = FK_HINTS[table]?.[hint ?? ''];
+    const relationName = hintMap?.relation ?? name;
+    if (fields.includes('(')) {
+      const nested = parseSelect(fields, name);
+      include[relationName] = nested.include ?? {};
+    } else {
+      include[relationName] = { select: parseFieldsList(fields) };
+    }
+  }
+
+  return { include };
+}
+
+function getDelegate(table: string) {
+  const delegate = (prisma as unknown as Record<string, unknown>)[table];
+  if (!delegate) throw new Error(`Unknown table: ${table}`);
+  return delegate as {
+    findMany: (args?: unknown) => Promise<unknown[]>;
+    findFirst: (args?: unknown) => Promise<unknown | null>;
+    count: (args?: unknown) => Promise<number>;
+    create: (args: unknown) => Promise<unknown>;
+    createMany: (args: unknown) => Promise<unknown>;
+    update: (args: unknown) => Promise<unknown>;
+    updateMany: (args: unknown) => Promise<unknown>;
+    delete: (args: unknown) => Promise<unknown>;
+    deleteMany: (args: unknown) => Promise<unknown>;
+  };
+}
+
+class QueryBuilder {
+  private filters: Filter[] = [];
+  private orders: Order[] = [];
+  private skip?: number;
+  private take?: number;
+  private selectStr = '*';
+  private countOnly = false;
+  private mode: 'select' | 'insert' | 'update' | 'delete' = 'select';
+  private payload: unknown;
+  private wantSingle = false;
+  private wantMaybeSingle = false;
+  private returning = false;
+
+  constructor(private readonly table: string) {}
+
+  select(columns = '*', options?: { count?: 'exact'; head?: boolean }) {
+    if (this.mode === 'insert' || this.mode === 'update') {
+      this.selectStr = columns;
+      this.returning = true;
+      return this;
+    }
+    this.selectStr = columns;
+    if (options?.count === 'exact' && options?.head) this.countOnly = true;
+    return this;
+  }
+
+  insert(payload: unknown) {
+    this.mode = 'insert';
+    this.payload = payload;
+    return this;
+  }
+
+  update(payload: unknown) {
+    this.mode = 'update';
+    this.payload = payload;
+    return this;
+  }
+
+  delete() {
+    this.mode = 'delete';
+    return this;
+  }
+
+  eq(field: string, value: unknown) {
+    this.filters.push({ kind: 'eq', field, value });
+    return this;
+  }
+
+  neq(field: string, value: unknown) {
+    this.filters.push({ kind: 'neq', field, value });
+    return this;
+  }
+
+  in(field: string, value: unknown[]) {
+    this.filters.push({ kind: 'in', field, value });
+    return this;
+  }
+
+  or(expr: string) {
+    this.filters.push({ kind: 'or', expr });
+    return this;
+  }
+
+  is(field: string, value: null) {
+    this.filters.push({ kind: 'is', field, value });
+    return this;
+  }
+
+  order(field: string, options?: { ascending?: boolean }) {
+    this.orders.push({ field, ascending: options?.ascending !== false });
+    return this;
+  }
+
+  range(from: number, to: number) {
+    this.skip = from;
+    this.take = to - from + 1;
+    return this;
+  }
+
+  limit(n: number) {
+    this.take = n;
+    return this;
+  }
+
+  single() {
+    this.wantSingle = true;
+    return this;
+  }
+
+  maybeSingle() {
+    this.wantMaybeSingle = true;
+    return this;
+  }
+
+  async then<TResult1 = DbResult<unknown>, TResult2 = never>(
+    onfulfilled?: ((value: DbResult<unknown>) => TResult1 | PromiseLike<TResult1>) | null,
+    onrejected?: ((reason: unknown) => TResult2 | PromiseLike<TResult2>) | null
+  ): Promise<TResult1 | TResult2> {
+    try {
+      const result = await this.execute();
+      return onfulfilled ? onfulfilled(result) : (result as TResult1);
+    } catch (reason) {
+      if (onrejected) return onrejected(reason);
+      throw reason;
+    }
+  }
+
+  private async execute(): Promise<DbResult<unknown>> {
+    const delegate = getDelegate(this.table);
+    const where = buildWhere(this.filters);
+    const orderBy = this.orders.map((o) => ({ [o.field]: o.ascending ? 'asc' : 'desc' }));
+
+    try {
+      if (this.mode === 'insert') {
+        const rows = Array.isArray(this.payload) ? this.payload : [this.payload];
+        if (rows.length === 1) {
+          const created = await delegate.create({ data: rows[0] });
+          const data = serializeRow(created as Record<string, unknown>);
+          return { data: this.wantSingle || this.wantMaybeSingle ? data : [data], error: null };
+        }
+        await delegate.createMany({ data: rows });
+        return { data: rows, error: null };
+      }
+
+      if (this.mode === 'update') {
+        const id = where.id;
+        if (id !== undefined) {
+          const updated = await delegate.update({
+            where: { id },
+            data: this.payload,
+          });
+          const row = serializeRow(updated as Record<string, unknown>);
+          return { data: this.returning ? row : null, error: null };
+        }
+        await delegate.updateMany({ where, data: this.payload });
+        return { data: null, error: null };
+      }
+
+      if (this.mode === 'delete') {
+        const id = where.id;
+        if (id !== undefined) {
+          await delegate.delete({ where: { id } });
+          return { data: null, error: null };
+        }
+        await delegate.deleteMany({ where });
+        return { data: null, error: null };
+      }
+
+      if (this.countOnly) {
+        const count = await delegate.count({ where });
+        return { data: null, error: null, count };
+      }
+
+      const parsed = parseSelect(this.selectStr, this.table);
+      const args: Record<string, unknown> = { where };
+      if (orderBy.length) args.orderBy = orderBy;
+      if (this.skip !== undefined) args.skip = this.skip;
+      if (this.take !== undefined) args.take = this.take;
+      if (parsed.include) args.include = parsed.include;
+
+      if (this.wantSingle || this.wantMaybeSingle) {
+        const row = await delegate.findFirst(args);
+        if (!row && this.wantSingle) {
+          return { data: null, error: { message: 'Row not found', code: 'PGRST116' } };
+        }
+        return { data: row ? serializeRow(row as Record<string, unknown>) : null, error: null };
+      }
+
+      const rows = await delegate.findMany(args);
+      const data = (rows as Record<string, unknown>[]).map(serializeRow);
+      if (this.skip !== undefined || this.take !== undefined) {
+        const count = await delegate.count({ where });
+        return { data, error: null, count };
+      }
+      return { data, error: null };
+    } catch (err) {
+      return { data: null, error: toError(err) };
+    }
+  }
+}
+
+export function createCompatClient(): SupabaseClient {
+  const storage = createLocalStorage();
+  const client = {
+    from: (table: string) => new QueryBuilder(table),
+    storage,
+    auth: {
+      getUser: async () => ({ data: { user: null }, error: null }),
+      signOut: async () => ({ error: null }),
+    },
+  };
+  return client as unknown as SupabaseClient;
+}

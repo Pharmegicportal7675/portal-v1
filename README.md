@@ -1,22 +1,14 @@
-# portal-v1
+# portal-v1 — Pharmegic Portal (Live)
 
-Pharmegic Portal — Next.js app for **Hostinger Node.js Apps** deployment.
+Production app for **portal.pharmegichealthcare.com** — Hostinger Node.js + MySQL.
 
-## Project structure
+## Stack
 
-```text
-portal-v1/
-├─ package.json
-├─ package-lock.json
-├─ next.config.mjs
-├─ scripts/start.mjs
-├─ public/
-├─ app/
-│   ├─ layout.tsx
-│   ├─ page.tsx
-│   └─ globals.css
-└─ components/
-```
+- Next.js 16 + TypeScript + Tailwind
+- MySQL (Hostinger) + Prisma
+- Local file storage (`public/uploads/certificates/`)
+- SMTP2GO (unchanged)
+- Custom JWT auth (not Supabase Auth)
 
 ## Local development
 
@@ -25,36 +17,35 @@ npm install
 npm run dev
 ```
 
-## Hostinger settings (hPanel)
+## Environment (`.env.local`)
+
+```env
+DATABASE_URL=mysql://USER:PASSWORD@HOST:3306/DATABASE
+SMTP_HOST=mail.smtp2go.com
+SMTP_PORT=587
+SMTP_USER=...
+SMTP_PASS=...
+SMTP_FROM=Pharmegic Healthcare <noreply@pharmegichealthcare.com>
+NEXT_PUBLIC_APP_URL=http://localhost:3000
+```
+
+## Hostinger deploy (auto via GitHub push)
 
 | Setting | Value |
 |---------|-------|
-| Framework | Next.js |
-| Root directory | `./` |
-| Branch | `main` |
-| Install command | `npm ci` |
-| Build command | `npm run build` |
-| Start command | `npm run start` |
-| Node.js version | **22.x** (or 20.x) |
-| Output directory | `.next` |
+| Install | `npm ci` |
+| Build | `npm run build` |
+| Start | `npm run start` |
+| Node | 22.x |
+| Output | `.next` |
 
-Do **not** set output directory to `out` — that is only for static export.
+**Env vars in hPanel:** `DATABASE_URL`, `SMTP_*`, `NEXT_PUBLIC_APP_URL`
 
-### Environment variables
+## Database
 
-Add in Hostinger → **Environment Variables**:
-
-```
-DATABASE_URL=mysql://USER:PASSWORD@HOST:3306/DATABASE
+```bash
+npm run db:import          # create tables (first time)
+npm run db:migrate-from-supabase  # one-time data from Supabase
 ```
 
-Use the exact URL from Hostinger MySQL panel (password special chars must be URL-encoded, e.g. `@` → `%40`).
-
-Local dev: copy `.env.example` to `.env.local` and fill in values. **Never commit `.env.local`.**
-
-## Deploy steps
-
-1. Push latest code to GitHub `main` branch.
-2. In Hostinger → **Deployments** → verify **Repository** is connected (not `—`).
-3. Click **Redeploy**.
-4. If site still fails, check **Runtime logs** (not build logs).
+See `MIGRATION.md` for full migration details.

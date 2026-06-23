@@ -1,0 +1,53 @@
+/* Shared A4 shell — preview, print, and docx-preview parity */
+[data-reach-cert-preview-shell] {
+  display: flex;
+  justify-content: center;
+  align-items: flex-start;
+  min-height: 820px;
+  padding: 32px 16px;
+  background: #f1f5f9;
+  overflow: auto;
+}
+
+[data-reach-cert-print-area] {
+  display: block;
+  width: fit-content;
+  margin: 0 auto;
+}
+
+[data-reach-cert-print-area] > [data-reach-cert-root].reach-cert-page,
+[data-reach-cert-print-area] > .reach-cert-page,
+[data-reach-cert-print-area] .tcc-cert-document > [data-tcc-cert-root].tcc-cert-page {
+  flex-shrink: 0;
+  box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1);
+}
+
+/* DOCX preview — force Word pages to A4 dimensions */
+.docx-preview-container .docx-preview-wrapper > section.docx-preview,
+.docx-preview-container .docx-wrapper > section.docx {
+  width: 794px !important;
+  min-width: 794px !important;
+  max-width: 794px !important;
+  min-height: 1123px !important;
+  height: 1123px !important;
+  box-sizing: border-box !important;
+  margin: 0 auto 24px !important;
+  background: #ffffff !important;
+  box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1);
+  overflow: hidden;
+}
+
+.docx-preview-container .docx-preview-wrapper > section.docx-preview:last-child,
+.docx-preview-container .docx-wrapper > section.docx:last-child {
+  margin-bottom: 0 !important;
+}
+
+@media print {
+  [data-reach-cert-preview-shell] {
+    display: block !important;
+    min-height: 0 !important;
+    padding: 0 !important;
+    background: #ffffff !important;
+    overflow: visible !important;
+  }
+}

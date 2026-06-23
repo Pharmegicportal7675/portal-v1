@@ -1,0 +1,506 @@
+/* RC certificate preview — isolated from Tailwind preflight */
+[data-reach-cert-root] {
+  --reach-lime: #92d050;
+  --reach-green-dark: #145e40;
+  --reach-green-mid: #1b5e3a;
+  --reach-green-light: #8ac33f;
+  --reach-green-pale: #e2efda;
+  --reach-table-border: #cfdbc8;
+  --reach-red: #bf382a;
+  --reach-accent: #145e40;
+  display: block;
+  font-family: 'Verdana', Geneva, Tahoma, sans-serif;
+  font-size: 10pt;
+  line-height: 1.35;
+  color: #1a1a1a;
+  -webkit-font-smoothing: antialiased;
+}
+
+[data-reach-cert-root] *,
+[data-reach-cert-root] *::before,
+[data-reach-cert-root] *::after {
+  box-sizing: border-box;
+}
+
+[data-reach-cert-root] p {
+  margin: 0;
+  padding: 0;
+}
+
+[data-reach-cert-root].reach-cert-page {
+  display: block;
+  margin: 0 auto;
+  background: #ffffff !important;
+  position: relative;
+  padding: var(--reach-a4-padding, 50px);
+  width: var(--reach-a4-width, 794px);
+  height: var(--reach-a4-height, 1123px);
+  max-width: var(--reach-a4-width, 794px);
+  min-height: var(--reach-a4-height, 1123px);
+  box-sizing: border-box;
+  overflow: hidden;
+}
+
+[data-reach-cert-root] .reach-cert-frame {
+  display: flex !important;
+  flex-direction: column;
+  height: 100%;
+  min-height: 0;
+  padding: 0 !important;
+  border: 3px solid var(--reach-lime) !important;
+  position: relative;
+  background: #ffffff !important;
+  overflow: hidden;
+}
+
+[data-reach-cert-root] .reach-cert-body {
+  display: block;
+  flex: 1 1 auto;
+  padding: 20px 20px 0px !important;
+}
+
+[data-reach-cert-root] .reach-cert-header {
+  display: flex !important;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  margin: 0 0 8px !important;
+  padding: 0 !important;
+  background: transparent !important;
+  border: none !important;
+}
+
+[data-reach-cert-root] .reach-brand-logo {
+  display: block;
+  width: 350px;
+  height: auto;
+  object-fit: contain;
+}
+
+[data-reach-cert-root] .reach-cert-header-brand {
+  display: inline-block;
+  font-family: 'Verdana', Geneva, Tahoma, sans-serif !important;
+  font-size: 17px !important;
+  font-weight: bold !important;
+  color: var(--reach-green-dark) !important;
+  letter-spacing: 0.01em;
+  margin: 0 !important;
+  padding: 0 !important;
+}
+
+[data-reach-cert-root] .reach-cert-title {
+  display: block;
+  margin: 25px 0 18px !important;
+  padding: 0 !important; 
+  text-align: center !important;
+  font-family: 'Times New Roman', Times, serif !important;
+  font-size: 22pt !important;
+  font-weight: bold !important;
+  color: var(--reach-green-dark) !important;
+  text-transform: uppercase;
+  text-decoration: underline !important;
+  line-height: 1.15 !important;
+  background: transparent !important;
+  border: none !important;
+  text-underline-offset: 4px;
+}
+
+[data-reach-cert-root] .reach-cert-intro {
+  display: block;
+  margin: 0 0 14px !important;
+  padding: 0 !important;
+  font-family: 'Verdana', Geneva, Tahoma, sans-serif !important;
+  font-size: 10pt !important;
+  font-weight: 400 !important;
+  line-height: 1.45 !important;
+  color: #222 !important;
+  text-align: justify;
+}
+
+[data-reach-cert-root] .reach-manufacturer-box {
+  display: block;
+  background: var(--reach-green-pale) !important;
+  border-radius: 10px !important;
+  padding: 12px 16px 3px !important;
+  margin: 0 0 20px !important;
+  border: none !important;
+}
+
+[data-reach-cert-root] .reach-manufacturer-label {
+  display: block;
+  margin: 0 0 2px !important;
+  padding: 0 !important;
+  font-size: 7pt !important;
+  font-weight: bold !important;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  color: var(--reach-green-dark) !important;
+  font-family: 'Verdana', Geneva, Tahoma, sans-serif !important;
+  line-height: 1 !important;
+}
+
+[data-reach-cert-root] .reach-manufacturer-name {
+  display: block;
+  margin: 0 0 4px !important;
+  padding: 0 !important;
+  font-size: 13.5pt !important;
+  font-weight: bold !important;
+  color: #000000 !important;
+  font-family: 'Verdana', Geneva, Tahoma, sans-serif !important;
+  line-height: 1.15 !important;
+}
+
+[data-reach-cert-root] .reach-manufacturer-address {
+  display: block;
+  margin: 0 0 2px !important;
+  padding: 0 !important;
+  font-size: 9pt !important;
+  font-weight: 400 !important;
+  color: rgba(0, 0, 0, 0.6) !important;
+}
+
+[data-reach-cert-root] .reach-appointment-text {
+  display: block;
+  margin: 5px 0 0 !important;
+  padding: 0 !important;
+  font-size: 9pt !important;
+  line-height: 1.4 !important;
+  color: var(--reach-green-dark) !important;
+  font-weight: bold;
+}
+
+[data-reach-cert-root] .reach-appointment-text strong {
+  font-weight: bold !important;
+  color: var(--reach-green-dark) !important;
+}
+
+[data-reach-cert-root] .reach-section-title {
+  display: inline-block;
+  margin: 0 0 20px !important;
+  font-size: 10.5pt !important;
+  font-weight: bold !important;
+  color: var(--reach-green-dark) !important;
+  border: none !important;
+  background: transparent !important;
+  border-bottom: 2px solid var(--reach-green-light) !important;
+}
+
+[data-reach-cert-root] .reach-substance-table {
+  display: table !important;
+  width: 100% !important;
+  border-collapse: collapse !important;
+  margin: 0 0 20px !important;
+  table-layout: fixed;
+  border: 1px solid var(--reach-table-border) !important;
+  background: #fff !important;
+}
+
+[data-reach-cert-root] .reach-substance-table tbody {
+  display: table-row-group !important;
+}
+
+[data-reach-cert-root] .reach-substance-table tr {
+  display: table-row !important;
+}
+
+[data-reach-cert-root] .reach-substance-table th,
+[data-reach-cert-root] .reach-substance-table td {
+  display: table-cell !important;
+  border: 1px solid var(--reach-table-border) !important;
+  padding: 8px 10px !important;
+  font-size: 10pt !important;
+  vertical-align: middle !important;
+  text-align: left !important;
+  font-weight: 400 !important;
+  color: #111 !important;
+}
+
+[data-reach-cert-root] .reach-substance-table th {
+  width: 32% !important;
+  background: var(--reach-green-dark) !important;
+  color: #ffffff !important;
+  font-weight: bold !important;
+  border-bottom-color: #ffffff !important;
+}
+
+[data-reach-cert-root] .reach-substance-table tr:last-child th {
+  border-bottom-color: var(--reach-table-border) !important;
+}
+
+[data-reach-cert-root] .reach-substance-table tr:nth-child(odd) td {
+  background: var(--reach-green-pale) !important;
+  color: #111 !important;
+}
+
+[data-reach-cert-root] .reach-substance-table tr:nth-child(even) td {
+  background: #ffffff !important;
+  color: #111 !important;
+}
+
+[data-reach-cert-root] .reach-reg-number-box {
+  display: flex !important;
+  align-items: stretch;
+  margin: 0 0 20px !important;
+  border-radius: 6px !important;
+  overflow: hidden;
+  border: 1px solid var(--reach-green-dark) !important;
+}
+
+[data-reach-cert-root] .reach-reg-label {
+  display: flex !important;
+  align-items: center;
+  flex: 0 0 32%;
+  color: var(--reach-green-dark) !important;
+  font-size: 10pt !important;
+  font-weight: bold !important;
+  padding: 12px 10px !important;
+  white-space: nowrap;
+  background: var(--reach-lime) !important;
+}
+
+[data-reach-cert-root] .reach-reg-value {
+  display: flex !important;
+  align-items: center;
+  flex: 1 1 auto;
+  background: var(--reach-lime) !important;
+  color: #ffffff !important;
+  font-size: 10pt !important;
+  font-weight: bold !important;
+}
+
+[data-reach-cert-root] .reach-reg-pipe {
+  margin-right: 8px;
+  font-weight: 700;
+  color: var(--reach-green-dark) !important;
+}
+
+[data-reach-cert-root] .reach-representative-box {
+  display: block;
+  background: var(--reach-green-dark) !important;
+  color: #ffffff !important;
+  border-radius: 8px !important;
+  padding: 12px 16px !important;
+  margin: 0 0 20px !important;
+  border: 1px solid #000 !important;
+}
+
+[data-reach-cert-root] .reach-rep-name {
+  display: block;
+  margin: 0 0 4px !important;
+  padding: 0 !important;
+  font-size: 13.5pt !important;
+  font-weight: bold !important;
+  color: #ffffff !important;
+}
+
+[data-reach-cert-root] .reach-rep-address {
+  display: block;
+  margin: 0 0 6px !important;
+  padding: 0 !important;
+  font-size: 10pt !important;
+  line-height: 1.35 !important;
+  color: #ffffff !important;
+  color: var(--reach-green-light) !important;
+  font-weight: normal !important;
+}
+
+[data-reach-cert-root] .reach-rep-uuid {
+  display: block;
+  margin: 0 !important;
+  padding: 0 !important;
+  font-size: 10pt !important;
+  color: #ffffff !important;
+  font-weight: normal !important;
+}
+
+[data-reach-cert-root] .reach-rep-uuid strong {
+  font-weight: bold !important;
+  color: var(--reach-green-light) !important;
+}
+
+[data-reach-cert-root] .reach-date-section {
+  display: flex !important;
+  gap: 0;
+  margin: 0px !important;
+  background: var(--reach-green-pale) !important;
+  border: 1px solid var(--reach-green-light) !important;
+  border-radius: 8px !important;
+  overflow: hidden;
+  padding: 8px 5px;
+}
+
+[data-reach-cert-root] .reach-date-box {
+  display: block;
+  flex: 1 1 50%;
+  text-align: left !important;
+  background: transparent !important;
+}
+
+[data-reach-cert-root] .reach-date-box.right {
+  border-left: 2px solid #000 !important;
+  padding-left: 10px;
+  text-align: left !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  flex-direction: column !important;
+}
+
+[data-reach-cert-root] .reach-date-label {
+  display: block;
+  font-size: 7pt !important;
+  font-weight: bold !important;
+  letter-spacing: 0.05em;
+  color: rgba(0, 0, 0, 0.6) !important;
+  margin: 0 0 4px !important;
+  text-transform: uppercase;
+  font-family: 'Arial', Helvetica, sans-serif !important;
+}
+
+[data-reach-cert-root] .reach-date-value {
+  display: block;
+  font-size: 11pt !important;
+  font-weight: bold !important;
+  color: #111 !important;
+  margin: 0 !important;
+  font-family: 'Arial', Helvetica, sans-serif !important;
+}
+
+[data-reach-cert-root] .reach-date-value.red {
+  color: var(--reach-red) !important;
+}
+
+[data-reach-cert-root] .reach-seal-wrap {
+  display: flex !important;
+  justify-content: center;
+  margin: 10px 0 10px !important;
+  padding: 0 !important;
+}
+
+[data-reach-cert-root] .reach-seal-image {
+  display: block;
+  width: 130px;
+  height: 130px;
+  object-fit: contain;
+}
+
+[data-reach-cert-root] .reach-footer-slot {
+  display: block;
+  flex: 0 0 auto;
+  margin: 0 !important;
+  background: #ffffff !important;
+}
+
+[data-reach-cert-root] .reach-cert-footer {
+  display: block;
+  width: 100% !important;
+  margin: 0 !important;
+  background: #145e40 !important;
+  color: #ffffff !important;
+  padding: 10px !important;
+  text-align: left !important;
+  border: none !important;
+}
+
+[data-reach-cert-root] .reach-footer-line {
+  display: block;
+  margin: 0 !important;
+  padding: 0 !important;
+  font-family: 'Verdana', Geneva, Tahoma, sans-serif !important;
+  font-size: 8pt !important;
+  line-height: 1.3 !important;
+  color: #ffffff !important;
+  font-weight: 400 !important;
+  text-align: left !important;
+  letter-spacing: 0.01em;
+}
+
+[data-reach-cert-root] .reach-footer-company {
+}
+
+[data-reach-cert-root] .reach-footer-line+.reach-footer-line {
+  margin-top: 0 !important;
+}
+
+@media print {
+  @page {
+    size: A4 portrait;
+    margin: 0;
+  }
+
+  html,
+  body {
+    width: var(--reach-a4-width-mm, 210mm) !important;
+    height: var(--reach-a4-height-mm, 297mm) !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    background: #ffffff !important;
+    overflow: hidden !important;
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+  }
+
+  body.reach-cert-printing {
+    width: var(--reach-a4-width-mm, 210mm) !important;
+    height: var(--reach-a4-height-mm, 297mm) !important;
+  }
+
+  body.reach-cert-printing > :not([data-reach-cert-preview-shell]):not([data-reach-cert-print-area]) {
+    display: none !important;
+  }
+
+  body.reach-cert-printing [data-reach-cert-preview-shell] > :not([data-reach-cert-print-area]) {
+    display: none !important;
+  }
+
+  [data-reach-cert-preview-shell] {
+    display: block !important;
+    position: fixed !important;
+    inset: 0 !important;
+    width: var(--reach-a4-width-mm, 210mm) !important;
+    height: var(--reach-a4-height-mm, 297mm) !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    background: #ffffff !important;
+    overflow: hidden !important;
+    z-index: 2147483647 !important;
+  }
+
+  [data-reach-cert-print-area] {
+    display: block !important;
+    position: absolute !important;
+    top: 0 !important;
+    left: 0 !important;
+    width: var(--reach-a4-width-mm, 210mm) !important;
+    height: var(--reach-a4-height-mm, 297mm) !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    background: #ffffff !important;
+    overflow: hidden !important;
+  }
+
+  [data-reach-cert-print-area] > div {
+    display: block !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    width: var(--reach-a4-width-mm, 210mm) !important;
+    height: var(--reach-a4-height-mm, 297mm) !important;
+    box-shadow: none !important;
+  }
+
+  [data-reach-cert-print-area] [data-reach-cert-root].reach-cert-page {
+    display: block !important;
+    position: absolute !important;
+    top: 0 !important;
+    left: 0 !important;
+    width: var(--reach-a4-width-mm, 210mm) !important;
+    height: var(--reach-a4-height-mm, 297mm) !important;
+    max-width: var(--reach-a4-width-mm, 210mm) !important;
+    min-height: var(--reach-a4-height-mm, 297mm) !important;
+    margin: 0 !important;
+    padding: var(--reach-a4-padding-mm, 13.23mm) !important;
+    box-shadow: none !important;
+    page-break-after: avoid;
+    page-break-inside: avoid;
+  }
+}

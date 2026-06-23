@@ -1,0 +1,113 @@
+/* EU REACH certificate — local fonts from /public/fonts */
+
+/* Verdana (body text) */
+@font-face {
+  font-family: 'Verdana';
+  src: url('/fonts/verdana.ttf') format('truetype');
+  font-weight: 400;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'Verdana';
+  src: url('/fonts/verdanab.ttf') format('truetype');
+  font-weight: 700;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'Verdana';
+  src: url('/fonts/verdanai.ttf') format('truetype');
+  font-weight: 400;
+  font-style: italic;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'Verdana';
+  src: url('/fonts/verdanaz.ttf') format('truetype');
+  font-weight: 700;
+  font-style: italic;
+  font-display: swap;
+}
+
+/* Times New Roman (certificate title) */
+@font-face {
+  font-family: 'Times New Roman';
+  src: url('/fonts/Times-New-Roman.ttf') format('truetype');
+  font-weight: 400;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'Times New Roman';
+  src: url('/fonts/Times-New-Roman-Bold.ttf') format('truetype');
+  font-weight: 700;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'Times New Roman';
+  src: url('/fonts/Times-New-Roman-Italic.ttf') format('truetype');
+  font-weight: 400;
+  font-style: italic;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'Times New Roman';
+  src: url('/fonts/Times-New-Roman-BoldItalic.ttf') format('truetype');
+  font-weight: 700;
+  font-style: italic;
+  font-display: swap;
+}
+
+/* Arial (date labels) */
+@font-face {
+  font-family: 'Arial';
+  src: url('/fonts/arial.ttf') format('truetype');
+  font-weight: 400;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'Arial';
+  src: url('/fonts/arialbd.ttf') format('truetype');
+  font-weight: 700;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'Arial';
+  src: url('/fonts/ariali.ttf') format('truetype');
+  font-weight: 400;
+  font-style: italic;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'Arial';
+  src: url('/fonts/arialbi.ttf') format('truetype');
+  font-weight: 700;
+  font-style: italic;
+  font-display: swap;
+}
+
+/* DOCX preview — docx-preview does not load Word embedded fonts */
+.docx-preview-container,
+.docx-preview-container .docx-preview-wrapper,
+.docx-preview-container .docx-wrapper {
+  font-family: 'Verdana', Geneva, Tahoma, sans-serif;
+}
+
+.docx-preview-container p[style*='font-family: Times'],
+.docx-preview-container span[style*='font-family: Times'],
+.docx-preview-container [style*='font-family: "Times New Roman"'] {
+  font-family: 'Times New Roman', Times, serif !important;
+}

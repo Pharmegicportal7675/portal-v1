@@ -1,0 +1,22 @@
+import { isVercelHosting } from '@/lib/hosting';
+
+/** Base URL Puppeteer uses to load /reach-cert/print (must be reachable from the server). */
+export function resolvePdfRenderBaseUrl(): string {
+  const publicUrl = process.env.NEXT_PUBLIC_APP_URL?.replace(/\/$/, '');
+
+  if (isVercelHosting()) {
+    if (publicUrl) return publicUrl;
+    const vercelUrl = process.env.VERCEL_URL?.replace(/^https?:\/\//, '');
+    if (vercelUrl) return `https://${vercelUrl}`;
+    throw new Error(
+      'Set NEXT_PUBLIC_APP_URL in Vercel Environment Variables (e.g. https://portal.pharmegichealthcare.com).'
+    );
+  }
+
+  const internal = process.env.REACH_PDF_RENDER_URL?.replace(/\/$/, '');
+  if (internal) return internal;
+  if (publicUrl) return publicUrl;
+
+  const port = process.env.PORT || '3000';
+  return `http://127.0.0.1:${port}`;
+}
