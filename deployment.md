@@ -32,7 +32,9 @@ Production app: **portal.pharmegichealthcare.com**
 | **Start** | `npm run start -- -p $PORT` |
 | Entry file | `server.js` |
 | Node | 22.x |
-| Output directory | `.next` (Hostinger build artifact path — OK) |
+| Output directory | **leave empty** (do not serve `.next` as static only) |
+
+`server.js` always binds **`0.0.0.0`** — never `process.env.HOSTNAME` (on Linux that is the machine name and causes **503**).
 
 ### CRITICAL — if `/login` shows raw text like `:HL[...]` or `0:{"tree":`
 

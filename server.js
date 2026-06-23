@@ -1,9 +1,7 @@
-// Hostinger entry — binds 0.0.0.0 and uses platform PORT (see deployment.md)
+// Hostinger entry — binds 0.0.0.0 (never use process.env.HOSTNAME; Linux sets it to the machine name)
 process.env.NODE_ENV = process.env.NODE_ENV || 'production';
 
 const { spawn } = require('child_process');
-const path = require('path');
-const fs = require('fs');
 
 function readPort() {
   const portFlagIndex = process.argv.indexOf('-p');
@@ -14,57 +12,16 @@ function readPort() {
 }
 
 const port = readPort();
-const hostname = process.env.HOSTNAME || '0.0.0.0';
-const root = __dirname;
-const nextBin = path.join(root, 'node_modules', 'next', 'dist', 'bin', 'next');
-const buildIdPath = path.join(root, '.next', 'BUILD_ID');
 
-if (!fs.existsSync(buildIdPath)) {
-  console.error('[portal] Missing .next/BUILD_ID. Run npm run build before npm run start.');
-  process.exit(1);
-}
+console.info(`[portal] Starting Next.js on 0.0.0.0:${port}`);
 
 if (!process.env.DATABASE_URL) {
-  console.error('[portal] DATABASE_URL is not set. Add it in hPanel environment variables, then redeploy.');
-  process.exit(1);
+  console.warn('[portal] DATABASE_URL is not set — add it in hPanel environment variables.');
 }
 
-console.info(`[portal] PORT=${port} HOST=${hostname} DATABASE_URL=set NODE_ENV=${process.env.NODE_ENV}`);
-
-function spawnNext() {
-  const args = ['start', '-H', hostname, '-p', String(port)];
-
-  if (fs.existsSync(nextBin)) {
-    return spawn(process.execPath, [nextBin, ...args], {
-      stdio: 'inherit',
-      cwd: root,
-      env: process.env,
-    });
-  }
-
-  console.warn('[portal] Next binary not found at expected path, falling back to npx next');
-  return spawn('npx', ['next', ...args], {
-    stdio: 'inherit',
-    shell: true,
-    cwd: root,
-    env: process.env,
-  });
-}
-
-console.info(`[portal] Starting Next.js on http://${hostname}:${port}`);
-
-const child = spawnNext();
-
-child.on('error', (error) => {
-  console.error('[portal] Failed to start Next.js:', error);
-  process.exit(1);
-});
-
-child.on('exit', (code, signal) => {
-  if (signal) {
-    console.error(`[portal] Next.js stopped by signal: ${signal}`);
-  } else if (code && code !== 0) {
-    console.error(`[portal] Next.js exited with code ${code}`);
-  }
-  process.exit(code ?? 1);
-});
+spawn('npx', ['next', 'start', '-H', '0.0.0.0', '-p', String(port)], {
+  stdio: 'inherit',
+  shell: true,
+  cwd: __dirname,
+  env: process.env,
+}).on('exit', (code) => process.exit(code ?? 1));
