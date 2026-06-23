@@ -12,6 +12,35 @@ const JSON_FIELDS = new Set([
   'mail_sent_history',
 ]);
 
+const DATE_ONLY_PATTERN = /^\d{4}-\d{2}-\d{2}$/;
+
+/** Prisma DateTime/@db.Date fields reject bare YYYY-MM-DD — convert for MySQL writes. */
+function toPrismaDateTime(value: unknown): unknown {
+  if (value === null || value === undefined) return value;
+  if (value instanceof Date) return value;
+  if (typeof value === 'string') {
+    const trimmed = value.trim();
+    if (!trimmed) return null;
+    if (DATE_ONLY_PATTERN.test(trimmed)) {
+      return new Date(`${trimmed}T00:00:00.000Z`);
+    }
+  }
+  return value;
+}
+
+function prepareValueForWrite(key: string, value: unknown): unknown {
+  if (value === null || value === undefined) return value;
+
+  const dateValue = toPrismaDateTime(value);
+  if (dateValue !== value) return dateValue;
+
+  if (JSON_FIELDS.has(key) && typeof value !== 'string') {
+    return JSON.stringify(value);
+  }
+
+  return value;
+}
+
 const RELATION_ALIASES: Record<string, string> = {
   certificates_certificates_tcc_application_idTotcc_applications: 'certificates',
   tcc_applications_certificates_tcc_application_idTotcc_applications: 'tcc_applications',
@@ -98,6 +127,15 @@ function serializeRow(row: Record<string, unknown>): Record<string, unknown> {
   return out;
 }
 
+/** Convert JSON-backed LongText fields and date-only strings for Prisma writes. */
+function prepareRowForWrite(row: Record<string, unknown>): Record<string, unknown> {
+  const out: Record<string, unknown> = {};
+  for (const [key, value] of Object.entries(row)) {
+    out[key] = prepareValueForWrite(key, value);
+  }
+  return out;
+}
+
 type Filter =
   | { kind: 'eq'; field: string; value: unknown }
   | { kind: 'neq'; field: string; value: unknown }
@@ -129,9 +167,13 @@ function buildWhere(filters: Filter[]): Record<string, unknown> {
   const orGroups: Record<string, unknown>[][] = [];
 
   for (const filter of filters) {
-    if (filter.kind === 'eq') where[filter.field] = filter.value;
-    if (filter.kind === 'neq') where[filter.field] = { not: filter.value };
-    if (filter.kind === 'in') where[filter.field] = { in: filter.value };
+    if (filter.kind === 'eq') where[filter.field] = toPrismaDateTime(filter.value);
+    if (filter.kind === 'neq') where[filter.field] = { not: toPrismaDateTime(filter.value) };
+    if (filter.kind === 'in') {
+      where[filter.field] = {
+        in: filter.value.map((item) => toPrismaDateTime(item)),
+      };
+    }
     if (filter.kind === 'ilike') where[filter.field] = { contains: filter.pattern, mode: 'insensitive' };
     if (filter.kind === 'is' && filter.value === null) where[filter.field] = null;
     if (filter.kind === 'or') orGroups.push(parseOrExpression(filter.expr));
@@ -440,7 +482,9 @@ class QueryBuilder {
 
     try {
       if (this.mode === 'insert') {
-        const rows = Array.isArray(this.payload) ? this.payload : [this.payload];
+        const rows = (Array.isArray(this.payload) ? this.payload : [this.payload]).map((row) =>
+          prepareRowForWrite(row as Record<string, unknown>)
+        );
         if (rows.length === 1) {
           const created = await delegate.create({ data: rows[0] });
           const data = serializeRow(created as Record<string, unknown>);
@@ -451,7 +495,7 @@ class QueryBuilder {
       }
 
       if (this.mode === 'upsert') {
-        const data = this.payload as Record<string, unknown>;
+        const data = prepareRowForWrite(this.payload as Record<string, unknown>);
         const conflictField = this.upsertConflictField ?? 'id';
         const conflictValue = data[conflictField];
         const upsertWhere = { [conflictField]: conflictValue };
@@ -460,16 +504,17 @@ class QueryBuilder {
       }
 
       if (this.mode === 'update') {
+        const writeData = prepareRowForWrite(this.payload as Record<string, unknown>);
         const id = where.id;
         if (id !== undefined) {
           const updated = await delegate.update({
             where: { id },
-            data: this.payload,
+            data: writeData,
           });
           const row = serializeRow(updated as Record<string, unknown>);
           return { data: this.returning ? row : null, error: null };
         }
-        await delegate.updateMany({ where, data: this.payload });
+        await delegate.updateMany({ where, data: writeData });
         return { data: null, error: null };
       }
 

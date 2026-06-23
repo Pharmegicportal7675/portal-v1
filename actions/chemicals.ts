@@ -3,6 +3,7 @@
 import { createAdminClient } from '@/lib/db/admin';
 import { getSession } from '@/lib/auth/session';
 import { chemicalSchema } from '@/lib/validations';
+import { normalizeDateInput } from '@/lib/parse-flexible-date';
 import { revalidatePath } from 'next/cache';
 
 async function requireAdmin() {
@@ -28,10 +29,14 @@ export async function createChemicalAction(prevState: unknown, formData: FormDat
   const parsed = chemicalSchema.safeParse(data);
   if (!parsed.success) return { success: false, error: parsed.error.issues[0].message };
 
+  const validity = normalizeDateInput(parsed.data.validity_date, 'Validity date');
+  if (!validity.ok) return { success: false, error: validity.error };
+
   const adminSupabase = createAdminClient();
   try {
     const { error } = await adminSupabase.from('chemicals').insert({
       ...parsed.data,
+      validity_date: validity.iso,
       exported_quantity: 0,
     });
     if (error) throw error;
@@ -53,9 +58,16 @@ export async function updateChemicalAction(id: string, data: unknown) {
   const parsed = chemicalSchema.partial().safeParse(data);
   if (!parsed.success) return { success: false, error: parsed.error.issues[0].message };
 
+  const updateData = { ...parsed.data };
+  if (updateData.validity_date !== undefined) {
+    const validity = normalizeDateInput(updateData.validity_date, 'Validity date');
+    if (!validity.ok) return { success: false, error: validity.error };
+    updateData.validity_date = validity.iso;
+  }
+
   const adminSupabase = createAdminClient();
   try {
-    const { error } = await adminSupabase.from('chemicals').update(parsed.data).eq('id', id);
+    const { error } = await adminSupabase.from('chemicals').update(updateData).eq('id', id);
     if (error) throw error;
     revalidatePath('/admin/chemicals');
     return { success: true, message: 'Substance updated successfully.' };
@@ -81,7 +93,7 @@ export async function trashChemicalAction(id: string) {
         return {
           success: false,
           error:
-            'Trash is not enabled in the database yet. Run the chemical_status migration in Supabase SQL (see setup.md).',
+            'Trash is not enabled in the database yet. Run npm run db:import or apply the chemical_status migration in prisma/database.mysql.sql.',
         };
       }
       throw error;
@@ -94,7 +106,7 @@ export async function trashChemicalAction(id: string) {
       return {
         success: false,
         error:
-          'Trash is not enabled in the database yet. Run the chemical_status migration in Supabase SQL (see setup.md).',
+          'Trash is not enabled in the database yet. Run npm run db:import or apply the chemical_status migration in prisma/database.mysql.sql.',
       };
     }
     const message = err instanceof Error ? err.message : String(err);

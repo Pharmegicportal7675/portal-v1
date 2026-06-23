@@ -1,7 +1,7 @@
 import { cache } from 'react';
 import { jwtVerify } from 'jose';
 import { cookies } from 'next/headers';
-import { createAdminClient } from '@/lib/db/admin';
+import { prisma } from '@/lib/prisma';
 import { SESSION_COOKIE, getAuthSecret } from '@/lib/auth/constants';
 import { SESSION_COOKIE_OPTIONS } from '@/lib/auth/cookie-options';
 import { signSessionToken } from '@/lib/auth/sign-session';
@@ -22,32 +22,20 @@ export async function createSession(payload: SessionPayload): Promise<void> {
 async function reconcileSessionWithDatabase(
   session: SessionPayload
 ): Promise<SessionPayload | null> {
-  const supabase = createAdminClient();
+  const emailLower = session.email.toLowerCase().trim();
 
-  let user: {
-    id: string;
-    email: string;
-    role: string;
-    client_id: string | null;
-    is_disabled: boolean;
-  } | null = null;
-
-  const { data: userById } = await supabase
-    .from('users')
-    .select('id, email, role, client_id, is_disabled')
-    .eq('id', session.userId)
-    .maybeSingle();
-
-  user = userById;
-
-  if (!user) {
-    const { data: userByEmail } = await supabase
-      .from('users')
-      .select('id, email, role, client_id, is_disabled')
-      .eq('email', session.email.toLowerCase().trim())
-      .maybeSingle();
-    user = userByEmail;
-  }
+  const user = await prisma.users.findFirst({
+    where: {
+      OR: [{ id: session.userId }, { email: emailLower }],
+    },
+    select: {
+      id: true,
+      email: true,
+      role: true,
+      client_id: true,
+      is_disabled: true,
+    },
+  });
 
   if (!user || user.is_disabled) return null;
 

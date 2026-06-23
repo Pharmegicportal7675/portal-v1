@@ -30,6 +30,6 @@ restart_app
 
 echo ""
 echo "SUCCESS: LibreOffice installed for TCC PDF conversion."
-echo "RC certificates use HTML → PDF (Puppeteer) — no extra setup on Vercel."
+echo "RC certificates use HTML → PDF (Puppeteer) — set PUPPETEER_EXECUTABLE_PATH on Hostinger VPS."
 echo ""
 echo "Verify: https://portal.pharmegichealthcare.com/api/health/pdf-converter"

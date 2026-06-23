@@ -1,5 +1,5 @@
 /**
- * Turns Supabase/PostgREST and other thrown values into a readable string.
+ * Turns database/API errors and other thrown values into a readable string.
  * Plain objects stringify as "[object Object]" — avoid showing that in the UI.
  */
 export function formatErrorMessage(err: unknown): string {

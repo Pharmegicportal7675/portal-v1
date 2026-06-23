@@ -1,5 +1,5 @@
 /**
- * Remove legacy TCC .docx files from Supabase storage and regenerate HTML PDFs.
+ * Remove legacy TCC .docx files from local certificate storage and regenerate HTML PDFs.
  *
  * Usage:
  *   npx tsx scripts/cleanup-tcc-docx-storage.ts

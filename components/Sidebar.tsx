@@ -128,9 +128,15 @@ export default function Sidebar({ role, companyName, regulatoryRegistrations = [
     }`;
 
   const sidebarContent = (
-    <div className="flex flex-col h-full bg-primary text-primary-foreground border-r border-primary/20">
-      <div className="flex items-center justify-between p-6 border-b border-primary-hover">
-        <div className="rounded-lg bg-white px-2.5 py-1.5 shadow-xs">
+    <div
+      className="flex flex-col h-full bg-primary text-primary-foreground border-r border-primary/20"
+      suppressHydrationWarning
+    >
+      <div
+        className="flex items-center justify-between p-6 border-b border-primary-hover"
+        suppressHydrationWarning
+      >
+        <div className="rounded-lg bg-white px-2.5 py-1.5 shadow-xs" suppressHydrationWarning>
           <BrandLogo variant="sidebar" href={dashboardHome} />
         </div>
         <button
@@ -164,6 +170,7 @@ export default function Sidebar({ role, companyName, regulatoryRegistrations = [
                 <Link
                   key={link.href}
                   href={link.href}
+                  prefetch
                   className={navLinkClass(isActive, link.isSub)}
                 >
                   <Icon className={`shrink-0 ${link.isSub ? 'h-4 w-4' : 'h-5 w-5'}`} />
@@ -176,6 +183,7 @@ export default function Sidebar({ role, companyName, regulatoryRegistrations = [
             <div className="pt-3 mt-3 border-t border-primary-hover/60">
               <Link
                 href="/admin/clients"
+                prefetch
                 className={navLinkClass(pathname === '/admin/clients', false)}
               >
                 <Users className="h-5 w-5 shrink-0" />
@@ -193,7 +201,7 @@ export default function Sidebar({ role, companyName, regulatoryRegistrations = [
             const Icon = link.icon;
 
             return (
-              <Link key={link.href} href={link.href} className={navLinkClass(isActive)}>
+              <Link key={link.href} href={link.href} prefetch className={navLinkClass(isActive)}>
                 <Icon className="h-5 w-5 shrink-0" />
                 <span className="truncate" title={link.label}>
                   {link.label}
@@ -214,17 +222,21 @@ export default function Sidebar({ role, companyName, regulatoryRegistrations = [
 
   return (
     <>
-      <aside className="hidden md:flex flex-col w-64 h-full shrink-0">
+      <aside className="hidden md:flex flex-col w-64 h-full shrink-0" suppressHydrationWarning>
         {sidebarContent}
       </aside>
 
       {isSidebarOpen && (
-        <div className="fixed inset-0 z-40 md:hidden flex">
+        <div className="fixed inset-0 z-40 md:hidden flex" suppressHydrationWarning>
           <div
             className="fixed inset-0 bg-slate-900/50 backdrop-blur-xs transition-opacity"
             onClick={() => setSidebarOpen(false)}
+            suppressHydrationWarning
           />
-          <div className="relative flex flex-col w-64 max-w-xs h-full bg-primary z-50 animate-slide-in shadow-xl">
+          <div
+            className="relative flex flex-col w-64 max-w-xs h-full bg-primary z-50 animate-slide-in shadow-xl"
+            suppressHydrationWarning
+          >
             {sidebarContent}
           </div>
         </div>

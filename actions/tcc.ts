@@ -74,7 +74,7 @@ function tccSaveErrorMessage(err: unknown): string {
     message.includes('regulatory_framework') ||
     message.includes('PGRST204')
   ) {
-    return 'Database is missing EU Importer columns. Run the latest database.sql migration in Supabase, then try again.';
+    return 'Database is missing EU Importer columns. Run npm run db:import or apply the latest migration in prisma/database.mysql.sql, then try again.';
   }
   return message || 'Failed to save application.';
 }

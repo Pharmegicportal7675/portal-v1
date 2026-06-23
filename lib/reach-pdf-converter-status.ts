@@ -36,7 +36,7 @@ export async function resolveReachPdfConverterStatus(): Promise<ReachPdfConverte
   let recommendedAction: string | null = null;
   if (htmlPdfEnabled && !htmlPdfRenderUrl) {
     recommendedAction =
-      'Set NEXT_PUBLIC_APP_URL in Vercel Environment Variables (e.g. https://portal.pharmegichealthcare.com), then Redeploy.';
+      'Set NEXT_PUBLIC_APP_URL in Hostinger environment variables (e.g. https://portal.pharmegichealthcare.com), then redeploy.';
   }
 
   return {

@@ -223,7 +223,7 @@ export async function getTrashedChemicals(supabase: DbClient) {
     .eq('status', 'trashed')
     .order('chemical_name', { ascending: true });
 
-  // 22P02 = enum value 'trashed' not added yet — run database.sql migration in Supabase
+  // 22P02 = enum value 'trashed' not added yet — run prisma/database.mysql.sql migration
   if (error) {
     if (error.code === '22P02') return [];
     throw error;

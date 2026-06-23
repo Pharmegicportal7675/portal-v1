@@ -1,9 +1,10 @@
+import { cache } from 'react';
 import { createAdminClient } from '@/lib/db/admin';
 import { getSession } from '@/lib/auth/session';
 import { redirect } from 'next/navigation';
 import { getLatestReachCertForChemical, type ReachCertificateRecord } from '@/lib/reach-certificate';
 
-export async function loadClientProfileData(clientId: string) {
+export const loadClientProfileData = cache(async function loadClientProfileData(clientId: string) {
   const session = await getSession();
   if (!session || (session.role !== 'MASTER_ADMIN' && session.role !== 'SUPER_ADMIN')) {
     redirect('/login');
@@ -128,7 +129,9 @@ export async function loadClientProfileData(clientId: string) {
         .filter((email: string | undefined): email is string => Boolean(email)),
     },
   };
-}
+});
+
+export type ClientProfileData = Awaited<ReturnType<typeof loadClientProfileData>>;
 
 export type ClientProfileViewMode = 'overview' | 'chemicals' | 'certificates' | 'rc-certificates';
 
