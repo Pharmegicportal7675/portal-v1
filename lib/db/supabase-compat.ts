@@ -125,14 +125,87 @@ function buildWhere(filters: Filter[]): Record<string, unknown> {
   return where;
 }
 
-function parseFieldsList(fields: string): Record<string, boolean> | true {
+function parseFieldsList(fields: string): Record<string, boolean> | null {
   const trimmed = fields.trim();
-  if (trimmed === '*') return true;
+  if (trimmed === '*') return null;
   const select: Record<string, boolean> = {};
   for (const field of trimmed.split(',').map((f) => f.trim()).filter(Boolean)) {
+    if (field === '*') continue;
     select[field] = true;
   }
-  return select;
+  return Object.keys(select).length > 0 ? select : null;
+}
+
+function splitTopLevelSegments(input: string): string[] {
+  const segments: string[] = [];
+  let depth = 0;
+  let current = '';
+  for (const char of input) {
+    if (char === '(') depth++;
+    if (char === ')') depth--;
+    if (char === ',' && depth === 0) {
+      if (current.trim()) segments.push(current.trim());
+      current = '';
+      continue;
+    }
+    current += char;
+  }
+  if (current.trim()) segments.push(current.trim());
+  return segments;
+}
+
+/** Parse mixed scalar fields and nested relations inside one parenthesis block. */
+function parseSelectContent(
+  content: string,
+  parentTable: string
+): { select?: Record<string, boolean>; include?: Record<string, unknown> } {
+  const select: Record<string, boolean> = {};
+  const include: Record<string, unknown> = {};
+
+  for (const segment of splitTopLevelSegments(content)) {
+    if (segment.includes('(')) {
+      const { name, hint, fields } = parseRelationSegment(segment);
+      if (!name || name === '*') continue;
+      const hintMap = FK_HINTS[parentTable]?.[hint ?? ''];
+      const relationName = hintMap?.relation ?? name;
+      include[relationName] = buildRelationInclude(fields, name, relationName);
+    } else {
+      const field = segment.trim();
+      if (field && field !== '*') select[field] = true;
+    }
+  }
+
+  const result: { select?: Record<string, boolean>; include?: Record<string, unknown> } = {};
+  if (Object.keys(select).length > 0) result.select = select;
+  if (Object.keys(include).length > 0) result.include = include;
+  return result;
+}
+
+function buildRelationInclude(
+  fields: string,
+  table: string,
+  relationName: string
+): Record<string, unknown> | boolean {
+  const trimmed = fields.trim();
+  if (trimmed === '*') return true;
+
+  if (trimmed.includes('(')) {
+    const parsed = parseSelectContent(trimmed, table);
+    if (parsed.select && parsed.include) {
+      return { select: parsed.select, include: parsed.include };
+    }
+    if (parsed.include && Object.keys(parsed.include).length > 0) {
+      return { include: parsed.include };
+    }
+    if (parsed.select) {
+      return { select: parsed.select };
+    }
+    return true;
+  }
+
+  const fieldSelect = parseFieldsList(trimmed);
+  if (!fieldSelect) return true;
+  return { select: fieldSelect };
 }
 
 function parseRelationSegment(segment: string): { name: string; hint?: string; fields: string } {
@@ -153,37 +226,32 @@ function parseRelationSegment(segment: string): { name: string; hint?: string; f
   return { name, hint, fields };
 }
 
-function parseSelect(select: string, table: string): { include?: Record<string, unknown> } {
-  if (select === '*') return {};
-  const include: Record<string, unknown> = {};
-  const top = select.replace(/^\*,\s*/, '');
-  if (top === select && !select.includes('(')) return {};
+function parseSelect(
+  select: string,
+  table: string
+): { include?: Record<string, unknown>; select?: Record<string, boolean> } {
+  const trimmed = select.trim();
+  if (trimmed === '*') return {};
 
-  const segments: string[] = [];
-  let depth = 0;
-  let current = '';
-  for (const char of top) {
-    if (char === '(') depth++;
-    if (char === ')') depth--;
-    if (char === ',' && depth === 0) {
-      if (current.trim()) segments.push(current.trim());
-      current = '';
-      continue;
+  // Plain column list without relations, e.g. "country, status"
+  if (!trimmed.includes('(')) {
+    if (trimmed.startsWith('*,') || trimmed.startsWith('*\n')) {
+      // fall through to relation parsing below
+    } else {
+      const cols = parseFieldsList(trimmed);
+      return cols ? { select: cols } : {};
     }
-    current += char;
   }
-  if (current.trim()) segments.push(current.trim());
 
-  for (const segment of segments) {
+  const include: Record<string, unknown> = {};
+  const top = trimmed.replace(/^\*,\s*/s, '');
+
+  for (const segment of splitTopLevelSegments(top)) {
     const { name, hint, fields } = parseRelationSegment(segment);
+    if (!name || name === '*') continue;
     const hintMap = FK_HINTS[table]?.[hint ?? ''];
     const relationName = hintMap?.relation ?? name;
-    if (fields.includes('(')) {
-      const nested = parseSelect(fields, name);
-      include[relationName] = nested.include ?? {};
-    } else {
-      include[relationName] = { select: parseFieldsList(fields) };
-    }
+    include[relationName] = buildRelationInclude(fields, name, relationName);
   }
 
   return { include };
@@ -363,7 +431,10 @@ class QueryBuilder {
       if (orderBy.length) args.orderBy = orderBy;
       if (this.skip !== undefined) args.skip = this.skip;
       if (this.take !== undefined) args.take = this.take;
-      if (parsed.include) args.include = parsed.include;
+      if (parsed.select) args.select = parsed.select;
+      if (parsed.include && Object.keys(parsed.include).length > 0) {
+        args.include = parsed.include;
+      }
 
       if (this.wantSingle || this.wantMaybeSingle) {
         const row = await delegate.findFirst(args);
