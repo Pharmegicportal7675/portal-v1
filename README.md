@@ -40,6 +40,18 @@ npm run dev
 
 Do **not** set output directory to `out` — that is only for static export.
 
+### Environment variables
+
+Add in Hostinger → **Environment Variables**:
+
+```
+DATABASE_URL=mysql://USER:PASSWORD@HOST:3306/DATABASE
+```
+
+Use the exact URL from Hostinger MySQL panel (password special chars must be URL-encoded, e.g. `@` → `%40`).
+
+Local dev: copy `.env.example` to `.env.local` and fill in values. **Never commit `.env.local`.**
+
 ## Deploy steps
 
 1. Push latest code to GitHub `main` branch.
