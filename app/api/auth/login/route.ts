@@ -3,6 +3,7 @@ import { authenticateUser } from '@/lib/auth/authenticate-user';
 import { SESSION_COOKIE } from '@/lib/auth/constants';
 import { SESSION_COOKIE_OPTIONS } from '@/lib/auth/cookie-options';
 import { resolveLoginRedirect } from '@/lib/auth/resolve-login-redirect';
+import { getRequestOrigin } from '@/lib/http/get-request-origin';
 import { signSessionToken } from '@/lib/auth/sign-session';
 
 async function readLoginBody(request: NextRequest) {
@@ -26,7 +27,7 @@ async function readLoginBody(request: NextRequest) {
 }
 
 function loginFailureRedirect(request: NextRequest, redirectTo: string, message: string) {
-  const loginUrl = new URL('/login', request.url);
+  const loginUrl = new URL('/login', getRequestOrigin(request));
   loginUrl.searchParams.set('error', message);
   if (redirectTo) {
     loginUrl.searchParams.set('redirectTo', redirectTo);
@@ -56,7 +57,7 @@ export async function POST(request: NextRequest) {
   const target = resolveLoginRedirect(auth.session.role, redirectTo);
   const token = await signSessionToken(auth.session);
 
-  const response = NextResponse.redirect(new URL(target, request.url));
+  const response = NextResponse.redirect(new URL(target, getRequestOrigin(request)));
   response.cookies.set(SESSION_COOKIE, token, SESSION_COOKIE_OPTIONS);
   return response;
 }

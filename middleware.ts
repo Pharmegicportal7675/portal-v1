@@ -1,18 +1,20 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { jwtVerify } from 'jose';
 import { SESSION_COOKIE, getAuthSecret } from '@/lib/auth/constants';
+import { getRequestOrigin } from '@/lib/http/get-request-origin';
 
 const ADMIN_ROLES = ['SUPER_ADMIN', 'MASTER_ADMIN'];
 const CLIENT_ROLE = 'CLIENT';
 
 function redirectToRoleHome(request: NextRequest, role: string) {
+  const origin = getRequestOrigin(request);
   if (ADMIN_ROLES.includes(role)) {
-    return NextResponse.redirect(new URL('/admin', request.url));
+    return NextResponse.redirect(new URL('/admin', origin));
   }
   if (role === CLIENT_ROLE) {
-    return NextResponse.redirect(new URL('/client', request.url));
+    return NextResponse.redirect(new URL('/client', origin));
   }
-  return NextResponse.redirect(new URL('/login', request.url));
+  return NextResponse.redirect(new URL('/login', origin));
 }
 
 async function readSessionRole(request: NextRequest): Promise<string | null> {
@@ -44,7 +46,7 @@ export async function middleware(request: NextRequest) {
     if (role) {
       return redirectToRoleHome(request, role);
     }
-    return NextResponse.redirect(new URL('/login', request.url));
+    return NextResponse.redirect(new URL('/login', getRequestOrigin(request)));
   }
 
   return NextResponse.next();
