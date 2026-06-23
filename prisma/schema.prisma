@@ -1,9 +1,3 @@
-// This is your Prisma schema file,
-// learn more about it in the docs: https://pris.ly/d/prisma-schema
-
-// Looking for ways to speed up your queries, or scale easily with your serverless or edge functions?
-// Try Prisma Accelerate: https://pris.ly/cli/accelerate-init
-
 generator client {
   provider = "prisma-client"
   output   = "../app/generated/prisma"
@@ -12,4 +6,374 @@ generator client {
 datasource db {
   provider = "mysql"
   url      = env("DATABASE_URL")
+}
+
+model activity_logs {
+  id          String   @id @default(dbgenerated("(uuid())")) @db.Char(36)
+  client_id   String?  @db.Char(36)
+  user_id     String?  @db.Char(36)
+  action      String   @db.VarChar(255)
+  entity_type String?  @db.VarChar(255)
+  entity_id   String?  @db.VarChar(255)
+  description String?  @db.Text
+  metadata    String?  @db.LongText
+  created_at  DateTime @default(now()) @db.DateTime(0)
+  clients     clients? @relation(fields: [client_id], references: [id], onDelete: Cascade, onUpdate: Restrict, map: "fk_activity_client")
+  users       users?   @relation(fields: [user_id], references: [id], onUpdate: Restrict, map: "fk_activity_user")
+
+  @@index([user_id], map: "fk_activity_user")
+  @@index([client_id], map: "idx_activity_logs_client")
+}
+
+model admin_settings {
+  id                                  Int       @id @default(1)
+  full_name                           String?   @default("Admin User") @db.VarChar(255)
+  mobile_number                       String?   @default("") @db.VarChar(255)
+  email                               String?   @default("directoratulpatoliya@gmail.com") @db.VarChar(255)
+  cc_emails                           String?   @db.Text
+  bcc_emails                          String?   @db.Text
+  timezone                            String?   @default("UTC") @db.VarChar(64)
+  profile_image                       String?   @db.Text
+  smtp_host                           String?   @default("") @db.VarChar(255)
+  smtp_port                           Int?      @default(587)
+  smtp_user                           String?   @default("") @db.VarChar(255)
+  smtp_pass                           String?   @default("") @db.VarChar(255)
+  smtp_from                           String?   @default("") @db.VarChar(255)
+  smtp_cc_default                     String?   @db.Text
+  rc_smtp_host                        String?   @default("") @db.VarChar(255)
+  rc_smtp_port                        Int?      @default(587)
+  rc_smtp_user                        String?   @default("") @db.VarChar(255)
+  rc_smtp_pass                        String?   @default("") @db.VarChar(255)
+  rc_smtp_from                        String?   @default("") @db.VarChar(255)
+  rc_smtp_cc_default                  String?   @db.Text
+  tcc_application_notification_emails String?   @db.Text
+  created_at                          DateTime? @default(now()) @db.DateTime(0)
+  updated_at                          DateTime? @default(now()) @db.DateTime(0)
+}
+
+model audit_logs {
+  id          String   @id @default(dbgenerated("(uuid())")) @db.Char(36)
+  user_id     String?  @db.Char(36)
+  action      String   @db.VarChar(255)
+  entity_type String   @db.VarChar(255)
+  entity_id   String?  @db.VarChar(255)
+  metadata    String?  @db.LongText
+  created_at  DateTime @default(now()) @db.DateTime(0)
+  users       users?   @relation(fields: [user_id], references: [id], onUpdate: Restrict, map: "fk_audit_user")
+
+  @@index([user_id], map: "fk_audit_user")
+}
+
+model certificates {
+  id                                                                   String               @id @default(dbgenerated("(uuid())")) @db.Char(36)
+  certificate_number                                                   String               @unique(map: "certificate_number") @db.VarChar(255)
+  tcc_application_id                                                   String?              @unique(map: "tcc_application_id") @db.Char(36)
+  client_id                                                            String               @db.Char(36)
+  chemical_id                                                          String?              @db.Char(36)
+  type                                                                 String?              @default("TCC") @db.VarChar(64)
+  registration_number                                                  String?              @db.VarChar(255)
+  file_url                                                             String?              @db.Text
+  allocated_quantity                                                   Decimal?             @db.Decimal(12, 2)
+  tonnage_band                                                         String?              @db.VarChar(255)
+  issued_at                                                            DateTime             @default(now()) @db.DateTime(0)
+  expires_at                                                           DateTime?            @db.DateTime(0)
+  status                                                               certificates_status? @default(active)
+  mail_sent                                                            Boolean              @default(false)
+  mail_sent_at                                                         DateTime?            @db.DateTime(0)
+  mail_sent_by                                                         String?              @db.Char(36)
+  mail_resend_count                                                    Int                  @default(0)
+  last_resend_at                                                       DateTime?            @db.DateTime(0)
+  last_resend_by                                                       String?              @db.Char(36)
+  mail_sent_history                                                    String               @default(dbgenerated("(json_array())")) @db.LongText
+  created_by                                                           String?              @db.Char(36)
+  updated_by                                                           String?              @db.Char(36)
+  created_at                                                           DateTime             @default(now()) @db.DateTime(0)
+  updated_at                                                           DateTime?            @default(now()) @db.DateTime(0)
+  chemicals                                                            chemicals?           @relation(fields: [chemical_id], references: [id], onUpdate: Restrict, map: "fk_certificates_chemical")
+  clients                                                              clients              @relation(fields: [client_id], references: [id], onDelete: Cascade, onUpdate: Restrict, map: "fk_certificates_client")
+  users_certificates_created_byTousers                                 users?               @relation("certificates_created_byTousers", fields: [created_by], references: [id], onUpdate: Restrict, map: "fk_certificates_created_by")
+  users_certificates_last_resend_byTousers                             users?               @relation("certificates_last_resend_byTousers", fields: [last_resend_by], references: [id], onUpdate: Restrict, map: "fk_certificates_last_resend_by")
+  users_certificates_mail_sent_byTousers                               users?               @relation("certificates_mail_sent_byTousers", fields: [mail_sent_by], references: [id], onUpdate: Restrict, map: "fk_certificates_mail_sent_by")
+  tcc_applications_certificates_tcc_application_idTotcc_applications   tcc_applications?    @relation("certificates_tcc_application_idTotcc_applications", fields: [tcc_application_id], references: [id], onDelete: Cascade, onUpdate: Restrict, map: "fk_certificates_tcc")
+  users_certificates_updated_byTousers                                 users?               @relation("certificates_updated_byTousers", fields: [updated_by], references: [id], onUpdate: Restrict, map: "fk_certificates_updated_by")
+  tcc_applications_tcc_applications_reach_certificate_idTocertificates tcc_applications[]   @relation("tcc_applications_reach_certificate_idTocertificates")
+
+  @@index([chemical_id], map: "fk_certificates_chemical")
+  @@index([created_by], map: "fk_certificates_created_by")
+  @@index([last_resend_by], map: "fk_certificates_last_resend_by")
+  @@index([mail_sent_by], map: "fk_certificates_mail_sent_by")
+  @@index([updated_by], map: "fk_certificates_updated_by")
+  @@index([client_id], map: "idx_certificates_client_id")
+  @@index([certificate_number], map: "idx_certificates_number")
+  @@index([client_id, chemical_id, type], map: "idx_certificates_reach")
+}
+
+model chemicals {
+  id                 String               @id @default(dbgenerated("(uuid())")) @db.Char(36)
+  chemical_name      String               @db.VarChar(255)
+  cas_number         String               @unique(map: "cas_number") @db.VarChar(64)
+  ec_number          String?              @db.VarChar(64)
+  tonnage_band       String?              @db.VarChar(255)
+  available_quantity Decimal              @default(0.00) @db.Decimal(12, 2)
+  exported_quantity  Decimal              @default(0.00) @db.Decimal(12, 2)
+  validity_date      DateTime?            @db.Date
+  status             chemicals_status?    @default(active)
+  created_at         DateTime             @default(now()) @db.DateTime(0)
+  certificates       certificates[]
+  client_chemicals   client_chemicals[]
+  quota_transactions quota_transactions[]
+  tcc_applications   tcc_applications[]
+
+  @@index([cas_number], map: "idx_chemicals_cas")
+}
+
+model client_chemicals {
+  id                  String                  @id @default(dbgenerated("(uuid())")) @db.Char(36)
+  client_id           String                  @db.Char(36)
+  chemical_id         String                  @db.Char(36)
+  available_quantity  Decimal                 @default(0.00) @db.Decimal(12, 2)
+  validity_date       DateTime?               @db.Date
+  registration_number String?                 @db.VarChar(255)
+  issued_date         DateTime?               @db.Date
+  certificate_number  String?                 @db.VarChar(255)
+  status              client_chemicals_status @default(active)
+  assigned_by         String?                 @db.Char(36)
+  created_at          DateTime                @default(now()) @db.DateTime(0)
+  updated_at          DateTime                @default(now()) @db.DateTime(0)
+  users               users?                  @relation(fields: [assigned_by], references: [id], onUpdate: Restrict, map: "fk_client_chemicals_assigned_by")
+  chemicals           chemicals               @relation(fields: [chemical_id], references: [id], onDelete: Cascade, onUpdate: Restrict, map: "fk_client_chemicals_chemical")
+  clients             clients                 @relation(fields: [client_id], references: [id], onDelete: Cascade, onUpdate: Restrict, map: "fk_client_chemicals_client")
+  tcc_applications    tcc_applications[]
+
+  @@unique([client_id, chemical_id], map: "uq_client_chemical")
+  @@index([assigned_by], map: "fk_client_chemicals_assigned_by")
+  @@index([chemical_id], map: "fk_client_chemicals_chemical")
+  @@index([client_id], map: "idx_client_chemicals_client")
+}
+
+model client_contacts {
+  id         String   @id @default(dbgenerated("(uuid())")) @db.Char(36)
+  client_id  String   @db.Char(36)
+  first_name String   @db.VarChar(255)
+  last_name  String   @db.VarChar(255)
+  email      String   @db.VarChar(255)
+  phone      String?  @db.VarChar(64)
+  role       String?  @db.VarChar(255)
+  created_at DateTime @default(now()) @db.DateTime(0)
+  clients    clients  @relation(fields: [client_id], references: [id], onDelete: Cascade, onUpdate: Restrict, map: "fk_client_contacts_client")
+
+  @@index([client_id], map: "idx_client_contacts_client_id")
+}
+
+model clients {
+  id                         String               @id @default(dbgenerated("(uuid())")) @db.Char(36)
+  created_at                 DateTime             @default(now()) @db.DateTime(0)
+  updated_at                 DateTime             @default(now()) @db.DateTime(0)
+  company_name               String               @db.VarChar(255)
+  legal_name                 String?              @db.VarChar(255)
+  uuid_number                String?              @unique(map: "uuid_number") @db.VarChar(255)
+  registration_number        String?              @db.VarChar(255)
+  owner_name                 String?              @db.VarChar(255)
+  address                    String?              @db.Text
+  city                       String?              @db.VarChar(255)
+  state                      String?              @db.VarChar(255)
+  postal_code                String?              @db.VarChar(64)
+  country                    String?              @default("Turkey") @db.VarChar(255)
+  email                      String               @unique(map: "email") @db.VarChar(255)
+  phone                      String?              @db.VarChar(64)
+  primary_contact_first_name String?              @db.VarChar(255)
+  primary_contact_last_name  String?              @db.VarChar(255)
+  cc_emails                  String?              @db.Text
+  cc_phones                  String?              @db.Text
+  status                     clients_status?      @default(pending)
+  regulatory_registrations   String?              @default(dbgenerated("(json_array())")) @db.LongText
+  activity_logs              activity_logs[]
+  certificates               certificates[]
+  client_chemicals           client_chemicals[]
+  client_contacts            client_contacts[]
+  internal_notes             internal_notes[]
+  quota_transactions         quota_transactions[]
+  tcc_applications           tcc_applications[]
+  users                      users[]
+
+  @@index([email], map: "idx_clients_email")
+}
+
+model internal_notes {
+  id         String   @id @default(dbgenerated("(uuid())")) @db.Char(36)
+  client_id  String   @db.Char(36)
+  author_id  String?  @db.Char(36)
+  note       String   @db.Text
+  created_at DateTime @default(now()) @db.DateTime(0)
+  updated_at DateTime @default(now()) @db.DateTime(0)
+  users      users?   @relation(fields: [author_id], references: [id], onUpdate: Restrict, map: "fk_internal_notes_author")
+  clients    clients  @relation(fields: [client_id], references: [id], onDelete: Cascade, onUpdate: Restrict, map: "fk_internal_notes_client")
+
+  @@index([author_id], map: "fk_internal_notes_author")
+  @@index([client_id], map: "fk_internal_notes_client")
+}
+
+model notifications {
+  id         String   @id @default(dbgenerated("(uuid())")) @db.Char(36)
+  user_id    String   @db.Char(36)
+  title      String   @db.VarChar(255)
+  message    String   @db.Text
+  link       String?  @db.Text
+  read       Boolean  @default(false)
+  created_at DateTime @default(now()) @db.DateTime(0)
+  users      users    @relation(fields: [user_id], references: [id], onDelete: Cascade, onUpdate: Restrict, map: "fk_notifications_user")
+
+  @@index([user_id, read], map: "idx_notifications_user_id")
+}
+
+model quota_transactions {
+  id                 String                              @id @default(dbgenerated("(uuid())")) @db.Char(36)
+  client_id          String                              @db.Char(36)
+  chemical_id        String                              @db.Char(36)
+  tcc_application_id String?                             @db.Char(36)
+  quantity_mt        Decimal                             @db.Decimal(12, 2)
+  transaction_type   quota_transactions_transaction_type
+  performed_by       String?                             @db.Char(36)
+  notes              String?                             @db.Text
+  created_at         DateTime                            @default(now()) @db.DateTime(0)
+  chemicals          chemicals                           @relation(fields: [chemical_id], references: [id], onDelete: Cascade, onUpdate: Restrict, map: "fk_quota_chemical")
+  clients            clients                             @relation(fields: [client_id], references: [id], onDelete: Cascade, onUpdate: Restrict, map: "fk_quota_client")
+  users              users?                              @relation(fields: [performed_by], references: [id], onUpdate: Restrict, map: "fk_quota_performed_by")
+  tcc_applications   tcc_applications?                   @relation(fields: [tcc_application_id], references: [id], onUpdate: Restrict, map: "fk_quota_tcc")
+
+  @@index([chemical_id], map: "fk_quota_chemical")
+  @@index([performed_by], map: "fk_quota_performed_by")
+  @@index([tcc_application_id], map: "fk_quota_tcc")
+  @@index([client_id], map: "idx_quota_transactions_client")
+}
+
+model tcc_applications {
+  id                                                               String                   @id @default(dbgenerated("(uuid())")) @db.Char(36)
+  tracking_id                                                      String?                  @unique(map: "tracking_id") @db.VarChar(255)
+  client_id                                                        String                   @db.Char(36)
+  chemical_id                                                      String                   @db.Char(36)
+  client_chemical_id                                               String?                  @db.Char(36)
+  reach_certificate_id                                             String?                  @db.Char(36)
+  quantity_mt                                                      Decimal                  @db.Decimal(12, 2)
+  export_date                                                      DateTime?                @db.Date
+  registration_number                                              String?                  @db.VarChar(255)
+  remarks                                                          String?                  @db.Text
+  bo_attachment_url                                                String?                  @db.Text
+  bo_attachment_name                                               String?                  @db.VarChar(255)
+  eu_importer_company_name                                         String?                  @db.VarChar(255)
+  eu_importer_address                                              String?                  @db.Text
+  purchase_order_number                                            String?                  @db.VarChar(255)
+  invoice_number                                                   String?                  @db.VarChar(255)
+  regulatory_framework                                             String?                  @db.VarChar(255)
+  certificate_issue_date                                           DateTime?                @db.Date
+  status                                                           tcc_applications_status? @default(pending)
+  rejection_reason                                                 String?                  @db.Text
+  approved_by                                                      String?                  @db.Char(36)
+  created_at                                                       DateTime                 @default(now()) @db.DateTime(0)
+  updated_at                                                       DateTime                 @default(now()) @db.DateTime(0)
+  certificates_certificates_tcc_application_idTotcc_applications   certificates?            @relation("certificates_tcc_application_idTotcc_applications")
+  quota_transactions                                               quota_transactions[]
+  users                                                            users?                   @relation(fields: [approved_by], references: [id], onUpdate: Restrict, map: "fk_tcc_approved_by")
+  chemicals                                                        chemicals                @relation(fields: [chemical_id], references: [id], onDelete: Cascade, onUpdate: Restrict, map: "fk_tcc_chemical")
+  clients                                                          clients                  @relation(fields: [client_id], references: [id], onDelete: Cascade, onUpdate: Restrict, map: "fk_tcc_client")
+  client_chemicals                                                 client_chemicals?        @relation(fields: [client_chemical_id], references: [id], onUpdate: Restrict, map: "fk_tcc_client_chemical")
+  certificates_tcc_applications_reach_certificate_idTocertificates certificates?            @relation("tcc_applications_reach_certificate_idTocertificates", fields: [reach_certificate_id], references: [id], onUpdate: Restrict, map: "fk_tcc_reach_certificate")
+
+  @@index([approved_by], map: "fk_tcc_approved_by")
+  @@index([chemical_id], map: "fk_tcc_chemical")
+  @@index([client_chemical_id], map: "fk_tcc_client_chemical")
+  @@index([reach_certificate_id], map: "fk_tcc_reach_certificate")
+  @@index([client_id], map: "idx_tcc_applications_client_id")
+  @@index([status], map: "idx_tcc_applications_status")
+}
+
+model templates {
+  id                  String   @id @default(dbgenerated("(uuid())")) @db.Char(36)
+  logo                String?  @db.Text
+  accent_color        String   @default("#064e3b") @db.VarChar(32)
+  footer_text         String?  @db.Text
+  signature_image     String?  @db.Text
+  rc_template_key     String?  @default("template_1") @db.VarChar(64)
+  tcc_template_key    String?  @default("template_1") @db.VarChar(64)
+  rc_logo             String?  @db.Text
+  rc_signature_image  String?  @db.Text
+  rc_accent_color     String?  @default("#064e3b") @db.VarChar(32)
+  rc_footer_text      String?  @db.Text
+  tcc_logo            String?  @db.Text
+  tcc_signature_image String?  @db.Text
+  tcc_accent_color    String?  @default("#064e3b") @db.VarChar(32)
+  tcc_footer_text     String?  @db.Text
+  created_at          DateTime @default(now()) @db.DateTime(0)
+}
+
+model users {
+  id                                              String               @id @default(dbgenerated("(uuid())")) @db.Char(36)
+  email                                           String               @unique(map: "email") @db.VarChar(255)
+  password_hash                                   String               @db.VarChar(255)
+  login_password                                  String?              @db.VarChar(255)
+  role                                            users_role           @default(CLIENT)
+  client_id                                       String?              @db.Char(36)
+  is_disabled                                     Boolean              @default(false)
+  created_at                                      DateTime             @default(now()) @db.DateTime(0)
+  updated_at                                      DateTime             @default(now()) @db.DateTime(0)
+  activity_logs                                   activity_logs[]
+  audit_logs                                      audit_logs[]
+  certificates_certificates_created_byTousers     certificates[]       @relation("certificates_created_byTousers")
+  certificates_certificates_last_resend_byTousers certificates[]       @relation("certificates_last_resend_byTousers")
+  certificates_certificates_mail_sent_byTousers   certificates[]       @relation("certificates_mail_sent_byTousers")
+  certificates_certificates_updated_byTousers     certificates[]       @relation("certificates_updated_byTousers")
+  client_chemicals                                client_chemicals[]
+  internal_notes                                  internal_notes[]
+  notifications                                   notifications[]
+  quota_transactions                              quota_transactions[]
+  tcc_applications                                tcc_applications[]
+  clients                                         clients?             @relation(fields: [client_id], references: [id], onUpdate: Restrict, map: "fk_users_client")
+
+  @@index([client_id], map: "idx_users_client_id")
+  @@index([email], map: "idx_users_email")
+}
+
+enum users_role {
+  SUPER_ADMIN
+  MASTER_ADMIN
+  CLIENT
+}
+
+enum quota_transactions_transaction_type {
+  deduct
+  restore
+  assign
+}
+
+enum chemicals_status {
+  active
+  inactive
+  trashed
+}
+
+enum client_chemicals_status {
+  active
+  expired
+  suspended
+  trashed
+}
+
+enum certificates_status {
+  active
+  expired
+  revoked
+}
+
+enum tcc_applications_status {
+  pending
+  approved
+  rejected
+  changes_required
+  expired
+}
+
+enum clients_status {
+  active
+  inactive
+  pending
 }

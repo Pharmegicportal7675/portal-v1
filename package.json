@@ -9,6 +9,8 @@
     "dev": "next dev",
     "build": "prisma generate && next build",
     "postinstall": "prisma generate",
+    "db:import": "prisma db execute --file prisma/database.mysql.sql --schema prisma/schema.prisma",
+    "db:pull": "prisma db pull",
     "start": "node scripts/start.mjs",
     "lint": "eslint"
   },
