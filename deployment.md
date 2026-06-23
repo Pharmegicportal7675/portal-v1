@@ -87,14 +87,16 @@ Also reconnect GitHub (dashboard shows "Disconnected from GitHub") so future pus
 Local dev may use the external host (`srvXXXX.hstgr.io`). **The Node app on Hostinger must use the internal host** from hPanel → Databases → MySQL:
 
 ```
-mysql://DB_USER:DB_PASSWORD@localhost:3306/DB_NAME
+mysql://DB_USER:DB_PASSWORD@127.0.0.1:3306/DB_NAME?connection_limit=5&connect_timeout=30
 ```
 
-Rules:
+Example (use your real password):
 
-1. Password contains `@` → URL-encode as `%40` (e.g. `Pharmegic@1234` → `Pharmegic%401234`).
-2. Do **not** paste the raw password with `@` — the URL breaks and login shows "Invalid email or password" even when phpMyAdmin has users.
-3. After changing `DATABASE_URL` → **Save and redeploy**.
+```
+mysql://u402838766_Pharmegic:Pharmegic1234@127.0.0.1:3306/u402838766_Pharmegic?connection_limit=5&connect_timeout=30
+```
+
+Use **`127.0.0.1`** not `localhost` (avoids socket issues on Linux). Password with `@` → `%40`.
 
 Verify after deploy:
 
