@@ -31,6 +31,7 @@ const nextConfig = {
     '/admin/**/*': PRISMA_TRACE,
     '/client/**/*': PRISMA_TRACE,
     '/login': PRISMA_TRACE,
+    '/api/tcc/application': PRISMA_TRACE,
     '/api/reach-certificate/pdf-html': [
       './node_modules/@sparticuz/chromium-min/**',
       ...PDF_FONT_TRACE,

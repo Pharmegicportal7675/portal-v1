@@ -5,7 +5,6 @@ import { computeTccQuotaForExportDate } from '@/lib/quota';
 import type { TccExportRecord } from '@/lib/quota';
 import type { ReachCertificateRecord } from '@/lib/reach-certificate';
 import { useRouter } from 'next/navigation';
-import { applyForTccAction, updateTccApplicationAction } from '@/actions/tcc';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from './ui/Card';
 import { Button } from './ui/Button';
 import { Input } from './ui/Input';
@@ -319,9 +318,23 @@ export default function TccApplicationForm({
         payload.append('bo_attachment', boFile);
       }
 
-      const res = isEditing
-        ? await updateTccApplicationAction(null, payload)
-        : await applyForTccAction(null, payload);
+      const response = await fetch('/api/tcc/application', {
+        method: 'POST',
+        body: payload,
+        credentials: 'same-origin',
+      });
+
+      let res: { success?: boolean; message?: string; error?: string };
+      try {
+        res = (await response.json()) as typeof res;
+      } catch {
+        setError(
+          response.status === 404
+            ? 'Application service not found. Please contact support or try again after redeploy.'
+            : 'Failed to save application.'
+        );
+        return;
+      }
 
       if (res.success) {
         toast.success(res.message || (isEditing ? 'Application updated.' : 'TCC application submitted.'));
