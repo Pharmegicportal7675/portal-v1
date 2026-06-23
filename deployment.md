@@ -48,6 +48,20 @@ Fix in hPanel → **Settings and redeploy**:
 
 Also reconnect GitHub (dashboard shows "Disconnected from GitHub") so future pushes auto-deploy.
 
+### 503 Service Unavailable
+
+The Node process is **not running** or crashed after start.
+
+1. hPanel → **Runtime logs** — read the latest error (build missing, port, database, etc.).
+2. **Settings and redeploy** must include:
+   - Install: `npm ci`
+   - Build: `npm run build`
+   - Start: `npm run start` or `npm run start -- -p $PORT`
+   - Entry file: `server.js`
+3. Confirm **Build** step succeeded (not only deploy).
+4. `DATABASE_URL` must be valid MySQL URL (special chars in password URL-encoded, e.g. `@` → `%40`).
+5. After fix → **Save and redeploy** → **Clear cache**.
+
 ### Required environment variables (hPanel)
 
 | Variable | Description |
