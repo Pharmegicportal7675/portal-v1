@@ -86,7 +86,7 @@ export default async function CertificatePreviewPage({ params }: { params: Promi
   }
 
   if (cert.type === 'REACH' && cert.client_id && cert.chemical_id) {
-    redirect(`/admin/clients/${cert.client_id}/rc-preview/${cert.chemical_id}?certId=${cert.id}`);
+    redirect(`/admin/clients/${cert.client_id}/rc-preview/${cert.chemical_id}`);
   }
 
   const mailSentHistory = cert.mail_sent
