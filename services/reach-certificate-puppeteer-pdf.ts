@@ -1,3 +1,4 @@
+import puppeteer from 'puppeteer-core';
 import type { Browser, LaunchOptions } from 'puppeteer-core';
 import { isVercelHosting } from '@/lib/hosting';
 import { launchVercelPuppeteerBrowser } from '@/services/reach-certificate-puppeteer-vercel';
@@ -72,9 +73,8 @@ async function launchBrowser(): Promise<Browser> {
     return launchVercelPuppeteerBrowser();
   }
 
-  const puppeteer = await import('puppeteer-core');
   const options = await buildLaunchOptions();
-  return puppeteer.default.launch(options);
+  return puppeteer.launch(options);
 }
 
 async function getBrowser(): Promise<Browser> {
