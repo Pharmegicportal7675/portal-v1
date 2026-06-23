@@ -6,6 +6,8 @@ import { resolveLoginRedirect } from '@/lib/auth/resolve-login-redirect';
 import { getRequestOrigin } from '@/lib/http/get-request-origin';
 import { signSessionToken } from '@/lib/auth/sign-session';
 
+export const runtime = 'nodejs';
+
 async function readLoginBody(request: NextRequest) {
   const contentType = request.headers.get('content-type') || '';
 

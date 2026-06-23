@@ -18,6 +18,8 @@ const nextConfig = {
     ];
   },
   outputFileTracingIncludes: {
+    '/api/health/db': PRISMA_TRACE,
+    '/api/auth/login': PRISMA_TRACE,
     '/api/**/*': PRISMA_TRACE,
     '/admin/**/*': PRISMA_TRACE,
     '/client/**/*': PRISMA_TRACE,
