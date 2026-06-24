@@ -185,6 +185,20 @@ PUPPETEER_EXECUTABLE_PATH=/usr/bin/google-chrome-stable
 
 **4. Redeploy** the Node app from hPanel, then test PDF download once (wait up to 60s).
 
+Or run the repo script after SSH login (from project root on server, or copy script contents):
+
+```bash
+bash scripts/install-google-chrome-hostinger.sh
+```
+
+### Site 503 after changing env vars
+
+1. hPanel → **Runtime logs** — look for `DATABASE_URL`, `FATAL`, or `exited with code`
+2. **DATABASE_URL** — no quotes around the value; use `127.0.0.1` not `srv1827.hstgr.io`
+3. Password with `@` in it → encode as `%40` in the URL
+4. Do **not** set `PUPPETEER_EXECUTABLE_PATH` until `google-chrome-stable --version` works in SSH
+5. **Save and redeploy** → **Clear cache** → wait 2–3 minutes
+
 ### `spawn /tmp/chromium EAGAIN` (process limit)
 
 Hostinger shared hosting often cannot run bundled Chromium (process `ulimit` too low). **Install system Chrome via SSH above** — that is the reliable fix.
