@@ -2,13 +2,12 @@
 const PDF_FONT_TRACE = ['./public/fonts/**'];
 const PRISMA_TRACE = ['./generated/prisma/**'];
 const CHROMIUM_TRACE = ['./node_modules/@sparticuz/chromium-min/**'];
+const PUPPETEER_TRACE = ['./node_modules/puppeteer-core/**'];
 
 /** @type {import('next').NextConfig} */
 const nextConfig = {
   output: 'standalone',
   serverExternalPackages: [
-    'puppeteer-core',
-    '@sparticuz/chromium-min',
     '@prisma/client',
     'prisma',
     '@prisma/adapter-mariadb',
@@ -41,8 +40,18 @@ const nextConfig = {
     '/api/reach/certificates/send-email': PRISMA_TRACE,
     '/api/reach/certificates/resend-email': PRISMA_TRACE,
     '/api/client-chemicals/remove': PRISMA_TRACE,
-    '/api/reach-certificate/pdf-html': [...CHROMIUM_TRACE, ...PDF_FONT_TRACE, ...PRISMA_TRACE],
-    '/api/tcc-certificate/pdf-html': [...CHROMIUM_TRACE, ...PDF_FONT_TRACE, ...PRISMA_TRACE],
+    '/api/reach-certificate/pdf-html': [
+      ...CHROMIUM_TRACE,
+      ...PUPPETEER_TRACE,
+      ...PDF_FONT_TRACE,
+      ...PRISMA_TRACE,
+    ],
+    '/api/tcc-certificate/pdf-html': [
+      ...CHROMIUM_TRACE,
+      ...PUPPETEER_TRACE,
+      ...PDF_FONT_TRACE,
+      ...PRISMA_TRACE,
+    ],
     '/api/tcc-certificate/html-data': [...PDF_FONT_TRACE, ...PRISMA_TRACE],
   },
 };
