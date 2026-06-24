@@ -4,6 +4,11 @@ import path from 'path';
 export const CERTIFICATES_BUCKET = 'certificates';
 const UPLOAD_ROOT = path.join(process.cwd(), 'public', 'uploads', 'certificates');
 
+function resolveStorageFilePath(fileName: string): string {
+  const relative = fileName.replace(/\\/g, '/').replace(/^\/+/, '');
+  return path.join(UPLOAD_ROOT, ...relative.split('/').filter(Boolean));
+}
+
 async function ensureDir(): Promise<void> {
   await fs.mkdir(UPLOAD_ROOT, { recursive: true });
 }
@@ -28,7 +33,8 @@ export function createLocalStorage() {
       ) => {
         try {
           await ensureDir();
-          const filePath = path.join(UPLOAD_ROOT, fileName);
+          const filePath = resolveStorageFilePath(fileName);
+          await fs.mkdir(path.dirname(filePath), { recursive: true });
           if (!options?.upsert) {
             try {
               await fs.access(filePath);
@@ -51,7 +57,7 @@ export function createLocalStorage() {
       },
       download: async (fileName: string) => {
         try {
-          const filePath = path.join(UPLOAD_ROOT, fileName);
+          const filePath = resolveStorageFilePath(fileName);
           const buffer = await fs.readFile(filePath);
           return { data: new Blob([buffer]), error: null };
         } catch (err) {
@@ -62,7 +68,7 @@ export function createLocalStorage() {
         try {
           await Promise.all(
             paths.map(async (fileName) => {
-              const filePath = path.join(UPLOAD_ROOT, fileName);
+              const filePath = resolveStorageFilePath(fileName);
               await fs.unlink(filePath).catch(() => undefined);
             })
           );

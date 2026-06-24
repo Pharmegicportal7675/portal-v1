@@ -1,20 +1,13 @@
 import type { DbClient } from '@/lib/db/types';
 import { CERTIFICATES_BUCKET } from '@/lib/storage';
+import { extractStorageRelativePath } from '@/lib/storage-paths';
 
 const PDF_CONTENT_TYPE = 'application/pdf';
 const DOCX_CONTENT_TYPE =
   'application/vnd.openxmlformats-officedocument.wordprocessingml.document';
 
 function extractCertificateFileName(fileUrl: string): string | null {
-  const trimmed = fileUrl.trim();
-  if (!trimmed) return null;
-  try {
-    const base = new URL(trimmed).pathname.split('/').pop();
-    return base || null;
-  } catch {
-    const parts = trimmed.split('/');
-    return parts[parts.length - 1] || null;
-  }
+  return extractStorageRelativePath(fileUrl);
 }
 
 async function tryStoredPdf(
@@ -52,11 +45,14 @@ export async function loadReachCertificateStoredPdf(
 /** Remove cached certificate files so stale Template 1 PDFs cannot be served. */
 export async function clearReachCertificateStorageFiles(
   supabase: DbClient,
-  certificateNumber: string
+  certificateNumber: string,
+  fileUrl?: string | null
 ): Promise<void> {
-  await supabase.storage
-    .from(CERTIFICATES_BUCKET)
-    .remove([`${certificateNumber}.pdf`, `${certificateNumber}.docx`]);
+  const paths = new Set<string>([`${certificateNumber}.pdf`, `${certificateNumber}.docx`]);
+  const fromUrl = fileUrl ? extractStorageRelativePath(fileUrl) : null;
+  if (fromUrl) paths.add(fromUrl);
+
+  await supabase.storage.from(CERTIFICATES_BUCKET).remove([...paths]);
 }
 
 export async function downloadReachCertificateFile(

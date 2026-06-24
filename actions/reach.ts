@@ -3,6 +3,7 @@
 import { createAdminClient } from '@/lib/db/admin';
 import { getSession } from '@/lib/auth/session';
 import { buildReachCertificateStoredFile } from '@/lib/reach-pdf-data';
+import { buildClientDateStoragePath } from '@/lib/storage-paths';
 import { buildCertificateRecipients } from '@/lib/certificate-email-recipients';
 import { appendMailSentHistory } from '@/lib/certificate-mail-history';
 import { buildRcSmtpConfig } from '@/lib/certificate-smtp-settings';
@@ -207,11 +208,17 @@ export async function createReachCertificate(input: CreateReachCertificateInput)
     clientId,
     chemicalId,
   });
+  const storagePath = buildClientDateStoragePath(
+    'rc',
+    client.company_name,
+    issuedDate,
+    certFile.fileName
+  );
 
   await ensureCertificatesBucket(adminSupabase);
   const { error: uploadError } = await adminSupabase.storage
     .from(CERTIFICATES_BUCKET)
-    .upload(certFile.fileName, certFile.buffer, {
+    .upload(storagePath, certFile.buffer, {
       contentType: certFile.contentType,
       upsert: true,
     });
@@ -220,7 +227,7 @@ export async function createReachCertificate(input: CreateReachCertificateInput)
 
   const {
     data: { publicUrl },
-  } = adminSupabase.storage.from(CERTIFICATES_BUCKET).getPublicUrl(certFile.fileName);
+  } = adminSupabase.storage.from(CERTIFICATES_BUCKET).getPublicUrl(storagePath);
 
   const coreInsert = {
     client_id: clientId,
@@ -335,7 +342,7 @@ export async function regenerateReachCertificateFile(certId: string) {
   const { data: cert } = await adminSupabase
     .from('certificates')
     .select(
-      'id, certificate_number, registration_number, tonnage_band, issued_at, expires_at, client_id, chemical_id, type'
+      'id, certificate_number, registration_number, tonnage_band, issued_at, expires_at, client_id, chemical_id, type, file_url'
     )
     .eq('id', certId)
     .eq('type', REACH_CERTIFICATE_TYPE)
@@ -363,7 +370,7 @@ export async function regenerateReachCertificateFile(certId: string) {
   const certNumber = cert.certificate_number;
 
   try {
-    await clearReachCertificateStorageFiles(adminSupabase, certNumber);
+    await clearReachCertificateStorageFiles(adminSupabase, certNumber, cert.file_url);
 
     const certFile = await buildReachCertificateStoredFile(client, chemical, certNumber, {
       registrationNumber: cert.registration_number,
@@ -373,11 +380,17 @@ export async function regenerateReachCertificateFile(certId: string) {
       clientId: cert.client_id,
       chemicalId: cert.chemical_id,
     });
+    const storagePath = buildClientDateStoragePath(
+      'rc',
+      client.company_name,
+      cert.issued_at.split('T')[0],
+      certFile.fileName
+    );
 
     await ensureCertificatesBucket(adminSupabase);
     const { error: uploadError } = await adminSupabase.storage
       .from(CERTIFICATES_BUCKET)
-      .upload(certFile.fileName, certFile.buffer, {
+      .upload(storagePath, certFile.buffer, {
         contentType: certFile.contentType,
         upsert: true,
       });
@@ -386,7 +399,7 @@ export async function regenerateReachCertificateFile(certId: string) {
 
     const {
       data: { publicUrl },
-    } = adminSupabase.storage.from(CERTIFICATES_BUCKET).getPublicUrl(certFile.fileName);
+    } = adminSupabase.storage.from(CERTIFICATES_BUCKET).getPublicUrl(storagePath);
 
     await adminSupabase.from('certificates').update({ file_url: publicUrl }).eq('id', certId);
 

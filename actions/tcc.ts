@@ -13,6 +13,7 @@ import { buildTccSmtpConfig } from '@/lib/certificate-smtp-settings';
 import { adminTccApplicationUpdateSchema, tccEuApplicationSchema, tccNotificationApplicationSchema } from '@/lib/validations';
 import { uploadBoAttachment, validateBoAttachment } from '@/lib/tcc-attachments';
 import { CERTIFICATES_BUCKET, ensureCertificatesBucket } from '@/lib/storage';
+import { buildClientDateStoragePath } from '@/lib/storage-paths';
 import { revalidatePath } from 'next/cache';
 import { notifyAllAdmins, notifyUser } from '@/lib/notifications';
 import { notifyTccApplicationByEmail } from '@/lib/tcc-application-notification';
@@ -336,7 +337,10 @@ export async function applyForTccAction(prevState: unknown, formData: FormData) 
 
     if (appError) throw appError;
 
-    const { url: boUrl, name: boName } = await uploadBoAttachment(adminSupabase, boFile, clientId, app.id);
+    const { url: boUrl, name: boName } = await uploadBoAttachment(adminSupabase, boFile, {
+      clientName: client.company_name || 'client',
+      folderDate: euData.export_date,
+    });
     await adminSupabase
       .from('tcc_applications')
       .update({ bo_attachment_url: boUrl, bo_attachment_name: boName })
@@ -433,7 +437,7 @@ export async function updateTccApplicationAction(prevState: unknown, formData: F
   try {
     const { data: client, error: clientError } = await adminSupabase
       .from('clients')
-      .select('regulatory_registrations')
+      .select('company_name, regulatory_registrations')
       .eq('id', clientId)
       .single();
 
@@ -523,12 +527,10 @@ export async function updateTccApplicationAction(prevState: unknown, formData: F
     if (updateError) throw updateError;
 
     if (hasNewBo) {
-      const { url: boUrl, name: boName } = await uploadBoAttachment(
-        adminSupabase,
-        boFile,
-        clientId,
-        applicationId
-      );
+      const { url: boUrl, name: boName } = await uploadBoAttachment(adminSupabase, boFile, {
+        clientName: client.company_name || 'client',
+        folderDate: euData.export_date,
+      });
       await adminSupabase
         .from('tcc_applications')
         .update({ bo_attachment_url: boUrl, bo_attachment_name: boName })
@@ -670,11 +672,14 @@ async function regenerateTccCertificateFile(
 
   const input = await buildTccCertificatePdfInputFromStoredCert(adminSupabase, cert as never);
   const certFile = await resolveTccCertificateDownloadFile(adminSupabase, input);
+  const clientName = input.client.company_name || 'client';
+  const issuedDate = input.issuedDate || input.validUntilDate || new Date().toISOString().slice(0, 10);
+  const storagePath = buildClientDateStoragePath('tcc', clientName, issuedDate, certFile.fileName);
 
   await ensureCertificatesBucket(adminSupabase);
   const { error: uploadError } = await adminSupabase.storage
     .from(CERTIFICATES_BUCKET)
-    .upload(certFile.fileName, certFile.buffer, {
+    .upload(storagePath, certFile.buffer, {
       contentType: certFile.contentType,
       upsert: true,
     });
@@ -682,6 +687,12 @@ async function regenerateTccCertificateFile(
   if (uploadError) {
     throw new Error(`Certificate regeneration failed: ${uploadError.message}`);
   }
+
+  const {
+    data: { publicUrl },
+  } = adminSupabase.storage.from(CERTIFICATES_BUCKET).getPublicUrl(storagePath);
+
+  await adminSupabase.from('certificates').update({ file_url: publicUrl }).eq('id', certificateId);
 }
 
 function parseAdminTccUpdateFormData(formData: FormData) {

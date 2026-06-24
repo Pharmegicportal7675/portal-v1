@@ -1,5 +1,6 @@
 import type { DbClient } from '@/lib/db/types';
 import { buildTccCertificateStoredFile } from '@/lib/tcc-pdf-data';
+import { buildClientDateStoragePath } from '@/lib/storage-paths';
 import { resolveTccPdfChemicalTonnageBand } from '@/lib/tcc-certificate-pdf';
 import type { TccPdfChemical } from '@/lib/tcc-certificate-html-data';
 import { generateUniqueTccCertificateNumber } from '@/lib/tcc-certificate-number';
@@ -91,11 +92,14 @@ export async function upsertTccCertificateForApplication(
     deliveryChallanNo: application.tracking_id,
     issuedDate: issueDateRaw,
   });
+  const clientName =
+    (application.clients as { company_name?: string | null } | null)?.company_name || 'client';
+  const storagePath = buildClientDateStoragePath('tcc', clientName, issueDateRaw, certFile.fileName);
 
   await ensureCertificatesBucket(supabase);
   const { error: uploadError } = await supabase.storage
     .from(CERTIFICATES_BUCKET)
-    .upload(certFile.fileName, certFile.buffer, {
+    .upload(storagePath, certFile.buffer, {
       contentType: certFile.contentType,
       upsert: true,
     });
@@ -106,7 +110,7 @@ export async function upsertTccCertificateForApplication(
 
   const {
     data: { publicUrl },
-  } = supabase.storage.from(CERTIFICATES_BUCKET).getPublicUrl(certFile.fileName);
+  } = supabase.storage.from(CERTIFICATES_BUCKET).getPublicUrl(storagePath);
 
   if (existingCert) {
     const { error: updateError } = await supabase

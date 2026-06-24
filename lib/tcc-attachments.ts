@@ -1,4 +1,5 @@
 import type { DbClient } from '@/lib/db/types';
+import { buildBoStoragePath } from '@/lib/storage-paths';
 import { CERTIFICATES_BUCKET, ensureCertificatesBucket } from '@/lib/storage';
 
 const MAX_BO_BYTES = 10 * 1024 * 1024; // 10 MB
@@ -55,11 +56,12 @@ export function validateBoAttachment(file: File): { ok: true } | { ok: false; er
 export async function uploadBoAttachment(
   supabase: DbClient,
   file: File,
-  clientId: string,
-  applicationId: string
+  options: {
+    clientName: string;
+    folderDate?: string | Date | null;
+  }
 ): Promise<{ url: string; name: string }> {
-  const safeName = file.name.replace(/[^a-zA-Z0-9._-]/g, '_');
-  const fileName = `bo/${clientId}/${applicationId}/${Date.now()}-${safeName}`;
+  const fileName = buildBoStoragePath(options.clientName, options.folderDate, file.name);
   const buffer = Buffer.from(await file.arrayBuffer());
 
   await ensureCertificatesBucket(supabase);

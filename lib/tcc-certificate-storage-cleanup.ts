@@ -1,6 +1,7 @@
 import type { DbClient } from '@/lib/db/types';
 import { createAdminClient } from '@/lib/db/admin';
 import { CERTIFICATES_BUCKET } from '@/lib/storage';
+import { buildClientDateStoragePath } from '@/lib/storage-paths';
 import {
   buildTccCertificatePdfInputFromCert,
   resolveTccCertificateDownloadFile,
@@ -195,9 +196,22 @@ async function cleanupOneTccDocx(
   try {
     const input = buildTccCertificatePdfInputFromCert(cert as never);
     const certFile = await resolveTccCertificateDownloadFile(adminSupabase, input);
+    const clientRaw = cert.clients;
+    const client = Array.isArray(clientRaw) ? clientRaw[0] : clientRaw;
+    const issuedDate =
+      cert.expires_at?.split('T')[0] ||
+      input.issuedDate ||
+      input.validUntilDate ||
+      new Date().toISOString().slice(0, 10);
+    const storagePath = buildClientDateStoragePath(
+      'tcc',
+      client?.company_name || 'client',
+      issuedDate,
+      certFile.fileName
+    );
     const { error: uploadError } = await adminSupabase.storage
       .from(CERTIFICATES_BUCKET)
-      .upload(certFile.fileName, certFile.buffer, {
+      .upload(storagePath, certFile.buffer, {
         contentType: certFile.contentType,
         upsert: true,
       });
@@ -207,9 +221,13 @@ async function cleanupOneTccDocx(
       return;
     }
 
+    const {
+      data: { publicUrl },
+    } = adminSupabase.storage.from(CERTIFICATES_BUCKET).getPublicUrl(storagePath);
+
     const { error: urlError } = await adminSupabase
       .from('certificates')
-      .update({ file_url: pdfPublicUrl(adminSupabase, certNumber) })
+      .update({ file_url: publicUrl })
       .eq('id', cert.id);
 
     if (urlError) {

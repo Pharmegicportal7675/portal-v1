@@ -15,24 +15,33 @@ const JSON_FIELDS = new Set([
 const DATE_ONLY_PATTERN = /^\d{4}-\d{2}-\d{2}$/;
 const DATE_FIELD_PATTERN = /(_at|_date)$/;
 
-/** Prisma DateTime/@db.Date fields reject bare YYYY-MM-DD — convert for MySQL writes. */
+function isDateTimeField(fieldKey?: string): boolean {
+  if (!fieldKey) return false;
+  return DATE_FIELD_PATTERN.test(fieldKey);
+}
+
+/** Prisma DateTime/@db.Date fields reject bare YYYY-MM-DD — convert only on date columns. */
 function toPrismaDateTime(value: unknown, fieldKey?: string): unknown {
   if (value === null || value === undefined) return value;
+
   if (value instanceof Date) return value;
-  if (typeof value === 'string') {
-    const trimmed = value.trim();
-    if (!trimmed) return null;
-    if (DATE_ONLY_PATTERN.test(trimmed)) {
-      return new Date(`${trimmed}T00:00:00.000Z`);
-    }
-    const parsed = Date.parse(trimmed);
-    if (
-      !Number.isNaN(parsed) &&
-      (trimmed.includes('T') || (fieldKey ? DATE_FIELD_PATTERN.test(fieldKey) : false))
-    ) {
-      return new Date(parsed);
-    }
+
+  if (typeof value !== 'string') return value;
+
+  const trimmed = value.trim();
+  if (!trimmed) return isDateTimeField(fieldKey) ? null : value;
+
+  if (!isDateTimeField(fieldKey)) return value;
+
+  if (DATE_ONLY_PATTERN.test(trimmed)) {
+    return new Date(`${trimmed}T00:00:00.000Z`);
   }
+
+  const parsed = Date.parse(trimmed);
+  if (!Number.isNaN(parsed) && (trimmed.includes('T') || isDateTimeField(fieldKey))) {
+    return new Date(parsed);
+  }
+
   return value;
 }
 
@@ -175,11 +184,11 @@ function buildWhere(filters: Filter[]): Record<string, unknown> {
   const orGroups: Record<string, unknown>[][] = [];
 
   for (const filter of filters) {
-    if (filter.kind === 'eq') where[filter.field] = toPrismaDateTime(filter.value);
-    if (filter.kind === 'neq') where[filter.field] = { not: toPrismaDateTime(filter.value) };
+    if (filter.kind === 'eq') where[filter.field] = toPrismaDateTime(filter.value, filter.field);
+    if (filter.kind === 'neq') where[filter.field] = { not: toPrismaDateTime(filter.value, filter.field) };
     if (filter.kind === 'in') {
       where[filter.field] = {
-        in: filter.value.map((item) => toPrismaDateTime(item)),
+        in: filter.value.map((item) => toPrismaDateTime(item, filter.field)),
       };
     }
     if (filter.kind === 'ilike') where[filter.field] = { contains: filter.pattern, mode: 'insensitive' };
