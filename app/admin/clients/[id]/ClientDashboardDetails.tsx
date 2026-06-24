@@ -199,7 +199,7 @@ export default function ClientDashboardDetails({
         ? `${client.company_name} — TCC Certificates`
         : viewMode === 'rc-certificates'
           ? `${client.company_name} — RC Certificates`
-          : `${client.company_name} Details`;
+          : `${client.company_name}`;
 
   const reachByChemical = useMemo(
     () => mapLatestReachByChemical(certificates || []),
@@ -2061,7 +2061,7 @@ export default function ClientDashboardDetails({
                 + Apply for TCC
               </Button>
             ) : currentUserRole === 'CLIENT' ? null : (
-              <Link href="/admin/approvals">
+              <Link href={`/admin/clients/${client.id}/certificates`}>
                 <Button size="sm" variant="outline" className="h-8 border-slate-300">
                   Review Applications
                 </Button>
