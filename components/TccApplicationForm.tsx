@@ -272,14 +272,6 @@ export default function TccApplicationForm({
       return 'PO attachment is required.';
     }
 
-    if (selectedSubstance?.validity_date && isEuReach) {
-      const expiry = new Date(selectedSubstance.validity_date);
-      const shipment = new Date(exportDate);
-      if (shipment > expiry) {
-        return `The expected export date exceeds the substance validity date (${expiry.toLocaleDateString()}).`;
-      }
-    }
-
     return null;
   };
 
