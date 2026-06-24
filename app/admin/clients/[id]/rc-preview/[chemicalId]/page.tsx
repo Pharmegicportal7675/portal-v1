@@ -12,7 +12,7 @@ import {
 } from '@/lib/certificate-mail-history';
 
 export const revalidate = 0;
-export const maxDuration = 60;
+export const maxDuration = 120;
 
 function toIsoString(value: unknown): string | null {
   if (value == null || value === '') return null;

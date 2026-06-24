@@ -12,7 +12,7 @@ import { isReachCertificateType } from '@/lib/reach-certificate';
 
 /** Server-side RC certificate PDF — stored file first, then HTML/DOCX generation. */
 export const runtime = 'nodejs';
-export const maxDuration = 60;
+export const maxDuration = 120;
 
 function pdfResponse(buffer: Buffer, fileName: string) {
   return new NextResponse(new Uint8Array(buffer), {

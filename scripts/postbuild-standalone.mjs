@@ -41,7 +41,14 @@ copyDir(path.join(root, '.next', 'static'), path.join(standaloneDir, '.next', 's
 copyDir(path.join(root, 'templates'), path.join(standaloneDir, 'templates'));
 copyDir(path.join(root, 'generated'), path.join(standaloneDir, 'generated'));
 
-// PDF runtime — createRequire loads from standalone/node_modules on Hostinger
+// PDF worker — runs outside Next.js (avoids puppeteer-core EEXIST on Hostinger)
+const workerScript = path.join(root, 'scripts', 'reach-html-to-pdf.cjs');
+const workerDest = path.join(standaloneDir, 'scripts', 'reach-html-to-pdf.cjs');
+if (fs.existsSync(workerScript)) {
+  fs.mkdirSync(path.dirname(workerDest), { recursive: true });
+  fs.copyFileSync(workerScript, workerDest);
+}
+
 console.info('[postbuild] Ensuring PDF packages in standalone/node_modules…');
 ensureNodeModulesCopy('puppeteer-core');
 ensureNodeModulesCopy('@sparticuz', 'chromium-min');
