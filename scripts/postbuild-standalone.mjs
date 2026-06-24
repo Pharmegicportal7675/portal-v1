@@ -24,6 +24,34 @@ function copyDir(src, dest) {
   }
 }
 
+function packageDir(name) {
+  if (name.startsWith('@')) {
+    const [scope, pkg] = name.split('/');
+    return path.join('node_modules', scope, pkg);
+  }
+  return path.join('node_modules', name);
+}
+
+function collectPackageTree(packageName, collected = new Set()) {
+  if (collected.has(packageName)) return collected;
+  collected.add(packageName);
+
+  const pkgJsonPath = path.join(root, packageDir(packageName), 'package.json');
+  if (!fs.existsSync(pkgJsonPath)) return collected;
+
+  const pkg = JSON.parse(fs.readFileSync(pkgJsonPath, 'utf8'));
+  const deps = {
+    ...(pkg.dependencies || {}),
+    ...(pkg.optionalDependencies || {}),
+  };
+
+  for (const dep of Object.keys(deps)) {
+    collectPackageTree(dep, collected);
+  }
+
+  return collected;
+}
+
 function ensureNodeModulesCopy(...segments) {
   const src = path.join(root, 'node_modules', ...segments);
   const dest = path.join(standaloneDir, 'node_modules', ...segments);
@@ -41,7 +69,6 @@ copyDir(path.join(root, '.next', 'static'), path.join(standaloneDir, '.next', 's
 copyDir(path.join(root, 'templates'), path.join(standaloneDir, 'templates'));
 copyDir(path.join(root, 'generated'), path.join(standaloneDir, 'generated'));
 
-// PDF worker — runs outside Next.js (avoids puppeteer-core EEXIST on Hostinger)
 const workerScript = path.join(root, 'scripts', 'reach-html-to-pdf.cjs');
 const workerDest = path.join(standaloneDir, 'scripts', 'reach-html-to-pdf.cjs');
 if (fs.existsSync(workerScript)) {
@@ -50,11 +77,24 @@ if (fs.existsSync(workerScript)) {
 }
 
 console.info('[postbuild] Ensuring PDF packages in standalone/node_modules…');
-ensureNodeModulesCopy('puppeteer-core');
-ensureNodeModulesCopy('@sparticuz', 'chromium-min');
-ensureNodeModulesCopy('@puppeteer', 'browsers');
-ensureNodeModulesCopy('chromium-bidi');
-ensureNodeModulesCopy('devtools-protocol');
-ensureNodeModulesCopy('ws');
 
+const pdfRoots = ['puppeteer-core', '@sparticuz/chromium-min'];
+const packagesToCopy = new Set();
+
+for (const pkg of pdfRoots) {
+  for (const name of collectPackageTree(pkg)) {
+    packagesToCopy.add(name);
+  }
+}
+
+for (const name of [...packagesToCopy].sort()) {
+  if (name.startsWith('@')) {
+    const [scope, pkg] = name.split('/');
+    ensureNodeModulesCopy(scope, pkg);
+  } else {
+    ensureNodeModulesCopy(name);
+  }
+}
+
+console.info(`[postbuild] Copied ${packagesToCopy.size} PDF-related packages into standalone.`);
 console.info('[postbuild] Standalone bundle ready.');

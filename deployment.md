@@ -31,7 +31,7 @@ Production app: **portal.pharmegichealthcare.com**
 | Build | `npm run build` |
 | **Start** | `npm run start -- -p $PORT` |
 | Entry file | `server.js` |
-| Node | 22.x |
+| Node | 20.x or 22.x |
 | Output directory | **leave empty** (do not serve `.next` as static only) |
 
 `server.js` binds **`0.0.0.0`** on **`$PORT`** and starts the **Next.js standalone** bundle (built via `output: 'standalone'`). Never use `process.env.HOSTNAME` on Linux — it causes **503**.
@@ -134,7 +134,7 @@ After changing `NEXT_PUBLIC_*` vars, **redeploy** the app.
 On **Hostinger Linux**, RC HTML→PDF uses an isolated **PDF worker** (`scripts/reach-html-to-pdf.cjs`).
 
 **Requirements:**
-- **Node.js 22.x** in hPanel (required by `puppeteer-core` 25 and `@sparticuz/chromium-min` 148)
+- **Node.js 20.x or 22.x** in hPanel (`puppeteer-core` 23 + `@sparticuz/chromium-min` 131)
 - `NEXT_PUBLIC_APP_URL=https://portal.pharmegichealthcare.com`
 
 PDF engine order:
@@ -161,7 +161,8 @@ PUPPETEER_EXECUTABLE_PATH=/usr/bin/google-chrome-stable
 
 Verify after deploy:
 
-- `https://portal.pharmegichealthcare.com/api/health/pdf-converter` — `htmlPdfUsesBundledChromiumFallback: true` or `systemChromeFound: true`
+- `https://portal.pharmegichealthcare.com/api/health/pdf-converter` — converter status
+- `https://portal.pharmegichealthcare.com/api/health/pdf-worker` — worker module check (run after deploy)
 - First bundled-Chromium PDF may take ~30s; later requests are faster.
 - Generated PDFs are cached under `public/uploads/certificates/`.
 

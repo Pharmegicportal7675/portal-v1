@@ -8,7 +8,9 @@ const { access } = require('fs/promises');
 const WORKER_ROOT = path.resolve(__dirname, '..');
 const CHROMIUM_PACK_URL =
   process.env.CHROMIUM_PACK_URL ||
-  'https://github.com/Sparticuz/chromium/releases/download/v148.0.0/chromium-v148.0.0-pack.tar';
+  'https://github.com/Sparticuz/chromium/releases/download/v131.0.0/chromium-v131.0.0-pack.tar';
+
+const MIN_NODE_MAJOR = 20;
 
 const VIEWPORTS = {
   reach: { width: 794, height: 1123 },
@@ -21,17 +23,72 @@ const ROOT_SELECTORS = {
 };
 
 process.chdir(WORKER_ROOT);
-process.env.NODE_PATH = path.join(WORKER_ROOT, 'node_modules');
 
-function log(message) {
-  process.stderr.write(`[pdf-worker] ${message}\n`);
+function logFilePath() {
+  return process.env.REACH_PDF_LOG_FILE || '';
+}
+
+function appendLog(message) {
+  const line = `[pdf-worker] ${message}\n`;
+  try {
+    process.stderr.write(line);
+  } catch {
+    // ignore broken pipe
+  }
+  const logFile = logFilePath();
+  if (logFile) {
+    try {
+      fs.appendFileSync(logFile, line);
+    } catch {
+      // ignore
+    }
+  }
+}
+
+function exitWithError(err, code = 1) {
+  const message = err && (err.stack || err.message) ? err.stack || err.message : String(err);
+  appendLog(`error: ${message}`);
+  appendLog(`exit code=${code}`);
+  process.exit(code);
+}
+
+function assertNodeVersion() {
+  const major = Number.parseInt(process.versions.node.split('.')[0] || '0', 10);
+  if (major < MIN_NODE_MAJOR) {
+    exitWithError(
+      new Error(
+        `Node ${process.version} is too old for PDF generation (need >= ${MIN_NODE_MAJOR}). Set Hostinger Node.js to 20.x or 22.x.`
+      )
+    );
+  }
+}
+
+function moduleSearchPaths() {
+  const paths = new Set();
+  const add = (root) => {
+    const nm = path.join(root, 'node_modules');
+    if (fs.existsSync(nm)) paths.add(nm);
+  };
+
+  add(WORKER_ROOT);
+  add(path.join(WORKER_ROOT, '..', '..'));
+  add(path.join(WORKER_ROOT, '..'));
+
+  if (process.env.NODE_PATH) {
+    for (const entry of process.env.NODE_PATH.split(path.delimiter)) {
+      if (entry.trim()) paths.add(entry.trim());
+    }
+  }
+
+  return [...paths];
 }
 
 function requirePackage(name) {
+  const paths = moduleSearchPaths();
   try {
-    return require(require.resolve(name, { paths: [path.join(WORKER_ROOT, 'node_modules')] }));
+    return require(require.resolve(name, { paths }));
   } catch (err) {
-    log(`Failed to load ${name} from ${WORKER_ROOT}: ${err instanceof Error ? err.message : err}`);
+    appendLog(`Failed to load ${name} (searched: ${paths.join(', ')}): ${err instanceof Error ? err.message : err}`);
     throw err;
   }
 }
@@ -51,7 +108,7 @@ function chromeCandidates() {
 async function resolveSystemChrome() {
   for (const candidate of chromeCandidates()) {
     try {
-      await access(candidate);
+      await access(candidate, fs.constants.X_OK);
       return candidate;
     } catch {
       // try next
@@ -76,7 +133,7 @@ async function launchBrowser() {
   if (process.env.REACH_PDF_USE_BUNDLED_CHROMIUM !== '1') {
     const systemPath = await resolveSystemChrome();
     if (systemPath) {
-      log(`Using system Chrome: ${systemPath}`);
+      appendLog(`Using system Chrome: ${systemPath}`);
       return puppeteer.launch({
         headless: true,
         executablePath: systemPath,
@@ -91,14 +148,14 @@ async function launchBrowser() {
     }
   }
 
-  log('Using bundled Chromium (@sparticuz/chromium-min)');
+  appendLog('Using bundled Chromium (@sparticuz/chromium-min)');
   const chromiumMod = requirePackage('@sparticuz/chromium-min');
   const chromium = chromiumMod.default || chromiumMod;
 
   try {
     chromium.setGraphicsMode = false;
   } catch {
-    // optional on older builds
+    // optional
   }
 
   let executablePath;
@@ -114,6 +171,8 @@ async function launchBrowser() {
       throw err;
     }
   }
+
+  appendLog(`Chromium executable: ${executablePath}`);
 
   return puppeteer.launch({
     args: [
@@ -188,21 +247,40 @@ async function generatePdf(html, format) {
   }
 }
 
+async function runCheck() {
+  appendLog(`check node=${process.version} root=${WORKER_ROOT}`);
+  appendLog(`NODE_PATH=${process.env.NODE_PATH || '(unset)'}`);
+  appendLog(`REACH_PDF_USE_BUNDLED_CHROMIUM=${process.env.REACH_PDF_USE_BUNDLED_CHROMIUM || '(unset)'}`);
+
+  const puppeteer = requirePackage('puppeteer-core');
+  appendLog(`puppeteer-core loaded (launch=${typeof puppeteer.launch})`);
+
+  const chromiumMod = requirePackage('@sparticuz/chromium-min');
+  const chromium = chromiumMod.default || chromiumMod;
+  appendLog(`@sparticuz/chromium-min loaded (args=${Array.isArray(chromium.args)})`);
+
+  const chrome = await resolveSystemChrome();
+  appendLog(`systemChrome=${chrome || 'not found'}`);
+
+  process.exit(0);
+}
+
 async function main() {
-  const htmlPath = process.argv[2];
-  const format = process.argv[3] === 'tcc' ? 'tcc' : 'reach';
+  assertNodeVersion();
+  appendLog(`start node=${process.version} root=${WORKER_ROOT} argv=${process.argv.slice(2).join(' ')}`);
 
-  log(`node=${process.version} root=${WORKER_ROOT} format=${format}`);
+  const arg1 = process.argv[2];
 
-  const major = Number.parseInt(process.versions.node.split('.')[0] || '0', 10);
-  if (major < 22) {
-    throw new Error(
-      `Node ${process.version} is too old for puppeteer-core 25 / @sparticuz/chromium-min 148. Set Hostinger Node.js to 22.x and redeploy.`
-    );
+  if (arg1 === '--check') {
+    await runCheck();
+    return;
   }
 
+  const htmlPath = arg1;
+  const format = process.argv[3] === 'tcc' ? 'tcc' : 'reach';
+
   if (!htmlPath) {
-    throw new Error('Usage: node reach-html-to-pdf.cjs <htmlFile> [reach|tcc]');
+    throw new Error('Usage: node reach-html-to-pdf.cjs <htmlFile>|--check [reach|tcc]');
   }
 
   if (!fs.existsSync(htmlPath)) {
@@ -210,24 +288,18 @@ async function main() {
   }
 
   const html = fs.readFileSync(htmlPath, 'utf8');
-  log(`html bytes=${html.length}`);
+  appendLog(`html bytes=${html.length}`);
 
   const pdf = await generatePdf(html, format);
-  log(`pdf bytes=${pdf.length}`);
-  process.stdout.write(pdf);
+  if (!pdf.length) {
+    throw new Error('Generated PDF is empty');
+  }
+
+  appendLog(`pdf bytes=${pdf.length}`);
+  fs.writeSync(1, pdf);
 }
 
-process.on('uncaughtException', (err) => {
-  log(`uncaught: ${err?.stack || err}`);
-  process.exit(1);
-});
+process.on('uncaughtException', (err) => exitWithError(err));
+process.on('unhandledRejection', (err) => exitWithError(err));
 
-process.on('unhandledRejection', (err) => {
-  log(`unhandled: ${err?.stack || err}`);
-  process.exit(1);
-});
-
-main().catch((err) => {
-  log(`error: ${err?.stack || err}`);
-  process.exit(1);
-});
+main().catch((err) => exitWithError(err));

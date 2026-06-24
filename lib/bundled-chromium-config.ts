@@ -3,6 +3,6 @@ export function getBundledChromiumPackUrl(): string {
   const fromEnv = process.env.CHROMIUM_PACK_URL?.trim();
   if (fromEnv) return fromEnv;
 
-  // Must match @sparticuz/chromium-min version (148.0.0) — x64 pack.
-  return 'https://github.com/Sparticuz/chromium/releases/download/v148.0.0/chromium-v148.0.0-pack.tar';
+  // Must match @sparticuz/chromium-min version (131.0.1) — x64 pack.
+  return 'https://github.com/Sparticuz/chromium/releases/download/v131.0.0/chromium-v131.0.0-pack.tar';
 }

@@ -1,9 +1,10 @@
-import { spawn } from 'node:child_process';
+import { execFile } from 'node:child_process';
 import { randomUUID } from 'node:crypto';
 import fs from 'node:fs';
-import { unlink, writeFile } from 'node:fs/promises';
+import { readFile, unlink, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
+import { promisify } from 'node:util';
 import type { Browser, LaunchOptions } from 'puppeteer-core';
 import {
   isReachPuppeteerPdfAvailable,
@@ -15,6 +16,8 @@ import { launchBundledChromiumBrowser } from '@/services/reach-certificate-bundl
 
 export { isReachPuppeteerPdfAvailable, resolveSystemChromeExecutable, usesBundledChromiumFallback };
 
+const execFileAsync = promisify(execFile);
+
 function usePdfWorker(): boolean {
   return (
     process.env.REACH_PDF_USE_WORKER === '1' ||
@@ -22,83 +25,168 @@ function usePdfWorker(): boolean {
   );
 }
 
-function resolveWorkerScript(): string {
+function resolveWorkerContext(): { scriptPath: string; workerRoot: string; nodePath: string } {
   const roots = [
     process.cwd(),
     path.join(process.cwd(), '..', '..'),
     path.join(__dirname, '..', '..'),
   ];
 
+  const seen = new Set<string>();
+  const options: Array<{ scriptPath: string; workerRoot: string; score: number }> = [];
+
   for (const root of roots) {
-    const candidate = path.join(root, 'scripts', 'reach-html-to-pdf.cjs');
-    if (fs.existsSync(candidate)) return candidate;
+    const normalized = path.resolve(root);
+    if (seen.has(normalized)) continue;
+    seen.add(normalized);
+
+    const scriptPath = path.join(normalized, 'scripts', 'reach-html-to-pdf.cjs');
+    if (!fs.existsSync(scriptPath)) continue;
+
+    let score = 0;
+    if (fs.existsSync(path.join(normalized, 'node_modules', 'puppeteer-core'))) score += 10;
+    if (fs.existsSync(path.join(normalized, 'node_modules', '@sparticuz', 'chromium-min'))) score += 10;
+    if (!normalized.includes(`${path.sep}standalone${path.sep}`) && !normalized.endsWith(`${path.sep}standalone`)) {
+      score += 5;
+    }
+
+    options.push({ scriptPath, workerRoot: normalized, score });
   }
 
-  throw new Error('PDF worker script not found (scripts/reach-html-to-pdf.cjs). Redeploy the app.');
+  if (options.length === 0) {
+    throw new Error('PDF worker script not found (scripts/reach-html-to-pdf.cjs). Redeploy the app.');
+  }
+
+  options.sort((a, b) => b.score - a.score);
+  const best = options[0];
+
+  const nodePath = [
+    path.join(best.workerRoot, 'node_modules'),
+    path.join(process.cwd(), 'node_modules'),
+    path.join(process.cwd(), '..', '..', 'node_modules'),
+  ]
+    .map((entry) => path.resolve(entry))
+    .filter((entry, index, all) => fs.existsSync(entry) && all.indexOf(entry) === index)
+    .join(path.delimiter);
+
+  return { scriptPath: best.scriptPath, workerRoot: best.workerRoot, nodePath };
+}
+
+async function buildWorkerEnv(logPath: string, nodePath: string): Promise<NodeJS.ProcessEnv> {
+  const systemChrome = await resolveSystemChromeExecutable();
+  const useBundled =
+    process.env.REACH_PDF_USE_BUNDLED_CHROMIUM === '1' ||
+    (!systemChrome && usesBundledChromiumFallback());
+
+  const env: NodeJS.ProcessEnv = {
+    ...process.env,
+    NODE_PATH: nodePath,
+    REACH_PDF_LOG_FILE: logPath,
+    REACH_PDF_USE_BUNDLED_CHROMIUM: useBundled ? '1' : process.env.REACH_PDF_USE_BUNDLED_CHROMIUM,
+  };
+
+  if (!systemChrome) {
+    delete env.PUPPETEER_EXECUTABLE_PATH;
+    delete env.CHROME_PATH;
+  }
+
+  return env;
+}
+
+function formatWorkerFailure(
+  context: { scriptPath: string; workerRoot: string; nodePath: string },
+  detail: string,
+  err?: { code?: string | number; signal?: string }
+): string {
+  const parts = [
+    detail.trim(),
+    `node=${process.version}`,
+    `workerRoot=${context.workerRoot}`,
+    `script=${context.scriptPath}`,
+    context.nodePath ? `NODE_PATH=${context.nodePath}` : '',
+    err?.code != null ? `exitCode=${err.code}` : '',
+    err?.signal ? `signal=${err.signal}` : '',
+  ].filter(Boolean);
+
+  return parts.join('\n');
+}
+
+async function readWorkerDiagnostics(logPath: string, stderr: string): Promise<string> {
+  let log = '';
+  try {
+    log = await readFile(logPath, 'utf8');
+  } catch {
+    // no log file
+  }
+
+  const parts = [stderr.trim(), log.trim()].filter(Boolean);
+  return parts.join('\n');
+}
+
+export async function runPdfWorkerCheck(): Promise<string> {
+  const context = resolveWorkerContext();
+  const logPath = path.join(tmpdir(), `reach-pdf-check-${randomUUID()}.log`);
+
+  try {
+    const env = await buildWorkerEnv(logPath, context.nodePath);
+    const { stderr } = await execFileAsync(process.execPath, [context.scriptPath, '--check'], {
+      cwd: context.workerRoot,
+      env,
+      timeout: 30_000,
+      maxBuffer: 1024 * 1024,
+      encoding: 'utf8',
+    });
+
+    return (stderr || 'PDF worker check passed').trim();
+  } catch (err: unknown) {
+    const execErr = err as { stderr?: string; message?: string; code?: string | number; signal?: string };
+    const detail = await readWorkerDiagnostics(logPath, execErr.stderr || execErr.message || String(err));
+    throw new Error(formatWorkerFailure(context, detail || 'PDF worker check failed', execErr));
+  } finally {
+    await unlink(logPath).catch(() => {});
+  }
 }
 
 async function runPdfWorker(html: string, format: 'reach' | 'tcc'): Promise<Buffer> {
   const htmlPath = path.join(tmpdir(), `reach-pdf-${randomUUID()}.html`);
-  const scriptPath = resolveWorkerScript();
-  const workerRoot = path.dirname(path.dirname(scriptPath));
+  const logPath = `${htmlPath}.log`;
+  const context = resolveWorkerContext();
   const workerTimeoutMs = Number(process.env.REACH_PDF_WORKER_TIMEOUT_MS || '110000');
 
   await writeFile(htmlPath, html, 'utf8');
 
-  return new Promise((resolve, reject) => {
-    const stdoutChunks: Buffer[] = [];
-    const stderrChunks: Buffer[] = [];
-
-    const child = spawn(process.execPath, [scriptPath, htmlPath, format], {
-      cwd: workerRoot,
-      env: {
-        ...process.env,
-        NODE_PATH: path.join(workerRoot, 'node_modules'),
-      },
-      stdio: ['ignore', 'pipe', 'pipe'],
+  try {
+    const env = await buildWorkerEnv(logPath, context.nodePath);
+    const { stdout } = await execFileAsync(process.execPath, [context.scriptPath, htmlPath, format], {
+      cwd: context.workerRoot,
+      env,
+      timeout: workerTimeoutMs,
+      maxBuffer: 50 * 1024 * 1024,
+      encoding: 'buffer',
     });
 
-    const timer = setTimeout(() => {
-      child.kill('SIGTERM');
-      setTimeout(() => child.kill('SIGKILL'), 5000);
-    }, workerTimeoutMs);
+    const pdf = Buffer.isBuffer(stdout) ? stdout : Buffer.from(stdout);
+    if (!pdf.length) {
+      const detail = await readWorkerDiagnostics(logPath, '');
+      throw new Error(formatWorkerFailure(context, detail || 'PDF worker returned an empty file'));
+    }
 
-    child.stdout.on('data', (chunk: Buffer) => stdoutChunks.push(chunk));
-    child.stderr.on('data', (chunk: Buffer) => stderrChunks.push(chunk));
-    child.on('error', (err) => {
-      clearTimeout(timer);
-      reject(err);
-    });
-    child.on('close', async (code, signal) => {
-      clearTimeout(timer);
-      await unlink(htmlPath).catch(() => {});
+    return pdf;
+  } catch (err: unknown) {
+    const execErr = err as { stderr?: string | Buffer; message?: string; code?: string | number; signal?: string };
+    const stderr =
+      typeof execErr.stderr === 'string'
+        ? execErr.stderr
+        : Buffer.isBuffer(execErr.stderr)
+          ? execErr.stderr.toString('utf8')
+          : execErr.message || String(err);
 
-      const stderr = Buffer.concat(stderrChunks).toString('utf8').trim();
-      const pdf = Buffer.concat(stdoutChunks);
-
-      if (code === 0 && pdf.length > 0) {
-        resolve(pdf);
-        return;
-      }
-
-      if (signal) {
-        reject(
-          new Error(
-            stderr ||
-              `PDF worker killed by ${signal} (likely timeout or out of memory on Hostinger). Use Node.js 22.x, redeploy, and retry.`
-          )
-        );
-        return;
-      }
-
-      reject(
-        new Error(
-          stderr ||
-            `PDF worker exited with code ${code ?? 'unknown'} (empty stderr — check Hostinger Node version is 22.x and runtime logs).`
-        )
-      );
-    });
-  });
+    const detail = await readWorkerDiagnostics(logPath, stderr);
+    throw new Error(formatWorkerFailure(context, detail || 'PDF worker failed', execErr));
+  } finally {
+    await unlink(htmlPath).catch(() => {});
+    await unlink(logPath).catch(() => {});
+  }
 }
 
 function prefersBundledChromium(): boolean {

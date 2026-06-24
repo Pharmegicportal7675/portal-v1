@@ -23,6 +23,7 @@ const standaloneServer = path.join(root, '.next', 'standalone', 'server.js');
 const nextBin = path.join(root, 'node_modules', 'next', 'dist', 'bin', 'next');
 
 console.info('[portal] NODE_ENV:', process.env.NODE_ENV);
+console.info('[portal] Node.js:', process.version);
 console.info('[portal] PORT:', port);
 console.info('[portal] DATABASE_URL:', process.env.DATABASE_URL ? 'set' : 'MISSING');
 

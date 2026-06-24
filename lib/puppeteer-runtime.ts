@@ -26,7 +26,7 @@ export function loadPuppeteerCore(): typeof import('puppeteer-core') {
   return projectRequire()('puppeteer-core');
 }
 
-export function loadBundledChromiumModule(): typeof import('@sparticuz/chromium-min').default {
+export function loadBundledChromiumModule() {
   const mod = projectRequire()('@sparticuz/chromium-min');
-  return (mod?.default ?? mod) as typeof import('@sparticuz/chromium-min').default;
+  return mod?.default ?? mod;
 }
