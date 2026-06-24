@@ -211,6 +211,14 @@ PUPPETEER_EXECUTABLE_PATH=/usr/bin/google-chrome-stable
 
 Redeploy / restart the Node app. PDFs will use system Chrome instead of `/tmp/chromium`.
 
+### `spawn /tmp/chromium EACCES` (noexec on `/tmp`)
+
+`@sparticuz/chromium-min` extracts Chromium to hardcoded `/tmp/chromium`. On Hostinger, `/tmp` is often mounted **noexec**, so the binary cannot run even though extraction succeeds.
+
+The app copies the extracted binary into `.cache/chromium-runtime/chromium` (executable) on first use. After deploying this fix, restart the Node app and retry a PDF download.
+
+For the most reliable production setup, still install system Chrome via SSH and set `PUPPETEER_EXECUTABLE_PATH=/usr/bin/google-chrome-stable` (see below).
+
 Optional reference — same Chrome install commands:
 
 ```bash

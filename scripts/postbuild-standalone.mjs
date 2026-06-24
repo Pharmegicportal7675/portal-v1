@@ -71,9 +71,15 @@ copyDir(path.join(root, 'generated'), path.join(standaloneDir, 'generated'));
 
 const workerScript = path.join(root, 'scripts', 'reach-html-to-pdf.cjs');
 const workerDest = path.join(standaloneDir, 'scripts', 'reach-html-to-pdf.cjs');
+const chromiumHelper = path.join(root, 'scripts', 'bundled-chromium-executable.cjs');
+const chromiumHelperDest = path.join(standaloneDir, 'scripts', 'bundled-chromium-executable.cjs');
 if (fs.existsSync(workerScript)) {
   fs.mkdirSync(path.dirname(workerDest), { recursive: true });
   fs.copyFileSync(workerScript, workerDest);
+}
+if (fs.existsSync(chromiumHelper)) {
+  fs.mkdirSync(path.dirname(chromiumHelperDest), { recursive: true });
+  fs.copyFileSync(chromiumHelper, chromiumHelperDest);
 }
 
 console.info('[postbuild] Ensuring PDF packages in standalone/node_modules…');

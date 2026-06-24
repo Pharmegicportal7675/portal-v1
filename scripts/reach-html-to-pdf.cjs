@@ -1,11 +1,16 @@
 'use strict';
 
 const fs = require('fs');
-const os = require('os');
 const path = require('path');
 const { access } = require('fs/promises');
+const {
+  ensureChromiumRuntimeDir,
+  resolveBundledChromiumExecutable,
+} = require('./bundled-chromium-executable.cjs');
 
 const WORKER_ROOT = path.resolve(__dirname, '..');
+
+ensureChromiumRuntimeDir(WORKER_ROOT);
 const CHROMIUM_PACK_URL =
   process.env.CHROMIUM_PACK_URL ||
   'https://github.com/Sparticuz/chromium/releases/download/v131.0.0/chromium-v131.0.0-pack.tar';
@@ -23,15 +28,6 @@ const ROOT_SELECTORS = {
 };
 
 process.chdir(WORKER_ROOT);
-
-function ensureRuntimeDir() {
-  const dir = process.env.TMPDIR || path.join(WORKER_ROOT, '.cache', 'chromium-runtime');
-  fs.mkdirSync(dir, { recursive: true });
-  process.env.TMPDIR = dir;
-  process.env.TEMP = dir;
-  process.env.TMP = dir;
-  return dir;
-}
 
 function logFilePath() {
   return process.env.REACH_PDF_LOG_FILE || '';
@@ -126,16 +122,6 @@ async function resolveSystemChrome() {
   return null;
 }
 
-async function clearChromiumTemp() {
-  for (const dir of ['chromium-pack', 'chromium']) {
-    try {
-      fs.rmSync(path.join(os.tmpdir(), dir), { recursive: true, force: true });
-    } catch {
-      // ignore
-    }
-  }
-}
-
 const HOSTING_CHROMIUM_ARGS = [
   '--no-sandbox',
   '--disable-setuid-sandbox',
@@ -168,7 +154,7 @@ async function closeBrowserSafely(browser) {
 }
 
 async function launchBrowser() {
-  ensureRuntimeDir();
+  ensureChromiumRuntimeDir(WORKER_ROOT);
   const puppeteer = requirePackage('puppeteer-core');
 
   if (process.env.REACH_PDF_USE_BUNDLED_CHROMIUM !== '1') {
@@ -194,20 +180,7 @@ async function launchBrowser() {
     // optional
   }
 
-  let executablePath;
-  try {
-    executablePath = await chromium.executablePath(CHROMIUM_PACK_URL);
-  } catch (err) {
-    const code = err && typeof err === 'object' && 'code' in err ? String(err.code) : '';
-    const message = err instanceof Error ? err.message : String(err);
-    if (code === 'EEXIST' || message.includes('EEXIST')) {
-      await clearChromiumTemp();
-      executablePath = await chromium.executablePath(CHROMIUM_PACK_URL);
-    } else {
-      throw err;
-    }
-  }
-
+  const executablePath = await resolveBundledChromiumExecutable(chromium, CHROMIUM_PACK_URL, WORKER_ROOT);
   appendLog(`Chromium executable: ${executablePath}`);
 
   return puppeteer.launch({

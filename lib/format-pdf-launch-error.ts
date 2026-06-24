@@ -16,7 +16,7 @@ export function formatPdfLaunchError(err: unknown): Error {
     );
   }
 
-  if (lower.includes('eagain') || lower.includes('spawn /tmp/chromium')) {
+  if (lower.includes('eagain') || lower.includes('spawn /tmp/chromium') || lower.includes('eacces')) {
     return new Error(`${message}\n\n${HOSTINGER_CHROME_HINT}`);
   }
 

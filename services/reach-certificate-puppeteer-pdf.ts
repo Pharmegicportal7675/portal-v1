@@ -151,8 +151,20 @@ export async function runInProcessPdfCheck(): Promise<string> {
 
   let chromiumPath = 'not resolved (use ?launch=1 to test download)';
   if (process.env.REACH_PDF_HEALTH_LAUNCH === '1') {
+    const { createRequire } = await import('node:module');
+    const { resolvePuppeteerProjectRoot } = await import('@/lib/puppeteer-runtime');
     const { getBundledChromiumPackUrl } = await import('@/lib/bundled-chromium-config');
-    chromiumPath = await chromium.executablePath(getBundledChromiumPackUrl());
+    const root = resolvePuppeteerProjectRoot();
+    const { resolveBundledChromiumExecutable } = createRequire(path.join(root, 'package.json'))(
+      './scripts/bundled-chromium-executable.cjs'
+    ) as {
+      resolveBundledChromiumExecutable: (
+        chromium: { executablePath: (packUrl: string) => Promise<string> },
+        packUrl: string,
+        projectRoot: string
+      ) => Promise<string>;
+    };
+    chromiumPath = await resolveBundledChromiumExecutable(chromium, getBundledChromiumPackUrl(), root);
   }
 
   return [
@@ -246,7 +258,8 @@ async function runPdfWorkerWithSpawn(
 }
 
 async function runPdfWorker(html: string, format: 'reach' | 'tcc'): Promise<Buffer> {
-  const htmlPath = path.join(tmpdir(), `reach-pdf-${randomUUID()}.html`);
+  const runtimeDir = ensureChromiumRuntimeDir();
+  const htmlPath = path.join(runtimeDir, `reach-pdf-${randomUUID()}.html`);
   const logPath = `${htmlPath}.log`;
   const context = resolveWorkerContext();
   const workerTimeoutMs = Number(process.env.REACH_PDF_WORKER_TIMEOUT_MS || '110000');
