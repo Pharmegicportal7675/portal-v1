@@ -4,6 +4,7 @@ const PRISMA_TRACE = ['./generated/prisma/**'];
 
 /** @type {import('next').NextConfig} */
 const nextConfig = {
+  output: 'standalone',
   serverExternalPackages: [
     'puppeteer-core',
     '@prisma/client',

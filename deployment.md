@@ -34,7 +34,7 @@ Production app: **portal.pharmegichealthcare.com**
 | Node | 22.x |
 | Output directory | **leave empty** (do not serve `.next` as static only) |
 
-`server.js` always binds **`0.0.0.0`** — never `process.env.HOSTNAME` (on Linux that is the machine name and causes **503**).
+`server.js` binds **`0.0.0.0`** on **`$PORT`** and starts the **Next.js standalone** bundle (built via `output: 'standalone'`). Never use `process.env.HOSTNAME` on Linux — it causes **503**.
 
 ### CRITICAL — if `/login` shows raw text like `:HL[...]` or `0:{"tree":`
 
@@ -52,7 +52,9 @@ Also reconnect GitHub (dashboard shows "Disconnected from GitHub") so future pus
 
 ### 503 Service Unavailable
 
-**503 on `/api/auth/login` (or every URL)** means the **Node process is not running** — not a wrong password. Build can succeed while the app never starts.
+**503 on every URL** means the **Node process is not running** — Hostinger CDN (`Server: hcdn`) cannot reach your app. The `LSCWP_CTRL` query params in the URL are from LiteSpeed cache (ignore them; clear cache after redeploy).
+
+**Common fix:** `server.js` must start Next.js with the platform port — use `npm run start -- -p $PORT` (not `npx`, not static `.next` hosting).
 
 1. hPanel → **Runtime logs** — look for:
    - `DATABASE_URL is not set` → add env var in hPanel, redeploy
