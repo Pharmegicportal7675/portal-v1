@@ -41,10 +41,11 @@ export function isLibreOfficeInstalled(): boolean {
 
 export async function resolveSystemChromeExecutable(): Promise<string | null> {
   const { access } = await import('node:fs/promises');
+  const { constants } = await import('node:fs');
 
   for (const candidate of chromeCandidates()) {
     try {
-      await access(candidate);
+      await access(candidate, constants.X_OK);
       return candidate;
     } catch {
       // try next path

@@ -131,11 +131,12 @@ After changing `NEXT_PUBLIC_*` vars, **redeploy** the app.
 
 ### RC HTML Certificate PDF (Puppeteer)
 
-On **Hostinger Linux**, RC HTML→PDF uses an isolated **PDF worker** (`scripts/reach-html-to-pdf.cjs`).
+On **Hostinger Linux**, RC HTML→PDF runs **in-process** via `createRequire` (no subprocess by default).
 
 **Requirements:**
 - **Node.js 20.x or 22.x** in hPanel (`puppeteer-core` 23 + `@sparticuz/chromium-min` 131)
 - `NEXT_PUBLIC_APP_URL=https://portal.pharmegichealthcare.com`
+- **Remove** `PUPPETEER_EXECUTABLE_PATH` unless Google Chrome is actually installed on the server
 
 PDF engine order:
 
@@ -162,7 +163,7 @@ PUPPETEER_EXECUTABLE_PATH=/usr/bin/google-chrome-stable
 Verify after deploy:
 
 - `https://portal.pharmegichealthcare.com/api/health/pdf-converter` — converter status
-- `https://portal.pharmegichealthcare.com/api/health/pdf-worker` — worker module check (run after deploy)
+- `https://portal.pharmegichealthcare.com/api/health/pdf-worker` — in-process Puppeteer/Chromium load check
 - First bundled-Chromium PDF may take ~30s; later requests are faster.
 - Generated PDFs are cached under `public/uploads/certificates/`.
 

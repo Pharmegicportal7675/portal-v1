@@ -48,7 +48,7 @@ export async function resolveReachPdfConverterStatus(): Promise<ReachPdfConverte
     htmlPdfUsesBundledChromiumFallback
   ) {
     recommendedAction =
-      'No system Chrome found — PDF generation uses bundled Chromium (@sparticuz/chromium-min). First PDF may take ~30s. Optional: install Google Chrome and set PUPPETEER_EXECUTABLE_PATH=/usr/bin/google-chrome-stable';
+      'No system Chrome found — PDF uses bundled Chromium. Remove PUPPETEER_EXECUTABLE_PATH from env if Chrome is not installed. First PDF may take ~30s.';
   } else if (htmlPdfEnabled && hosting === 'hostinger' && !systemChromeFound) {
     recommendedAction =
       'Install Google Chrome or redeploy with @sparticuz/chromium-min bundled fallback enabled.';
