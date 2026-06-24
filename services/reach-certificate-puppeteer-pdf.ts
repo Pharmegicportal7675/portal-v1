@@ -8,7 +8,7 @@ import { promisify } from 'node:util';
 import type { Browser, LaunchOptions } from 'puppeteer-core';
 import { getBundledChromiumLaunchArgs, getSystemChromeLaunchArgs } from '@/lib/chromium-launch-args';
 import { ensureChromiumRuntimeDir } from '@/lib/chromium-runtime-dir';
-import { formatPdfLaunchError } from '@/lib/format-pdf-launch-error';
+import { formatPdfLaunchError, isBrowserProtocolError, isProcessLimitError } from '@/lib/format-pdf-launch-error';
 import {
   isReachPuppeteerPdfAvailable,
   resolveSystemChromeExecutable,
@@ -23,24 +23,7 @@ export { isReachPuppeteerPdfAvailable, resolveSystemChromeExecutable, usesBundle
 const execFileAsync = promisify(execFile);
 
 function usePdfWorker(): boolean {
-  // Opt-in only — worker adds an extra Node process and worsens Hostinger ulimit (EAGAIN).
   return process.env.REACH_PDF_USE_WORKER === '1';
-}
-
-function isProcessLimitError(message: string): boolean {
-  const lower = message.toLowerCase();
-  return lower.includes('eagain') || lower.includes('failed to launch the browser process');
-}
-
-let sharedBrowser: Browser | null = null;
-let sharedBrowserLaunch: Promise<Browser> | null = null;
-
-async function resetSharedBrowser(): Promise<void> {
-  if (sharedBrowser) {
-    await closeBrowserSafely(sharedBrowser);
-    sharedBrowser = null;
-  }
-  sharedBrowserLaunch = null;
 }
 
 function isModuleLoadError(message: string): boolean {
@@ -346,47 +329,7 @@ async function launchBrowser(): Promise<Browser> {
   }
 }
 
-async function acquireSharedBrowser(): Promise<Browser> {
-  if (sharedBrowser?.connected) {
-    return sharedBrowser;
-  }
-
-  if (!sharedBrowserLaunch) {
-    sharedBrowserLaunch = launchBrowser()
-      .then((browser) => {
-        sharedBrowser = browser;
-        browser.on('disconnected', () => {
-          sharedBrowser = null;
-          sharedBrowserLaunch = null;
-        });
-        return browser;
-      })
-      .catch((err) => {
-        sharedBrowserLaunch = null;
-        throw err;
-      });
-  }
-
-  return sharedBrowserLaunch;
-}
-
-async function getBrowser(): Promise<Browser> {
-  return acquireSharedBrowser();
-}
-
-async function closeBrowserIfNeeded(_browser: Browser): Promise<void> {
-  // Keep one warm Chromium — closing per PDF causes fork storms (EAGAIN) on Hostinger.
-}
-
-async function generateHtmlPdfInProcess(html: string, format: 'reach' | 'tcc'): Promise<Buffer> {
-  let browser: Browser;
-  try {
-    browser = await getBrowser();
-  } catch (err) {
-    await resetSharedBrowser();
-    throw err;
-  }
-
+async function renderHtmlToPdf(browser: Browser, html: string, format: 'reach' | 'tcc'): Promise<Buffer> {
   const page = await browser.newPage();
   const viewport =
     format === 'tcc'
@@ -426,15 +369,31 @@ async function generateHtmlPdfInProcess(html: string, format: 'reach' | 'tcc'): 
     });
 
     return Buffer.from(pdf);
-  } catch (err) {
-    const message = err instanceof Error ? err.message : String(err);
-    if (isProcessLimitError(message)) {
-      await resetSharedBrowser();
-    }
-    throw formatPdfLaunchError(err);
   } finally {
     await page.close().catch(() => {});
-    await closeBrowserIfNeeded(browser);
+  }
+}
+
+async function generateHtmlPdfInProcess(html: string, format: 'reach' | 'tcc', attempt = 0): Promise<Buffer> {
+  let browser: Browser | null = null;
+
+  try {
+    browser = await launchBrowser();
+    return await renderHtmlToPdf(browser, html, format);
+  } catch (err) {
+    const message = err instanceof Error ? err.message : String(err);
+    const shouldRetry =
+      attempt === 0 && (isBrowserProtocolError(message) || isProcessLimitError(message));
+
+    if (shouldRetry) {
+      console.warn('[reach-pdf] Browser error, retrying with fresh instance:', message);
+      if (browser) await closeBrowserSafely(browser);
+      return generateHtmlPdfInProcess(html, format, attempt + 1);
+    }
+
+    throw formatPdfLaunchError(err);
+  } finally {
+    if (browser) await closeBrowserSafely(browser);
   }
 }
 
@@ -447,7 +406,7 @@ async function generateHtmlPdfWithStrategy(html: string, format: 'reach' | 'tcc'
     return await generateHtmlPdfInProcess(html, format);
   } catch (inProcessErr) {
     const message = inProcessErr instanceof Error ? inProcessErr.message : String(inProcessErr);
-    if (isModuleLoadError(message) || process.env.REACH_PDF_WORKER_FALLBACK === '1') {
+    if (isModuleLoadError(message) || isBrowserProtocolError(message) || process.env.REACH_PDF_WORKER_FALLBACK === '1') {
       console.warn('[reach-pdf] In-process PDF failed, retrying via worker:', message);
       return runPdfWorker(html, format);
     }

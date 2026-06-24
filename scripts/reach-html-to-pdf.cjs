@@ -143,8 +143,7 @@ const HOSTING_CHROMIUM_ARGS = [
   '--disable-gpu',
   '--disable-software-rasterizer',
   '--disable-extensions',
-  '--single-process',
-  '--no-zygote',
+  '--renderer-process-limit=2',
 ];
 
 function mergeChromiumArgs(base) {
@@ -152,7 +151,7 @@ function mergeChromiumArgs(base) {
   for (const arg of HOSTING_CHROMIUM_ARGS) {
     if (!merged.includes(arg)) merged.push(arg);
   }
-  return merged;
+  return merged.filter((arg) => arg !== '--single-process' && arg !== '--no-zygote');
 }
 
 async function closeBrowserSafely(browser) {

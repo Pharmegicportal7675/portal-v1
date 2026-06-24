@@ -145,11 +145,24 @@ PDF engine order:
 1. Uses **system Chrome** if installed (`PUPPETEER_EXECUTABLE_PATH=/usr/bin/google-chrome-stable`).
 2. Otherwise falls back to **bundled Chromium** (`@sparticuz/chromium-min`).
 
-### `spawn /tmp/chromium EAGAIN` (process limit)
+### Hostinger SSH (install Chrome for PDF)
 
-Hostinger shared hosting often cannot run bundled Chromium (process `ulimit` too low).
+From hPanel → **Advanced → SSH Access**, connect:
 
-**Recommended fix — install system Chrome (SSH):**
+```bash
+ssh -p 65002 u402838766@147.93.17.79
+```
+
+(Use your SSH password from hPanel when prompted.)
+
+**1. Check if Chrome is already installed:**
+
+```bash
+which google-chrome-stable || which google-chrome
+ulimit -u
+```
+
+**2. Install Google Chrome** (VPS / plans with `sudo` only):
 
 ```bash
 sudo apt-get update
@@ -159,22 +172,35 @@ sudo gpg --dearmor -o /usr/share/keyrings/google-chrome.gpg /tmp/google-chrome.g
 echo "deb [arch=amd64 signed-by=/usr/share/keyrings/google-chrome.gpg] http://dl.google.com/linux/chrome/deb/ stable main" \
   | sudo tee /etc/apt/sources.list.d/google-chrome.list
 sudo apt-get update && sudo apt-get install -y google-chrome-stable
+google-chrome-stable --version
 ```
 
-Then in **hPanel → Environment variables**:
+If `sudo` is denied, your plan may not allow apt installs — use Hostinger **VPS** or contact support.
+
+**3. hPanel → Environment variables** (after Chrome installs):
 
 ```
 PUPPETEER_EXECUTABLE_PATH=/usr/bin/google-chrome-stable
 ```
 
-Redeploy / restart the Node app. PDFs will use system Chrome (one warm browser, no `/tmp/chromium` spawn).
+**4. Redeploy** the Node app from hPanel, then test PDF download once (wait up to 60s).
 
-Optional (faster PDFs, avoids first-request Chromium download):
+### `spawn /tmp/chromium EAGAIN` (process limit)
+
+Hostinger shared hosting often cannot run bundled Chromium (process `ulimit` too low). **Install system Chrome via SSH above** — that is the reliable fix.
+
+Then in **hPanel → Environment variables** (if not set in step 3):
+
+```
+PUPPETEER_EXECUTABLE_PATH=/usr/bin/google-chrome-stable
+```
+
+Redeploy / restart the Node app. PDFs will use system Chrome instead of `/tmp/chromium`.
+
+Optional reference — same Chrome install commands:
 
 ```bash
-# Install Google Chrome (Ubuntu/Debian VPS — SSH)
-sudo apt-get update
-sudo apt-get install -y wget gnupg ca-certificates
+sudo apt-get update && sudo apt-get install -y wget gnupg ca-certificates
 wget -q -O /tmp/google-chrome.gpg https://dl.google.com/linux/linux_signing_key.pub
 sudo gpg --dearmor -o /usr/share/keyrings/google-chrome.gpg /tmp/google-chrome.gpg
 echo "deb [arch=amd64 signed-by=/usr/share/keyrings/google-chrome.gpg] http://dl.google.com/linux/chrome/deb/ stable main" \
@@ -192,6 +218,7 @@ Verify after deploy:
 - `https://portal.pharmegichealthcare.com/api/health/pdf-worker` — in-process Puppeteer/Chromium load check
 - First bundled-Chromium PDF may take ~30s; later requests are faster.
 - PDF requests run **one at a time** on the server (avoids Chromium `EAGAIN` / process limit on Hostinger).
+- If you see `Protocol error (Target closed)`, install system Chrome (see EAGAIN section below).
 - Logos use plain `/pharmegic-logo.png` (no `/_next/image` optimization on Hostinger).
 - Generated PDFs are cached under `public/uploads/certificates/`.
 
