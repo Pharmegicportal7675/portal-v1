@@ -11,8 +11,9 @@ type TccApplicationCertificateInput = {
 };
 
 export function resolveTccCertificateRow(
-  app: TccApplicationCertificateInput
+  app: TccApplicationCertificateInput | null | undefined
 ): TccCertificateRow | null {
+  if (!app) return null;
   const cert = app.certificates;
   if (!cert) return null;
   if (Array.isArray(cert)) return cert[0] ?? null;
@@ -20,7 +21,10 @@ export function resolveTccCertificateRow(
 }
 
 /** Issue date: issued certificate → stored issue date → approval timestamp. */
-export function resolveTccApplicationIssueDate(app: TccApplicationCertificateInput): string | null {
+export function resolveTccApplicationIssueDate(
+  app: TccApplicationCertificateInput | null | undefined
+): string | null {
+  if (!app) return null;
   const cert = resolveTccCertificateRow(app);
   if (cert?.issued_at) return cert.issued_at;
 
@@ -37,7 +41,7 @@ export function resolveTccApplicationIssueDate(app: TccApplicationCertificateInp
 }
 
 export function resolveTccApplicationCertificateNumber(
-  app: TccApplicationCertificateInput
+  app: TccApplicationCertificateInput | null | undefined
 ): string | null {
   const number = resolveTccCertificateRow(app)?.certificate_number?.trim();
   return number || null;

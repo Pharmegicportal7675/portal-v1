@@ -185,6 +185,104 @@ export default function TccApplicationForm({
     : authorizedSubstances;
   const hasExistingBo = Boolean(editApplication?.bo_attachment_url);
 
+  const formIsComplete = useMemo(() => {
+    if (!regulatoryFramework) return false;
+    if (isNotificationOnly && !caseNumber.trim()) return false;
+    if (isEuReach && !chemicalId) return false;
+    if (!exportDate) return false;
+    if (!quantity || Number(quantity) <= 0) return false;
+    if (!euImporterCompanyName.trim()) return false;
+    if (!euImporterAddress.trim()) return false;
+    if (!purchaseOrderNumber.trim()) return false;
+    if (!boFile && !hasExistingBo) return false;
+    if (
+      isEuReach &&
+      (quotaExceeded || (noQuotaLeft && !isEditing) || noReachForExportDate)
+    ) {
+      return false;
+    }
+    return true;
+  }, [
+    regulatoryFramework,
+    isNotificationOnly,
+    caseNumber,
+    isEuReach,
+    chemicalId,
+    exportDate,
+    quantity,
+    euImporterCompanyName,
+    euImporterAddress,
+    purchaseOrderNumber,
+    boFile,
+    hasExistingBo,
+    quotaExceeded,
+    noQuotaLeft,
+    isEditing,
+    noReachForExportDate,
+  ]);
+
+  const validateForm = (): string | null => {
+    if (isEuReach && !chemicalId) {
+      return 'Please select an authorized substance.';
+    }
+
+    if (isNotificationOnly && !caseNumber.trim()) {
+      return 'Case number is required.';
+    }
+
+    if (!regulatoryFramework) {
+      return 'Please select a regulatory framework for this application.';
+    }
+
+    if (!quantity || Number(quantity) <= 0) {
+      return 'Please specify a positive quantity in metric tons (MT).';
+    }
+
+    if (!exportDate) {
+      return 'Expected export shipment date is required.';
+    }
+
+    if (isEuReach) {
+      if (noReachForExportDate) {
+        return quotaContext?.error || 'No Active RC Certificate Available.';
+      }
+
+      if (noQuotaLeft) {
+        return 'No remaining quota for this RC validity period. Contact your administrator.';
+      }
+
+      if (selectedSubstance && Number(quantity) > initialQuota) {
+        return `Quantity exceeds available quota. Maximum allowed: ${initialQuota} MT.`;
+      }
+    }
+
+    if (!euImporterCompanyName.trim()) {
+      return 'EU importer company name is required.';
+    }
+
+    if (!euImporterAddress.trim()) {
+      return 'EU importer address is required.';
+    }
+
+    if (!purchaseOrderNumber.trim()) {
+      return 'Purchase order number is required.';
+    }
+
+    if (!boFile && !hasExistingBo) {
+      return 'PO attachment is required.';
+    }
+
+    if (selectedSubstance?.validity_date && isEuReach) {
+      const expiry = new Date(selectedSubstance.validity_date);
+      const shipment = new Date(exportDate);
+      if (shipment > expiry) {
+        return `The expected export date exceeds the substance validity date (${expiry.toLocaleDateString()}).`;
+      }
+    }
+
+    return null;
+  };
+
   const handleChemicalChange = (value: string) => {
     setChemicalId(value);
     setError(null);
@@ -223,78 +321,11 @@ export default function TccApplicationForm({
     e.preventDefault();
     setError(null);
 
-    if (isEuReach && !chemicalId) {
-      setError('Please select an authorized substance.');
+    const validationError = validateForm();
+    if (validationError) {
+      setError(validationError);
+      toast.error(validationError);
       return;
-    }
-
-    if (isNotificationOnly && !caseNumber.trim()) {
-      setError('Case number is required.');
-      return;
-    }
-
-    if (!regulatoryFramework) {
-      setError('Please select a regulatory framework for this application.');
-      return;
-    }
-
-    if (!quantity || Number(quantity) <= 0) {
-      setError('Please specify a positive quantity in metric tons (MT).');
-      return;
-    }
-
-    if (!exportDate) {
-      setError('Expected export shipment date is required.');
-      return;
-    }
-
-    if (isEuReach) {
-      if (noReachForExportDate) {
-        setError(
-          quotaContext?.error ||
-            'No Active RC Certificate Available.'
-        );
-        return;
-      }
-
-      if (noQuotaLeft) {
-        setError('No remaining quota for this RC validity period. Contact your administrator.');
-        return;
-      }
-
-      if (selectedSubstance && Number(quantity) > initialQuota) {
-        setError(`Quantity exceeds available quota. Maximum allowed: ${initialQuota} MT.`);
-        return;
-      }
-    }
-
-    if (!euImporterCompanyName.trim()) {
-      setError('EU importer company name is required.');
-      return;
-    }
-
-    if (!euImporterAddress.trim()) {
-      setError('EU importer address is required.');
-      return;
-    }
-
-    if (!purchaseOrderNumber.trim()) {
-      setError('Purchase order number is required.');
-      return;
-    }
-
-    if (!boFile && !hasExistingBo) {
-      setError('PO attachment is required.');
-      return;
-    }
-
-    if (selectedSubstance?.validity_date && isEuReach) {
-      const expiry = new Date(selectedSubstance.validity_date);
-      const shipment = new Date(exportDate);
-      if (shipment > expiry) {
-        setError(`The expected export date exceeds the substance validity date (${expiry.toLocaleDateString()}).`);
-        return;
-      }
     }
 
     startTransition(async () => {
@@ -328,20 +359,25 @@ export default function TccApplicationForm({
       try {
         res = (await response.json()) as typeof res;
       } catch {
-        setError(
+        const message =
           response.status === 404
             ? 'Application service not found. Please contact support or try again after redeploy.'
-            : 'Failed to save application.'
-        );
+            : 'Failed to save application.';
+        setError(message);
+        toast.error(message);
         return;
       }
 
-      if (res.success) {
-        toast.success(res.message || (isEditing ? 'Application updated.' : 'TCC application submitted.'));
-        router.push('/client');
-      } else {
-        setError(typeof res.error === 'string' ? res.error : 'Failed to save application.');
+      if (!response.ok || !res.success) {
+        const message =
+          typeof res.error === 'string' ? res.error : 'Failed to save application.';
+        setError(message);
+        toast.error(message);
+        return;
       }
+
+      toast.success(res.message || (isEditing ? 'Application updated.' : 'TCC application submitted.'));
+      router.push('/client');
     });
   };
 
@@ -442,7 +478,7 @@ export default function TccApplicationForm({
               <CardDescription>Enter correct regulatory and substance data.</CardDescription>
             </CardHeader>
             <CardContent>
-              <form onSubmit={handleSubmit} className="space-y-5">
+              <form onSubmit={handleSubmit} noValidate className="space-y-5">
                 <div className="rounded-xl border border-slate-200 bg-slate-50/60 p-4 space-y-4">
                   <h3 className="text-sm font-bold text-slate-800 flex items-center gap-2">
                     <Building2 className="h-4 w-4 text-teal-700" />
@@ -618,19 +654,7 @@ export default function TccApplicationForm({
                   <Button
                     type="submit"
                     isLoading={isPending}
-                    disabled={
-                      isPending ||
-                      !regulatoryFramework ||
-                      (isNotificationOnly && !caseNumber.trim()) ||
-                      (isEuReach &&
-                        (quotaExceeded ||
-                          (noQuotaLeft && !isEditing) ||
-                          noReachForExportDate ||
-                          !chemicalId)) ||
-                      !exportDate ||
-                      !quantity ||
-                      Number(quantity) <= 0
-                    }
+                    disabled={isPending || !formIsComplete}
                   >
                     {isEditing ? 'Save Changes' : 'Submit Application'}{' '}
                     <ArrowRight className="h-4 w-4 ml-1.5" />

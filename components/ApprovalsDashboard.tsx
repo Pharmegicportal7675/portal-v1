@@ -819,11 +819,11 @@ export default function ApprovalsDashboard({ initialApplications, emailDefaults 
             Permanently delete the TCC application from{' '}
             <strong>{deleteTarget?.clients.company_name}</strong> for{' '}
             <strong>{deleteTarget?.chemicals.chemical_name}</strong>
-            {getCertificateNumber(deleteTarget!) ? (
+            {deleteTarget && getCertificateNumber(deleteTarget) ? (
               <>
                 {' '}
                 (certificate{' '}
-                <strong className="font-mono">{getCertificateNumber(deleteTarget!)}</strong>)
+                <strong className="font-mono">{getCertificateNumber(deleteTarget)}</strong>)
               </>
             ) : null}
             ? This cannot be undone.

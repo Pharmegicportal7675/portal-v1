@@ -317,88 +317,95 @@ export async function applyForTccAction(prevState: unknown, formData: FormData) 
     availableBeforeRequest = validation.remainingQuota;
     reachCert = validation.reachCert;
 
-    const { data: app, error: appError } = await adminSupabase
-      .from('tcc_applications')
-      .insert({
-        client_id: clientId,
-        chemical_id: euData.chemical_id,
-        client_chemical_id: authChemId,
-        reach_certificate_id: reachCertId,
-        regulatory_framework: framework,
-        quantity_mt: euData.quantity_mt,
-        registration_number: euData.registration_number || null,
-        export_date: euData.export_date,
-        remarks: euData.remarks || null,
-        ...euImporter,
-        status: 'pending',
-      })
-      .select()
-      .single();
-
-    if (appError) throw appError;
-
     const { url: boUrl, name: boName } = await uploadBoAttachment(adminSupabase, boFile, {
       clientName: client.company_name || 'client',
       folderDate: euData.export_date,
     });
-    await adminSupabase
-      .from('tcc_applications')
-      .update({ bo_attachment_url: boUrl, bo_attachment_name: boName })
-      .eq('id', app.id);
 
-    await adminSupabase.from('audit_logs').insert({
-      user_id: session.userId,
-      action: 'CREATE_TCC_APPLICATION',
-      entity_type: 'tcc_applications',
-      entity_id: app.id,
-      metadata: {
-        quantity: euData.quantity_mt,
-        chemical: chemical.chemical_name,
-        regulatory_framework: framework,
-      },
-    });
+    let createdAppId: string | null = null;
 
-    const companyLabel = client.company_name || 'A client';
-    const frameworkLabel = getRegulatoryRegistrationLabel(framework);
-    await notifyAllAdmins(
-      adminSupabase,
-      'New TCC application',
-      `${companyLabel} submitted ${euData.quantity_mt} MT for ${chemical.chemical_name}. Review in Approvals.`,
-      '/admin/approvals'
-    );
+    try {
+      const { data: app, error: appError } = await adminSupabase
+        .from('tcc_applications')
+        .insert({
+          client_id: clientId,
+          chemical_id: euData.chemical_id,
+          client_chemical_id: authChemId,
+          reach_certificate_id: reachCertId,
+          regulatory_framework: framework,
+          quantity_mt: euData.quantity_mt,
+          registration_number: euData.registration_number || null,
+          export_date: euData.export_date,
+          remarks: euData.remarks || null,
+          bo_attachment_url: boUrl,
+          bo_attachment_name: boName,
+          ...euImporter,
+          status: 'pending',
+        })
+        .select()
+        .single();
 
-    await notifyTccApplicationByEmail(adminSupabase, {
-      clientCompanyName: companyLabel,
-      chemicalName: chemical.chemical_name,
-      casNumber: chemical.cas_number,
-      ecNumber: chemical.ec_number,
-      quantityMt: euData.quantity_mt,
-      exportDate: euData.export_date,
-      applicationId: app.id,
-      regulatoryFramework: framework,
-      euImporterCompanyName: euImporter.eu_importer_company_name,
-      euImporterAddress: euImporter.eu_importer_address,
-      purchaseOrderNumber: euImporter.purchase_order_number,
-      currentAvailableMt: availableBeforeRequest,
-      projectedBalanceMt: Math.max(0, availableBeforeRequest - euData.quantity_mt),
-      rcCertificateNumber: reachCert?.certificate_number ?? null,
-      rcPeriodStart: reachCert?.issued_at ?? null,
-      rcPeriodEnd: reachCert?.expires_at ?? null,
-      poAttachment: {
-        buffer: Buffer.from(await boFile.arrayBuffer()),
-        fileName: boName,
-        contentType: boFile.type || 'application/octet-stream',
-      },
-    });
+      if (appError || !app) throw appError || new Error('Failed to create TCC application.');
+      createdAppId = app.id;
 
-    revalidatePath('/client');
-    revalidatePath('/client/apply');
-    revalidatePath('/admin', 'layout');
-    revalidatePath('/admin/approvals');
-    return {
-      success: true,
-      message: 'TCC Application submitted. Status: Pending Review.',
-    };
+      await adminSupabase.from('audit_logs').insert({
+        user_id: session.userId,
+        action: 'CREATE_TCC_APPLICATION',
+        entity_type: 'tcc_applications',
+        entity_id: app.id,
+        metadata: {
+          quantity: euData.quantity_mt,
+          chemical: chemical.chemical_name,
+          regulatory_framework: framework,
+        },
+      });
+
+      const companyLabel = client.company_name || 'A client';
+      await notifyAllAdmins(
+        adminSupabase,
+        'New TCC application',
+        `${companyLabel} submitted ${euData.quantity_mt} MT for ${chemical.chemical_name}. Review in Approvals.`,
+        '/admin/approvals'
+      );
+
+      await notifyTccApplicationByEmail(adminSupabase, {
+        clientCompanyName: companyLabel,
+        chemicalName: chemical.chemical_name,
+        casNumber: chemical.cas_number,
+        ecNumber: chemical.ec_number,
+        quantityMt: euData.quantity_mt,
+        exportDate: euData.export_date,
+        applicationId: app.id,
+        regulatoryFramework: framework,
+        euImporterCompanyName: euImporter.eu_importer_company_name,
+        euImporterAddress: euImporter.eu_importer_address,
+        purchaseOrderNumber: euImporter.purchase_order_number,
+        currentAvailableMt: availableBeforeRequest,
+        projectedBalanceMt: Math.max(0, availableBeforeRequest - euData.quantity_mt),
+        rcCertificateNumber: reachCert?.certificate_number ?? null,
+        rcPeriodStart: reachCert?.issued_at ?? null,
+        rcPeriodEnd: reachCert?.expires_at ?? null,
+        poAttachment: {
+          buffer: Buffer.from(await boFile.arrayBuffer()),
+          fileName: boName,
+          contentType: boFile.type || 'application/octet-stream',
+        },
+      });
+
+      revalidatePath('/client');
+      revalidatePath('/client/apply');
+      revalidatePath('/admin', 'layout');
+      revalidatePath('/admin/approvals');
+      return {
+        success: true,
+        message: 'TCC Application submitted. Status: Pending Review.',
+      };
+    } catch (innerErr) {
+      if (createdAppId) {
+        await adminSupabase.from('tcc_applications').delete().eq('id', createdAppId);
+      }
+      throw innerErr;
+    }
   } catch (err: unknown) {
     return { success: false, error: tccSaveErrorMessage(err) };
   }
@@ -508,6 +515,18 @@ export async function updateTccApplicationAction(prevState: unknown, formData: F
     const resetStatus = ['changes_required', 'modification_requested', 'rejected'].includes(existing.status);
     const euImporter = resolveEuImporterFields(euData);
 
+    let boUrl = existing.bo_attachment_url;
+    let boName = existing.bo_attachment_name;
+
+    if (hasNewBo) {
+      const uploaded = await uploadBoAttachment(adminSupabase, boFile, {
+        clientName: client.company_name || 'client',
+        folderDate: euData.export_date,
+      });
+      boUrl = uploaded.url;
+      boName = uploaded.name;
+    }
+
     const { error: updateError } = await adminSupabase
       .from('tcc_applications')
       .update({
@@ -519,23 +538,14 @@ export async function updateTccApplicationAction(prevState: unknown, formData: F
         registration_number: euData.registration_number || null,
         export_date: euData.export_date,
         remarks: euData.remarks || null,
+        bo_attachment_url: boUrl,
+        bo_attachment_name: boName,
         ...euImporter,
         ...(resetStatus ? { status: 'pending', rejection_reason: null } : {}),
       })
       .eq('id', applicationId);
 
     if (updateError) throw updateError;
-
-    if (hasNewBo) {
-      const { url: boUrl, name: boName } = await uploadBoAttachment(adminSupabase, boFile, {
-        clientName: client.company_name || 'client',
-        folderDate: euData.export_date,
-      });
-      await adminSupabase
-        .from('tcc_applications')
-        .update({ bo_attachment_url: boUrl, bo_attachment_name: boName })
-        .eq('id', applicationId);
-    }
 
     await adminSupabase.from('audit_logs').insert({
       user_id: session.userId,
@@ -1564,7 +1574,9 @@ export async function deleteTccApplicationAction(applicationId: string) {
           .eq('chemical_id', app.chemical_id)
           .eq('status', 'approved');
 
-        const remainingApproved = (approvedApps || []).filter((row) => row.id !== applicationId);
+        const remainingApproved = (approvedApps || []).filter(
+          (row: { id: string }) => row.id !== applicationId
+        );
         const exportedAfter = sumApprovedExports(remainingApproved, app.chemical_id);
         const syncedAvailable = getRemainingQuota(0, exportedAfter, chemical.tonnage_band as string | null);
 
