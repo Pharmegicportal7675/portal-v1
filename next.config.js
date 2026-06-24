@@ -6,7 +6,6 @@ const PRISMA_TRACE = ['./generated/prisma/**'];
 const nextConfig = {
   serverExternalPackages: [
     'puppeteer-core',
-    '@sparticuz/chromium-min',
     '@prisma/client',
     'prisma',
     '@prisma/adapter-mariadb',
@@ -39,16 +38,8 @@ const nextConfig = {
     '/api/reach/certificates/send-email': PRISMA_TRACE,
     '/api/reach/certificates/resend-email': PRISMA_TRACE,
     '/api/client-chemicals/remove': PRISMA_TRACE,
-    '/api/reach-certificate/pdf-html': [
-      './node_modules/@sparticuz/chromium-min/**',
-      ...PDF_FONT_TRACE,
-      ...PRISMA_TRACE,
-    ],
-    '/api/tcc-certificate/pdf-html': [
-      './node_modules/@sparticuz/chromium-min/**',
-      ...PDF_FONT_TRACE,
-      ...PRISMA_TRACE,
-    ],
+    '/api/reach-certificate/pdf-html': [...PDF_FONT_TRACE, ...PRISMA_TRACE],
+    '/api/tcc-certificate/pdf-html': [...PDF_FONT_TRACE, ...PRISMA_TRACE],
     '/api/tcc-certificate/html-data': [...PDF_FONT_TRACE, ...PRISMA_TRACE],
   },
 };

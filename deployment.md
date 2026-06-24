@@ -129,12 +129,17 @@ After changing `NEXT_PUBLIC_*` vars, **redeploy** the app.
 
 ### RC HTML Certificate PDF (Puppeteer)
 
-On **Hostinger VPS / Linux**, PDF generation works automatically:
+On **Hostinger VPS / Linux**, RC HTML→PDF requires **system Google Chrome** (or Chromium):
 
-1. Uses system Chrome if installed (`PUPPETEER_EXECUTABLE_PATH` optional).
-2. Otherwise falls back to **bundled Chromium** (`@sparticuz/chromium-min`) — no manual Chrome install required.
+```bash
+# Install Chrome (Ubuntu/Debian example)
+wget -q -O - https://dl.google.com/linux/linux_signing_key.pub | sudo apt-key add -
+sudo sh -c 'echo "deb [arch=amd64] http://dl.google.com/linux/chrome/deb/ stable main" >> /etc/apt/sources.list.d/google-chrome.list'
+sudo apt-get update
+sudo apt-get install -y google-chrome-stable
+```
 
-Optional (faster, avoids first-request download):
+Set in Hostinger environment variables:
 
 ```
 PUPPETEER_EXECUTABLE_PATH=/usr/bin/google-chrome-stable
@@ -142,8 +147,7 @@ PUPPETEER_EXECUTABLE_PATH=/usr/bin/google-chrome-stable
 
 Verify after deploy:
 
-- `https://portal.pharmegichealthcare.com/api/health/pdf-converter`
-- First PDF download may take ~30s while Chromium unpacks; later requests are faster.
+- `https://portal.pharmegichealthcare.com/api/health/pdf-converter` — `systemChromeFound` should be `true`
 - Generated PDFs are cached under `public/uploads/certificates/`.
 
 ---

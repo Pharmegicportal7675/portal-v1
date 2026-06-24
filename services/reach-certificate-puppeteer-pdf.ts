@@ -1,24 +1,13 @@
 import puppeteer from 'puppeteer-core';
 import type { Browser, LaunchOptions } from 'puppeteer-core';
-import { isVercelHosting } from '@/lib/hosting';
-import { launchBundledChromiumBrowser } from '@/services/reach-certificate-puppeteer-vercel';
 
-function isServerlessHosting(): boolean {
-  return isVercelHosting() || Boolean(process.env.AWS_LAMBDA_FUNCTION_NAME);
-}
-
-/** Shared hosting / VPS: launch fresh Chromium per request instead of reusing a long-lived process. */
+/** Hostinger VPS: launch fresh Chromium per request instead of reusing a long-lived process. */
 function useEphemeralBrowser(): boolean {
   return (
-    isServerlessHosting() ||
     process.platform === 'linux' ||
     process.env.NODE_ENV === 'production' ||
     process.env.REACH_PDF_CLOSE_BROWSER === '1'
   );
-}
-
-function prefersBundledChromium(): boolean {
-  return process.env.REACH_PDF_USE_BUNDLED_CHROMIUM === '1';
 }
 
 function chromeCandidates(): string[] {
@@ -60,9 +49,13 @@ export async function resolveSystemChromeExecutable(): Promise<string | null> {
   return null;
 }
 
-async function launchSystemChromeBrowser(): Promise<Browser | null> {
+async function launchBrowser(): Promise<Browser> {
   const executablePath = await resolveSystemChromeExecutable();
-  if (!executablePath) return null;
+  if (!executablePath) {
+    throw new Error(
+      'Chromium/Chrome not found for PDF generation. On Hostinger, install Google Chrome and set PUPPETEER_EXECUTABLE_PATH=/usr/bin/google-chrome-stable'
+    );
+  }
 
   const options: LaunchOptions = {
     headless: true,
@@ -76,31 +69,7 @@ async function launchSystemChromeBrowser(): Promise<Browser | null> {
     ],
   };
 
-  try {
-    return await puppeteer.launch(options);
-  } catch (err) {
-    console.warn('[reach-pdf] System Chrome launch failed:', err);
-    return null;
-  }
-}
-
-async function launchBrowser(): Promise<Browser> {
-  if (isServerlessHosting()) {
-    return launchBundledChromiumBrowser();
-  }
-
-  if (!prefersBundledChromium()) {
-    const systemBrowser = await launchSystemChromeBrowser();
-    if (systemBrowser) return systemBrowser;
-  }
-
-  if (process.platform === 'linux' || prefersBundledChromium()) {
-    return launchBundledChromiumBrowser();
-  }
-
-  throw new Error(
-    'Chromium/Chrome not found for PDF generation. Install Google Chrome or set PUPPETEER_EXECUTABLE_PATH.'
-  );
+  return puppeteer.launch(options);
 }
 
 let browserPromise: Promise<Browser> | null = null;
@@ -211,12 +180,4 @@ export async function generateReachHtmlPdfFromHtml(html: string): Promise<Buffer
 
 export function isReachPuppeteerPdfAvailable(): boolean {
   return process.env.REACH_PDF_DISABLED !== '1';
-}
-
-export function usesServerlessChromium(): boolean {
-  return isServerlessHosting();
-}
-
-export function usesBundledChromiumFallback(): boolean {
-  return process.platform === 'linux' || prefersBundledChromium() || isServerlessHosting();
 }

@@ -69,7 +69,7 @@ function getFontFileIndex(): Map<string, string> {
   return fontFileIndex;
 }
 
-/** Resolve font path on case-sensitive hosts (Vercel/Linux). */
+/** Resolve font path on case-sensitive Linux hosts (Hostinger). */
 export function resolveReachCertificateFontFile(file: string): string {
   const index = getFontFileIndex();
   const actualName = index.get(file.toLowerCase());
