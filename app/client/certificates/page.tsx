@@ -33,7 +33,7 @@ export default async function CertificatesPage() {
   const { data: certificatesRaw } = await adminSupabase
     .from('certificates')
     .select(
-      '*, chemicals(chemical_name, cas_number, ec_number), tcc_applications!certificates_tcc_application_id_fkey(quantity_mt, chemicals(chemical_name, cas_number))'
+      '*, chemicals(chemical_name, cas_number, ec_number, tonnage_band), tcc_applications!certificates_tcc_application_id_fkey(quantity_mt, chemicals(chemical_name, cas_number))'
     )
     .eq('client_id', clientId)
     .order('issued_at', { ascending: false });

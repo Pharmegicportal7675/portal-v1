@@ -25,6 +25,7 @@ import {
 } from '@/lib/tcc-certificate-download';
 import { CertificatePdfDownloadLink } from '@/components/CertificatePdfDownloadLink';
 import { formatDisplayDate } from '@/lib/date-filter';
+import { resolveDisplayedTonnageBand } from '@/lib/quota';
 
 interface Certificate {
   id: string;
@@ -34,9 +35,11 @@ interface Certificate {
   issued_at: string;
   expires_at: string | null;
   status: 'active' | 'expired' | 'revoked';
+  tonnage_band?: string | null;
   chemicals?: {
     chemical_name: string;
     cas_number: string;
+    tonnage_band?: string | null;
   } | null;
   tcc_applications?: {
     quantity_mt: number;
@@ -171,6 +174,9 @@ export default function CertificatesList({ initialCertificates }: CertificatesLi
                     cert.tcc_applications?.chemicals?.cas_number ||
                     'N/A';
                   const isReach = cert.type === 'REACH';
+                  const authorizedWeight = isReach
+                    ? resolveDisplayedTonnageBand(cert.tonnage_band, cert.chemicals?.tonnage_band, '') || '—'
+                    : `${cert.tcc_applications?.quantity_mt ?? '—'} MT`;
 
                   return (
                   <tr key={cert.id} className="hover:bg-slate-50/50 transition-colors">
@@ -197,7 +203,7 @@ export default function CertificatesList({ initialCertificates }: CertificatesLi
                       </div>
                     </td>
                     <td className="p-4 font-extrabold text-slate-800">
-                      {isReach ? '—' : `${cert.tcc_applications?.quantity_mt ?? '—'} MT`}
+                      {authorizedWeight}
                     </td>
                     <td className="p-4 text-slate-500 font-medium">
                       <div className="flex items-center gap-1.5 text-xs">
