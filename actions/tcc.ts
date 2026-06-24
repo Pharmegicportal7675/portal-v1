@@ -13,7 +13,7 @@ import { buildTccSmtpConfig } from '@/lib/certificate-smtp-settings';
 import { adminTccApplicationUpdateSchema, tccEuApplicationSchema, tccNotificationApplicationSchema } from '@/lib/validations';
 import { uploadBoAttachment, validateBoAttachment } from '@/lib/tcc-attachments';
 import { CERTIFICATES_BUCKET, ensureCertificatesBucket } from '@/lib/storage';
-import { buildClientDateStoragePath } from '@/lib/storage-paths';
+import { buildClientDateStoragePath, extractStorageRelativePath } from '@/lib/storage-paths';
 import { revalidatePath } from 'next/cache';
 import { notifyAllAdmins, notifyUser } from '@/lib/notifications';
 import { notifyTccApplicationByEmail } from '@/lib/tcc-application-notification';
@@ -1490,5 +1490,147 @@ export async function resendCertificateEmailAction(certificateId: string) {
   } catch (err: unknown) {
     const message = err instanceof Error ? err.message : String(err);
     return { success: false, error: message };
+  }
+}
+
+// ============================================================================
+// DELETE TCC APPLICATION (Master / Super Admin)
+// ============================================================================
+export async function deleteTccApplicationAction(applicationId: string) {
+  const session = await getSession();
+  if (!session || (session.role !== 'MASTER_ADMIN' && session.role !== 'SUPER_ADMIN')) {
+    return { success: false, error: 'Unauthorized.' };
+  }
+
+  const adminSupabase = createAdminClient();
+
+  try {
+    const { data: app, error: fetchError } = await adminSupabase
+      .from('tcc_applications')
+      .select(`
+        id,
+        client_id,
+        chemical_id,
+        client_chemical_id,
+        quantity_mt,
+        status,
+        bo_attachment_url,
+        regulatory_framework,
+        chemicals ( id, chemical_name, tonnage_band, exported_quantity ),
+        certificates!certificates_tcc_application_id_fkey (
+          id,
+          certificate_number,
+          file_url,
+          type
+        )
+      `)
+      .eq('id', applicationId)
+      .maybeSingle();
+
+    if (fetchError) throw fetchError;
+    if (!app) return { success: false, error: 'TCC application not found.' };
+
+    const chemicalRaw = app.chemicals;
+    const chemical = Array.isArray(chemicalRaw) ? chemicalRaw[0] : chemicalRaw;
+    const certRaw = app.certificates;
+    const cert = Array.isArray(certRaw) ? certRaw[0] : certRaw;
+
+    if (app.status === 'approved' && chemical) {
+      const newExported = Math.max(0, Number(chemical.exported_quantity) - Number(app.quantity_mt));
+      await adminSupabase
+        .from('chemicals')
+        .update({ exported_quantity: newExported })
+        .eq('id', app.chemical_id);
+
+      let clientChemId = app.client_chemical_id;
+      if (!clientChemId) {
+        const { data: clientChem } = await adminSupabase
+          .from('client_chemicals')
+          .select('id')
+          .eq('client_id', app.client_id)
+          .eq('chemical_id', app.chemical_id)
+          .eq('status', 'active')
+          .maybeSingle();
+        clientChemId = clientChem?.id ?? null;
+      }
+
+      if (clientChemId) {
+        const { data: approvedApps } = await adminSupabase
+          .from('tcc_applications')
+          .select(
+            'id, chemical_id, quantity_mt, status, export_date, updated_at, created_at, certificates!certificates_tcc_application_id_fkey(issued_at)'
+          )
+          .eq('client_id', app.client_id)
+          .eq('chemical_id', app.chemical_id)
+          .eq('status', 'approved');
+
+        const remainingApproved = (approvedApps || []).filter((row) => row.id !== applicationId);
+        const exportedAfter = sumApprovedExports(remainingApproved, app.chemical_id);
+        const syncedAvailable = getRemainingQuota(0, exportedAfter, chemical.tonnage_band as string | null);
+
+        await adminSupabase
+          .from('client_chemicals')
+          .update({ available_quantity: syncedAvailable })
+          .eq('id', clientChemId);
+      }
+    }
+
+    await adminSupabase.from('quota_transactions').delete().eq('tcc_application_id', applicationId);
+
+    const storagePaths = new Set<string>();
+    const boPath = extractBoStoragePath(app.bo_attachment_url);
+    if (boPath) storagePaths.add(boPath);
+
+    if (cert?.file_url) {
+      const certPath = extractStorageRelativePath(cert.file_url);
+      if (certPath) storagePaths.add(certPath);
+    }
+    if (cert?.certificate_number) {
+      storagePaths.add(`${cert.certificate_number}.pdf`);
+    }
+
+    if (storagePaths.size > 0) {
+      await adminSupabase.storage.from(CERTIFICATES_BUCKET).remove([...storagePaths]);
+    }
+
+    if (cert?.id) {
+      await adminSupabase.from('certificates').delete().eq('id', cert.id);
+    }
+
+    const { error: deleteError } = await adminSupabase
+      .from('tcc_applications')
+      .delete()
+      .eq('id', applicationId);
+
+    if (deleteError) throw deleteError;
+
+    const certLabel = cert?.certificate_number || '—';
+    const chemicalName = chemical?.chemical_name || 'Unknown substance';
+
+    await adminSupabase.from('activity_logs').insert({
+      client_id: app.client_id,
+      user_id: session.userId,
+      action: 'TCC_APPLICATION_DELETED',
+      entity_type: 'tcc_applications',
+      entity_id: applicationId,
+      description: `TCC application deleted (${chemicalName}, cert ${certLabel}, status ${app.status})`,
+    });
+
+    revalidatePath('/admin/approvals');
+    revalidatePath('/admin');
+    revalidatePath('/client');
+    revalidatePath(`/admin/clients/${app.client_id}`);
+    revalidatePath(`/admin/clients/${app.client_id}/certificates`);
+
+    return {
+      success: true,
+      message:
+        app.status === 'approved' && cert?.certificate_number
+          ? `TCC application and certificate ${cert.certificate_number} deleted.`
+          : 'TCC application deleted.',
+    };
+  } catch (err: unknown) {
+    console.error('[TCC DELETE ERROR]:', err);
+    return { success: false, error: formatErrorMessage(err) };
   }
 }

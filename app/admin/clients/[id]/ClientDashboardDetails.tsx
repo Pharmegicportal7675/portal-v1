@@ -70,6 +70,7 @@ import {
   buildReachCertificateDocxPreviewUrl,
   buildReachCertificatePdfDownloadUrl,
 } from '@/lib/reach-certificate-download';
+import { deleteTccApplicationAction } from '@/actions/tcc';
 import {
   buildTccCertificatePdfDownloadUrl,
 } from '@/lib/tcc-certificate-download';
@@ -309,6 +310,12 @@ export default function ClientDashboardDetails({
   >(null);
   const [selectedRcCertIds, setSelectedRcCertIds] = useState<string[]>([]);
   const [selectedTccAppIds, setSelectedTccAppIds] = useState<string[]>([]);
+  const [tccDeleteTarget, setTccDeleteTarget] = useState<{
+    id: string;
+    chemical_name: string;
+    certificate_number?: string | null;
+    status: string;
+  } | null>(null);
 
   const minIssuedDate = useMemo(() => {
     if (!assignChemData.certificate_year) return undefined;
@@ -422,6 +429,7 @@ export default function ClientDashboardDetails({
   const [tccActionError, setTccActionError] = useState<string | null>(null);
   const canReviewTcc = currentUserRole !== 'CLIENT';
   const canManageRc = canManageAdminRecords(currentUserRole);
+  const canManageTcc = canManageRc;
   const hasEuReach = clientHasEuReachRegistration(client.regulatory_registrations);
   const hasAnyRegulatoryRegistration =
     normalizeRegulatoryRegistrations(client.regulatory_registrations).length > 0;
@@ -1340,6 +1348,21 @@ export default function ClientDashboardDetails({
     });
   };
 
+  const handleDeleteTccApplication = () => {
+    if (!tccDeleteTarget) return;
+    startTransition(async () => {
+      const res = await deleteTccApplicationAction(tccDeleteTarget.id);
+      if (res.success) {
+        toast.success(res.message || 'TCC application deleted.');
+        setTccDeleteTarget(null);
+        setSelectedTccAppIds((prev) => prev.filter((id) => id !== tccDeleteTarget.id));
+        router.refresh();
+      } else {
+        toast.error(res.error || 'Failed to delete TCC application.');
+      }
+    });
+  };
+
   const handleDeleteClient = () => {
     startTransition(async () => {
       const res = await deleteClientAction(client.id);
@@ -2036,6 +2059,41 @@ export default function ClientDashboardDetails({
         </div>
       </Dialog>
 
+      <Dialog
+        isOpen={!!tccDeleteTarget}
+        onClose={() => setTccDeleteTarget(null)}
+        title="Delete TCC Application"
+      >
+        <div className="space-y-4">
+          <p className="text-sm text-slate-600">
+            Permanently delete this TCC application for{' '}
+            <strong>{tccDeleteTarget?.chemical_name}</strong>
+            {tccDeleteTarget?.certificate_number ? (
+              <>
+                {' '}
+                (certificate <strong className="font-mono">{tccDeleteTarget.certificate_number}</strong>)
+              </>
+            ) : null}
+            ? This removes the application
+            {tccDeleteTarget?.status === 'approved' ? ', issued certificate, and restores quota' : ''} — this
+            cannot be undone.
+          </p>
+          <div className="flex justify-end gap-2 pt-2">
+            <Button variant="outline" onClick={() => setTccDeleteTarget(null)} disabled={isPending}>
+              Cancel
+            </Button>
+            <Button
+              variant="destructive"
+              onClick={handleDeleteTccApplication}
+              isLoading={isPending}
+              disabled={isPending}
+            >
+              Delete Application
+            </Button>
+          </div>
+        </div>
+      </Dialog>
+
       {/* 4. TCC Applications & Issued Certificates */}
       {showCertificatesSection && (
       <div className="bg-white rounded-xl border border-slate-200 shadow-xs overflow-hidden mt-8">
@@ -2181,6 +2239,24 @@ export default function ClientDashboardDetails({
                             >
                               <Download className="h-4 w-4" />
                             </CertificatePdfDownloadLink>
+                          )}
+                          {canManageTcc && (
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              className="h-8 w-8 p-0 text-rose-600 hover:bg-rose-50"
+                              title="Delete application"
+                              onClick={() =>
+                                setTccDeleteTarget({
+                                  id: app.id,
+                                  chemical_name: resolveChemical(app),
+                                  certificate_number: resolveTccCertificateNumber(app),
+                                  status: app.status,
+                                })
+                              }
+                            >
+                              <Trash2 className="h-4 w-4" />
+                            </Button>
                           )}
                         </div>
                       </td>

@@ -3,7 +3,7 @@
 import { useState, useTransition, useEffect, useMemo } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
-import { processTccAction } from '@/actions/tcc';
+import { processTccAction, deleteTccApplicationAction } from '@/actions/tcc';
 import { Card, CardContent } from './ui/Card';
 import { Button } from './ui/Button';
 import { Badge } from './ui/Badge';
@@ -43,6 +43,7 @@ import {
   AlertCircle,
   RotateCcw,
   Eye,
+  Trash2,
 } from 'lucide-react';
 
 interface CertificateRow {
@@ -176,6 +177,7 @@ export default function ApprovalsDashboard({ initialApplications, emailDefaults 
   const [rejectionReason, setRejectionReason] = useState('');
   const [actionError, setActionError] = useState<string | null>(null);
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
+  const [deleteTarget, setDeleteTarget] = useState<Application | null>(null);
 
   useEffect(() => {
     setApplications(initialApplications);
@@ -335,6 +337,26 @@ export default function ApprovalsDashboard({ initialApplications, emailDefaults 
       } else {
         setActionError(res.error || 'Failed to process application action.');
         toast.error(res.error || 'Failed to process application action.');
+      }
+    });
+  };
+
+  const handleDeleteApplication = () => {
+    if (!deleteTarget) return;
+    startTransition(async () => {
+      const res = await deleteTccApplicationAction(deleteTarget.id);
+      if (res.success) {
+        toast.success(res.message || 'TCC application deleted.');
+        setApplications((current) => current.filter((app) => app.id !== deleteTarget.id));
+        setSelectedIds((current) => current.filter((id) => id !== deleteTarget.id));
+        setDeleteTarget(null);
+        if (viewApp?.id === deleteTarget.id) {
+          setViewApp(null);
+          setIsViewOpen(false);
+        }
+        router.refresh();
+      } else {
+        toast.error(res.error || 'Failed to delete TCC application.');
       }
     });
   };
@@ -640,6 +662,15 @@ export default function ApprovalsDashboard({ initialApplications, emailDefaults 
                               Review in View
                             </Badge>
                           )}
+                          <Button
+                            size="sm"
+                            variant="ghost"
+                            onClick={() => setDeleteTarget(app)}
+                            className="h-8 w-8 p-0 text-rose-600 hover:bg-rose-50"
+                            title="Delete application"
+                          >
+                            <Trash2 className="h-3.5 w-3.5" />
+                          </Button>
                         </div>
                       </td>
                     </tr>
@@ -773,6 +804,41 @@ export default function ApprovalsDashboard({ initialApplications, emailDefaults 
                 : actionType === 'rejected'
                 ? 'Reject Permit'
                 : 'Send Revision Request'}
+            </Button>
+          </div>
+        </div>
+      </Dialog>
+
+      <Dialog
+        isOpen={!!deleteTarget}
+        onClose={() => setDeleteTarget(null)}
+        title="Delete TCC Application"
+      >
+        <div className="space-y-4">
+          <p className="text-sm text-slate-600">
+            Permanently delete the TCC application from{' '}
+            <strong>{deleteTarget?.clients.company_name}</strong> for{' '}
+            <strong>{deleteTarget?.chemicals.chemical_name}</strong>
+            {getCertificateNumber(deleteTarget!) ? (
+              <>
+                {' '}
+                (certificate{' '}
+                <strong className="font-mono">{getCertificateNumber(deleteTarget!)}</strong>)
+              </>
+            ) : null}
+            ? This cannot be undone.
+          </p>
+          <div className="flex justify-end gap-3 pt-4 border-t border-slate-100">
+            <Button type="button" variant="outline" onClick={() => setDeleteTarget(null)} disabled={isPending}>
+              Cancel
+            </Button>
+            <Button
+              variant="destructive"
+              onClick={handleDeleteApplication}
+              isLoading={isPending}
+              disabled={isPending}
+            >
+              Delete Application
             </Button>
           </div>
         </div>
