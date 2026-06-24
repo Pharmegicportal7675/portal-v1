@@ -49,5 +49,3 @@ next-env.d.ts
 .cache/
 
 # uploaded certificate files
-/public/uploads/certificates/*
-!/public/uploads/certificates/.gitkeep
