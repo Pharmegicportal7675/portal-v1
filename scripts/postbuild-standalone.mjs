@@ -24,11 +24,30 @@ function copyDir(src, dest) {
   }
 }
 
+function ensureNodeModulesCopy(...segments) {
+  const src = path.join(root, 'node_modules', ...segments);
+  const dest = path.join(standaloneDir, 'node_modules', ...segments);
+  if (!fs.existsSync(src)) {
+    console.warn(`[postbuild] Missing package: node_modules/${segments.join('/')}`);
+    return;
+  }
+  copyDir(src, dest);
+}
+
 console.info('[postbuild] Copying static assets into standalone bundle…');
 
 copyDir(path.join(root, 'public'), path.join(standaloneDir, 'public'));
 copyDir(path.join(root, '.next', 'static'), path.join(standaloneDir, '.next', 'static'));
 copyDir(path.join(root, 'templates'), path.join(standaloneDir, 'templates'));
 copyDir(path.join(root, 'generated'), path.join(standaloneDir, 'generated'));
+
+// PDF runtime — createRequire loads from standalone/node_modules on Hostinger
+console.info('[postbuild] Ensuring PDF packages in standalone/node_modules…');
+ensureNodeModulesCopy('puppeteer-core');
+ensureNodeModulesCopy('@sparticuz', 'chromium-min');
+ensureNodeModulesCopy('@puppeteer', 'browsers');
+ensureNodeModulesCopy('chromium-bidi');
+ensureNodeModulesCopy('devtools-protocol');
+ensureNodeModulesCopy('ws');
 
 console.info('[postbuild] Standalone bundle ready.');

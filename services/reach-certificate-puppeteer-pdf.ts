@@ -4,6 +4,7 @@ import {
   resolveSystemChromeExecutable,
   usesBundledChromiumFallback,
 } from '@/lib/reach-pdf-environment';
+import { loadPuppeteerCore } from '@/lib/puppeteer-runtime';
 import { launchBundledChromiumBrowser } from '@/services/reach-certificate-bundled-chromium';
 
 export { isReachPuppeteerPdfAvailable, resolveSystemChromeExecutable, usesBundledChromiumFallback };
@@ -16,7 +17,7 @@ async function launchSystemChromeBrowser(): Promise<Browser | null> {
   const executablePath = await resolveSystemChromeExecutable();
   if (!executablePath) return null;
 
-  const puppeteer = await import('puppeteer-core');
+  const puppeteer = loadPuppeteerCore();
 
   const options: LaunchOptions = {
     headless: true,
@@ -31,7 +32,7 @@ async function launchSystemChromeBrowser(): Promise<Browser | null> {
   };
 
   try {
-    return await puppeteer.default.launch(options);
+    return await puppeteer.launch(options);
   } catch (err) {
     console.warn('[reach-pdf] System Chrome launch failed:', err);
     return null;

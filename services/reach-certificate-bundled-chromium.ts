@@ -3,6 +3,7 @@ import os from 'node:os';
 import path from 'node:path';
 import type { Browser } from 'puppeteer-core';
 import { getBundledChromiumPackUrl } from '@/lib/bundled-chromium-config';
+import { loadBundledChromiumModule, loadPuppeteerCore } from '@/lib/puppeteer-runtime';
 
 async function clearChromiumTempDirs(): Promise<void> {
   const tmp = os.tmpdir();
@@ -16,8 +17,7 @@ async function clearChromiumTempDirs(): Promise<void> {
 }
 
 async function resolveBundledExecutablePath(): Promise<string> {
-  const chromiumModule = await import('@sparticuz/chromium-min');
-  const chromium = chromiumModule.default;
+  const chromium = loadBundledChromiumModule();
   const packUrl = getBundledChromiumPackUrl();
 
   try {
@@ -35,12 +35,11 @@ async function resolveBundledExecutablePath(): Promise<string> {
 
 /** Launch Puppeteer using @sparticuz/chromium-min when system Chrome is unavailable. */
 export async function launchBundledChromiumBrowser(): Promise<Browser> {
-  const puppeteer = await import('puppeteer-core');
-  const chromiumModule = await import('@sparticuz/chromium-min');
-  const chromium = chromiumModule.default;
+  const puppeteer = loadPuppeteerCore();
+  const chromium = loadBundledChromiumModule();
   const executablePath = await resolveBundledExecutablePath();
 
-  return puppeteer.default.launch({
+  return puppeteer.launch({
     args: [
       ...chromium.args,
       '--no-sandbox',
