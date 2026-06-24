@@ -2,8 +2,6 @@
 
 import { useMemo, useState, useTransition } from 'react';
 import { useRouter } from 'next/navigation';
-import { removeChemicalFromClientAction } from '@/actions/clients';
-import { deleteReachCertificateAction, sendBulkReachCertificatesEmailAction } from '@/actions/reach';
 import { Button } from '@/components/ui/Button';
 import { Dialog } from '@/components/ui/Dialog';
 import { toast } from '@/store/toast';
@@ -34,6 +32,21 @@ type DeleteTarget =
       chemicalId: string;
       chemical_name: string;
     };
+
+async function postJson<T>(url: string, body: unknown): Promise<T> {
+  const response = await fetch(url, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    credentials: 'same-origin',
+    body: JSON.stringify(body),
+  });
+
+  try {
+    return (await response.json()) as T;
+  } catch {
+    throw new Error(response.status === 404 ? 'Service not found. Redeploy the app and try again.' : 'Request failed.');
+  }
+}
 
 export default function RcCertificatesDashboard({
   initialCertificates,
@@ -73,7 +86,10 @@ export default function RcCertificatesDashboard({
 
     const [[clientId, certIds]] = selectedByClient.entries();
     startTransition(async () => {
-      const res = await sendBulkReachCertificatesEmailAction(clientId, certIds);
+      const res = await postJson<{ success: boolean; message?: string; error?: string }>(
+        '/api/reach/certificates/bulk-email',
+        { clientId, certificateIds: certIds }
+      );
       if (res.success) {
         toast.success(res.message || 'RC certificates sent successfully.');
         setSelectedIds([]);
@@ -89,8 +105,14 @@ export default function RcCertificatesDashboard({
     startTransition(async () => {
       const res =
         deleteTarget.kind === 'issued'
-          ? await deleteReachCertificateAction(deleteTarget.id, deleteTarget.clientId)
-          : await removeChemicalFromClientAction(deleteTarget.clientId, deleteTarget.chemicalId);
+          ? await postJson<{ success: boolean; message?: string; error?: string }>(
+              '/api/reach/certificates/delete',
+              { certificateId: deleteTarget.id, clientId: deleteTarget.clientId }
+            )
+          : await postJson<{ success: boolean; message?: string; error?: string }>(
+              '/api/client-chemicals/remove',
+              { clientId: deleteTarget.clientId, chemicalId: deleteTarget.chemicalId }
+            );
 
       if (res.success) {
         toast.success(res.message || 'Removed successfully.');
@@ -135,7 +157,17 @@ export default function RcCertificatesDashboard({
         description="Manage issue/expiry dates & remaining quota per year | Expired certificates retain quantity for TCC applications using old date."
         extraActions={extraActions}
         exportFilename="rc-certificates"
-        onEdit={(cc) => {
+        onEdit={(cc, certId) => {
+          const targetClientId = cc.client_id;
+          const targetChemicalId = cc.chemical_id;
+          if (!targetClientId || !targetChemicalId) {
+            router.push(`/admin/clients/${targetClientId || ''}`);
+            return;
+          }
+          const query = certId ? `?certId=${certId}` : '';
+          router.push(`/admin/clients/${targetClientId}/rc-preview/${targetChemicalId}${query}`);
+        }}
+        onRenew={(cc) => {
           router.push(`/admin/clients/${cc.client_id}`);
         }}
         onDelete={(cert) => {

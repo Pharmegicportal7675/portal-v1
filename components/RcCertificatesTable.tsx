@@ -185,7 +185,9 @@ export default function RcCertificatesTable({
   currentUserRole,
   hideCompanyColumn = false,
   hideMailColumn = false,
+  hideCheckboxColumn = false,
   selectedIds = [],
+  onSelectedIdsChange,
   onFilteredRowsChange,
   title,
   description,
@@ -200,6 +202,7 @@ export default function RcCertificatesTable({
 }: RcCertificatesTableProps) {
   const [columnFilters, setColumnFilters] = useState(INITIAL_FILTERS);
   const canManageRc = canManageAdminRecords(currentUserRole);
+  const showCheckboxColumn = !hideCheckboxColumn && Boolean(onSelectedIdsChange);
 
   const filteredCertificates = useMemo(() => {
     return certificates.filter((cert) => {
@@ -246,6 +249,28 @@ export default function RcCertificatesTable({
       return true;
     });
   }, [certificates, columnFilters, hideCompanyColumn]);
+
+  const selectableCertIds = useMemo(
+    () => filteredCertificates.map((cert) => cert.id).filter(Boolean),
+    [filteredCertificates]
+  );
+
+  const allSelectableSelected =
+    selectableCertIds.length > 0 && selectableCertIds.every((id) => selectedIds.includes(id));
+
+  const toggleCertSelection = (certificateId: string) => {
+    if (!onSelectedIdsChange) return;
+    onSelectedIdsChange(
+      selectedIds.includes(certificateId)
+        ? selectedIds.filter((id) => id !== certificateId)
+        : [...selectedIds, certificateId]
+    );
+  };
+
+  const toggleAllCertSelection = () => {
+    if (!onSelectedIdsChange) return;
+    onSelectedIdsChange(allSelectableSelected ? [] : [...selectableCertIds]);
+  };
 
   const filteredIds = useMemo(
     () => filteredCertificates.map((cert) => cert.id),
@@ -479,6 +504,18 @@ export default function RcCertificatesTable({
           <table className="w-full text-left border-collapse min-w-[1024px] text-xs sm:text-sm">
             <thead>
               <tr className="bg-slate-50/75 border-b border-slate-100 align-top">
+                {showCheckboxColumn && (
+                  <th className="px-4 py-3 w-12 text-center">
+                    <input
+                      type="checkbox"
+                      checked={allSelectableSelected}
+                      onChange={toggleAllCertSelection}
+                      disabled={selectableCertIds.length === 0}
+                      aria-label="Select all filtered RC certificates"
+                      className="h-4 w-4 rounded border-slate-300 text-teal-700 focus:ring-teal-600"
+                    />
+                  </th>
+                )}
                 <th className="px-4 py-3 min-w-[220px]">
                   <span className="text-[11px] font-bold text-slate-500 uppercase tracking-wider">Substance Info</span>
                   {!hideFilters && (
@@ -539,7 +576,8 @@ export default function RcCertificatesTable({
                   <td
                     colSpan={
                       8 -
-                      (hideMailColumn ? 1 : 0)
+                      (hideMailColumn ? 1 : 0) +
+                      (showCheckboxColumn ? 1 : 0)
                     }
                     className="p-8 text-center text-slate-400 font-medium"
                   >
@@ -557,6 +595,7 @@ export default function RcCertificatesTable({
                         key={`${group.key}_pending`}
                         className="hover:bg-slate-50/30 transition-colors border-t border-slate-200 bg-white"
                       >
+                        {showCheckboxColumn && <td className="px-4 py-3.5" />}
                         {/* Chemical Info column */}
                         <td className="px-4 py-4 align-top border-r border-slate-100 bg-white">
                           <div className="flex flex-col gap-1 pr-2">
@@ -757,8 +796,19 @@ export default function RcCertificatesTable({
                         key={cert.id}
                         className={`hover:bg-slate-50/30 transition-colors ${
                           certIndex === 0 ? 'border-t border-slate-200 bg-white' : 'bg-white'
-                        }`}
+                        } ${selectedIds.includes(cert.id) ? 'bg-teal-50/30' : ''}`}
                       >
+                        {showCheckboxColumn && (
+                          <td className="px-4 py-3.5 align-middle text-center">
+                            <input
+                              type="checkbox"
+                              checked={selectedIds.includes(cert.id)}
+                              onChange={() => toggleCertSelection(cert.id)}
+                              aria-label={`Select ${cert.certificate_number}`}
+                              className="h-4 w-4 rounded border-slate-300 text-teal-700 focus:ring-teal-600"
+                            />
+                          </td>
+                        )}
                         {/* Chemical Info column (spanned) */}
                         {certIndex === 0 && (
                           <td
