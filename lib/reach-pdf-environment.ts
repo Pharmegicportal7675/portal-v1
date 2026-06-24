@@ -53,3 +53,10 @@ export async function resolveSystemChromeExecutable(): Promise<string | null> {
 
   return null;
 }
+
+export function usesBundledChromiumFallback(): boolean {
+  return (
+    process.env.REACH_PDF_USE_BUNDLED_CHROMIUM === '1' ||
+    (process.platform === 'linux' && process.env.NODE_ENV === 'production')
+  );
+}

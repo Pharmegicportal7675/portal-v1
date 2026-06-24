@@ -2,17 +2,19 @@ import type { Browser, LaunchOptions } from 'puppeteer-core';
 import {
   isReachPuppeteerPdfAvailable,
   resolveSystemChromeExecutable,
+  usesBundledChromiumFallback,
 } from '@/lib/reach-pdf-environment';
+import { launchBundledChromiumBrowser } from '@/services/reach-certificate-bundled-chromium';
 
-export { isReachPuppeteerPdfAvailable, resolveSystemChromeExecutable };
+export { isReachPuppeteerPdfAvailable, resolveSystemChromeExecutable, usesBundledChromiumFallback };
 
-async function launchBrowser(): Promise<Browser> {
+function prefersBundledChromium(): boolean {
+  return process.env.REACH_PDF_USE_BUNDLED_CHROMIUM === '1';
+}
+
+async function launchSystemChromeBrowser(): Promise<Browser | null> {
   const executablePath = await resolveSystemChromeExecutable();
-  if (!executablePath) {
-    throw new Error(
-      'Chromium/Chrome not found for PDF generation. On Hostinger, install Google Chrome and set PUPPETEER_EXECUTABLE_PATH=/usr/bin/google-chrome-stable'
-    );
-  }
+  if (!executablePath) return null;
 
   const puppeteer = await import('puppeteer-core');
 
@@ -28,10 +30,30 @@ async function launchBrowser(): Promise<Browser> {
     ],
   };
 
-  return puppeteer.default.launch(options);
+  try {
+    return await puppeteer.default.launch(options);
+  } catch (err) {
+    console.warn('[reach-pdf] System Chrome launch failed:', err);
+    return null;
+  }
 }
 
-/** Hostinger VPS: launch fresh Chromium per request instead of reusing a long-lived process. */
+async function launchBrowser(): Promise<Browser> {
+  if (!prefersBundledChromium()) {
+    const systemBrowser = await launchSystemChromeBrowser();
+    if (systemBrowser) return systemBrowser;
+  }
+
+  if (usesBundledChromiumFallback()) {
+    return launchBundledChromiumBrowser();
+  }
+
+  throw new Error(
+    'Chromium/Chrome not found for PDF generation. Install Google Chrome or enable bundled Chromium on Linux.'
+  );
+}
+
+/** Hostinger: launch fresh Chromium per request instead of reusing a long-lived process. */
 function useEphemeralBrowser(): boolean {
   return (
     process.platform === 'linux' ||
@@ -145,4 +167,3 @@ export async function generateReachHtmlPdfFromHtml(html: string): Promise<Buffer
     await closeBrowserIfNeeded(browser);
   }
 }
-

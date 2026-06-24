@@ -31,4 +31,14 @@ copyDir(path.join(root, '.next', 'static'), path.join(standaloneDir, '.next', 's
 copyDir(path.join(root, 'templates'), path.join(standaloneDir, 'templates'));
 copyDir(path.join(root, 'generated'), path.join(standaloneDir, 'generated'));
 
+// serverExternalPackages — ensure PDF deps exist in standalone runtime
+copyDir(
+  path.join(root, 'node_modules', 'puppeteer-core'),
+  path.join(standaloneDir, 'node_modules', 'puppeteer-core')
+);
+copyDir(
+  path.join(root, 'node_modules', '@sparticuz', 'chromium-min'),
+  path.join(standaloneDir, 'node_modules', '@sparticuz', 'chromium-min')
+);
+
 console.info('[postbuild] Standalone bundle ready.');

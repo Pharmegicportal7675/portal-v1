@@ -131,25 +131,23 @@ After changing `NEXT_PUBLIC_*` vars, **redeploy** the app.
 
 ### RC HTML Certificate PDF (Puppeteer)
 
-On **Hostinger VPS / Linux**, RC HTML→PDF requires **system Google Chrome** (or Chromium):
+On **Hostinger Linux**, RC HTML→PDF works automatically:
+
+1. Uses **system Chrome** if installed (`PUPPETEER_EXECUTABLE_PATH` optional).
+2. Otherwise falls back to **bundled Chromium** (`@sparticuz/chromium-min`) — no SSH Chrome install required.
+
+Optional (faster PDFs, avoids first-request Chromium download):
 
 ```bash
-# Install Google Chrome (Ubuntu/Debian VPS — run via SSH)
+# Install Google Chrome (Ubuntu/Debian VPS — SSH)
 sudo apt-get update
 sudo apt-get install -y wget gnupg ca-certificates
-
 wget -q -O /tmp/google-chrome.gpg https://dl.google.com/linux/linux_signing_key.pub
 sudo gpg --dearmor -o /usr/share/keyrings/google-chrome.gpg /tmp/google-chrome.gpg
-
 echo "deb [arch=amd64 signed-by=/usr/share/keyrings/google-chrome.gpg] http://dl.google.com/linux/chrome/deb/ stable main" \
   | sudo tee /etc/apt/sources.list.d/google-chrome.list
-
-sudo apt-get update
-sudo apt-get install -y google-chrome-stable
-google-chrome-stable --version
+sudo apt-get update && sudo apt-get install -y google-chrome-stable
 ```
-
-Set in Hostinger environment variables:
 
 ```
 PUPPETEER_EXECUTABLE_PATH=/usr/bin/google-chrome-stable
@@ -157,7 +155,8 @@ PUPPETEER_EXECUTABLE_PATH=/usr/bin/google-chrome-stable
 
 Verify after deploy:
 
-- `https://portal.pharmegichealthcare.com/api/health/pdf-converter` — `systemChromeFound` should be `true`
+- `https://portal.pharmegichealthcare.com/api/health/pdf-converter` — `htmlPdfUsesBundledChromiumFallback: true` or `systemChromeFound: true`
+- First bundled-Chromium PDF may take ~30s; later requests are faster.
 - Generated PDFs are cached under `public/uploads/certificates/`.
 
 ---
