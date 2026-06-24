@@ -2,6 +2,7 @@ import type { DbClient } from '@/lib/db/types';
 import type { ReachCertPdfInput } from '@/lib/reach-certificate-preview';
 import { generateReachCertificateHtmlPdf } from '@/lib/reach-certificate-html-pdf-server';
 import type { LoadedReachCertificateInput } from '@/lib/reach-certificate-api-input';
+import { buildClientYearStoragePath } from '@/lib/storage-paths';
 import {
   loadReachCertificateStoredPdf,
   uploadReachCertificateFile,
@@ -38,12 +39,14 @@ export async function resolveReachCertificateDownloadFile(
 
   try {
     const pdfBuffer = await generateReachCertificateHtmlPdf(input);
-    void uploadReachCertificateFile(
-      supabase,
-      `${input.certificateNumber}.pdf`,
-      pdfBuffer,
-      PDF_CONTENT_TYPE
+    const clientName = input.client.company_name || 'client';
+    const storagePath = buildClientYearStoragePath(
+      'RC',
+      clientName,
+      input.issuedDate,
+      `${input.certificateNumber}.pdf`
     );
+    void uploadReachCertificateFile(supabase, storagePath, pdfBuffer, PDF_CONTENT_TYPE);
     return {
       buffer: pdfBuffer,
       contentType: PDF_CONTENT_TYPE,

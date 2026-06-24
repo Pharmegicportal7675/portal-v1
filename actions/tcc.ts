@@ -13,7 +13,7 @@ import { buildTccSmtpConfig } from '@/lib/certificate-smtp-settings';
 import { adminTccApplicationUpdateSchema, tccEuApplicationSchema, tccNotificationApplicationSchema } from '@/lib/validations';
 import { uploadBoAttachment, validateBoAttachment } from '@/lib/tcc-attachments';
 import { CERTIFICATES_BUCKET, ensureCertificatesBucket } from '@/lib/storage';
-import { buildClientDateStoragePath, extractStorageRelativePath } from '@/lib/storage-paths';
+import { buildClientDateStoragePath, extractStorageRelativePath, CERTIFICATES_UPLOAD_URL_MARKER } from '@/lib/storage-paths';
 import { revalidatePath } from 'next/cache';
 import { notifyAllAdmins, notifyUser } from '@/lib/notifications';
 import { notifyTccApplicationByEmail } from '@/lib/tcc-application-notification';
@@ -184,6 +184,9 @@ async function validateClientTccSubmission(
 
 function extractBoStoragePath(publicUrl: string | null | undefined): string | null {
   if (!publicUrl?.trim()) return null;
+  const fromUploads = extractStorageRelativePath(publicUrl);
+  if (fromUploads) return fromUploads;
+
   const markers = [`/object/public/${CERTIFICATES_BUCKET}/`, `/${CERTIFICATES_BUCKET}/`];
   for (const marker of markers) {
     const idx = publicUrl.indexOf(marker);
@@ -191,10 +194,22 @@ function extractBoStoragePath(publicUrl: string | null | undefined): string | nu
       return decodeURIComponent(publicUrl.slice(idx + marker.length).split('?')[0] ?? '');
     }
   }
+
+  const poIdx = publicUrl.indexOf('/PO/');
+  if (poIdx >= 0) {
+    const uploadsIdx = publicUrl.indexOf(CERTIFICATES_UPLOAD_URL_MARKER);
+    if (uploadsIdx >= 0) {
+      return decodeURIComponent(
+        publicUrl.slice(uploadsIdx + CERTIFICATES_UPLOAD_URL_MARKER.length).split('?')[0] ?? ''
+      );
+    }
+  }
+
   const boIdx = publicUrl.indexOf('/bo/');
   if (boIdx >= 0) {
     return decodeURIComponent(publicUrl.slice(boIdx + 1).split('?')[0] ?? '');
   }
+
   return null;
 }
 

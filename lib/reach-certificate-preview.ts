@@ -1,4 +1,5 @@
 import type { DbClient } from '@/lib/db/types';
+import { buildClientYearStoragePath } from '@/lib/storage-paths';
 import {
   DOCX_CONTENT_TYPE,
   PDF_CONTENT_TYPE,
@@ -38,11 +39,13 @@ export async function resolveReachCertificatePreview(
   const certNumber = input.certificateNumber;
   const pdfFileName = `${certNumber}.pdf`;
   const docxFileName = `${certNumber}.docx`;
+  const clientName = input.client.company_name || 'client';
   const loaded = toLoadedInput(input);
 
   try {
     const pdfBuffer = await generateReachCertificateHtmlPdf(loaded);
-    void uploadReachCertificateFile(supabase, pdfFileName, pdfBuffer, PDF_CONTENT_TYPE);
+    const storagePath = buildClientYearStoragePath('RC', clientName, input.issuedDate, pdfFileName);
+    void uploadReachCertificateFile(supabase, storagePath, pdfBuffer, PDF_CONTENT_TYPE);
     return { mode: 'pdf', buffer: pdfBuffer, fileName: pdfFileName };
   } catch {
     // fall through to DOCX upload
@@ -57,9 +60,10 @@ export async function resolveReachCertificatePreview(
     })
   );
 
+  const docxStoragePath = buildClientYearStoragePath('RC', clientName, input.issuedDate, docxFileName);
   const docxUrl = await uploadReachCertificateFile(
     supabase,
-    docxFileName,
+    docxStoragePath,
     freshDocx,
     DOCX_CONTENT_TYPE
   );
