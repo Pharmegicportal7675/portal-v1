@@ -1,4 +1,3 @@
-import Image from 'next/image';
 import Link from 'next/link';
 import { clsx } from 'clsx';
 
@@ -11,7 +10,7 @@ interface BrandLogoProps {
 }
 
 const SIZES: Record<BrandLogoVariant, { src: string; width: number; height: number }> = {
-  full: { src: '/pharmegic-logo.png', width: 2200, height: 48 },
+  full: { src: '/pharmegic-logo.png', width: 200, height: 44 },
   icon: { src: '/favicon.png', width: 40, height: 40 },
   sidebar: { src: '/pharmegic-logo.png', width: 200, height: 44 },
 };
@@ -20,13 +19,15 @@ export default function BrandLogo({ variant = 'full', href = '/', className }: B
   const { src, width, height } = SIZES[variant];
 
   const image = (
-    <Image
+    // Plain img — avoids /_next/image sharp pipeline on Hostinger (503 under load).
+    <img
       src={src}
       alt="Pharmegic Healthcare"
       width={width}
       height={height}
       className={clsx('h-auto w-full max-w-full object-contain', className)}
-      priority={variant === 'sidebar' || variant === 'full'}
+      loading={variant === 'sidebar' || variant === 'full' ? 'eager' : 'lazy'}
+      decoding="async"
     />
   );
 

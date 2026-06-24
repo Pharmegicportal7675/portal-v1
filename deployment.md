@@ -36,6 +36,8 @@ Production app: **portal.pharmegichealthcare.com**
 
 `server.js` binds **`0.0.0.0`** on **`$PORT`** and starts the **Next.js standalone** bundle (built via `output: 'standalone'`). Never use `process.env.HOSTNAME` on Linux — it causes **503**.
 
+**Logos / `next/image`:** `images.unoptimized: true` in `next.config.js` — logos load from `/pharmegic-logo.png` directly (no `/_next/image` sharp pipeline on Hostinger).
+
 ### CRITICAL — if `/login` shows raw text like `:HL[...]` or `0:{"tree":`
 
 The **Node start command is missing or not running**. Hostinger must run `next start`, not only serve build files.
@@ -140,8 +142,32 @@ All certificate PDFs use **puppeteer-core** + **@sparticuz/chromium-min** (HTML 
 
 PDF engine order:
 
-1. Uses **system Chrome** if installed (`PUPPETEER_EXECUTABLE_PATH` optional).
-2. Otherwise falls back to **bundled Chromium** (`@sparticuz/chromium-min`) — no SSH Chrome install required.
+1. Uses **system Chrome** if installed (`PUPPETEER_EXECUTABLE_PATH=/usr/bin/google-chrome-stable`).
+2. Otherwise falls back to **bundled Chromium** (`@sparticuz/chromium-min`).
+
+### `spawn /tmp/chromium EAGAIN` (process limit)
+
+Hostinger shared hosting often cannot run bundled Chromium (process `ulimit` too low).
+
+**Recommended fix — install system Chrome (SSH):**
+
+```bash
+sudo apt-get update
+sudo apt-get install -y wget gnupg ca-certificates
+wget -q -O /tmp/google-chrome.gpg https://dl.google.com/linux/linux_signing_key.pub
+sudo gpg --dearmor -o /usr/share/keyrings/google-chrome.gpg /tmp/google-chrome.gpg
+echo "deb [arch=amd64 signed-by=/usr/share/keyrings/google-chrome.gpg] http://dl.google.com/linux/chrome/deb/ stable main" \
+  | sudo tee /etc/apt/sources.list.d/google-chrome.list
+sudo apt-get update && sudo apt-get install -y google-chrome-stable
+```
+
+Then in **hPanel → Environment variables**:
+
+```
+PUPPETEER_EXECUTABLE_PATH=/usr/bin/google-chrome-stable
+```
+
+Redeploy / restart the Node app. PDFs will use system Chrome (one warm browser, no `/tmp/chromium` spawn).
 
 Optional (faster PDFs, avoids first-request Chromium download):
 
@@ -165,6 +191,8 @@ Verify after deploy:
 - `https://portal.pharmegichealthcare.com/api/health/pdf-converter` — converter status
 - `https://portal.pharmegichealthcare.com/api/health/pdf-worker` — in-process Puppeteer/Chromium load check
 - First bundled-Chromium PDF may take ~30s; later requests are faster.
+- PDF requests run **one at a time** on the server (avoids Chromium `EAGAIN` / process limit on Hostinger).
+- Logos use plain `/pharmegic-logo.png` (no `/_next/image` optimization on Hostinger).
 - Generated PDFs are cached under `public/uploads/certificates/`.
 
 ---

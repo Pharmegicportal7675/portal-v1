@@ -24,6 +24,15 @@ const ROOT_SELECTORS = {
 
 process.chdir(WORKER_ROOT);
 
+function ensureRuntimeDir() {
+  const dir = process.env.TMPDIR || path.join(WORKER_ROOT, '.cache', 'chromium-runtime');
+  fs.mkdirSync(dir, { recursive: true });
+  process.env.TMPDIR = dir;
+  process.env.TEMP = dir;
+  process.env.TMP = dir;
+  return dir;
+}
+
 function logFilePath() {
   return process.env.REACH_PDF_LOG_FILE || '';
 }
@@ -127,7 +136,40 @@ async function clearChromiumTemp() {
   }
 }
 
+const HOSTING_CHROMIUM_ARGS = [
+  '--no-sandbox',
+  '--disable-setuid-sandbox',
+  '--disable-dev-shm-usage',
+  '--disable-gpu',
+  '--disable-software-rasterizer',
+  '--disable-extensions',
+  '--single-process',
+  '--no-zygote',
+];
+
+function mergeChromiumArgs(base) {
+  const merged = [...(base || [])];
+  for (const arg of HOSTING_CHROMIUM_ARGS) {
+    if (!merged.includes(arg)) merged.push(arg);
+  }
+  return merged;
+}
+
+async function closeBrowserSafely(browser) {
+  try {
+    await browser.close();
+  } catch (err) {
+    appendLog(`browser.close failed: ${err instanceof Error ? err.message : err}`);
+    try {
+      browser.process()?.kill('SIGKILL');
+    } catch {
+      // ignore
+    }
+  }
+}
+
 async function launchBrowser() {
+  ensureRuntimeDir();
   const puppeteer = requirePackage('puppeteer-core');
 
   if (process.env.REACH_PDF_USE_BUNDLED_CHROMIUM !== '1') {
@@ -137,13 +179,8 @@ async function launchBrowser() {
       return puppeteer.launch({
         headless: true,
         executablePath: systemPath,
-        args: [
-          '--no-sandbox',
-          '--disable-setuid-sandbox',
-          '--disable-dev-shm-usage',
-          '--disable-gpu',
-          '--font-render-hinting=none',
-        ],
+        pipe: true,
+        args: mergeChromiumArgs(['--font-render-hinting=none']),
       });
     }
   }
@@ -175,15 +212,10 @@ async function launchBrowser() {
   appendLog(`Chromium executable: ${executablePath}`);
 
   return puppeteer.launch({
-    args: [
-      ...chromium.args,
-      '--no-sandbox',
-      '--disable-setuid-sandbox',
-      '--disable-dev-shm-usage',
-      '--disable-gpu',
-    ],
+    args: mergeChromiumArgs(chromium.args),
     executablePath,
     headless: true,
+    pipe: true,
   });
 }
 
@@ -243,7 +275,7 @@ async function generatePdf(html, format) {
     return Buffer.from(pdf);
   } finally {
     await page.close();
-    await browser.close();
+    await closeBrowserSafely(browser);
   }
 }
 

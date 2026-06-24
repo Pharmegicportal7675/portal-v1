@@ -45,6 +45,9 @@ next-env.d.ts
 # prisma generated client (rebuilt on install)
 /generated/prisma
 
+# chromium extract + temp (Hostinger PDF)
+.cache/
+
 # uploaded certificate files
 /public/uploads/certificates/*
 !/public/uploads/certificates/.gitkeep

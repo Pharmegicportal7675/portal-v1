@@ -27,6 +27,17 @@ console.info('[portal] Node.js:', process.version);
 console.info('[portal] PORT:', port);
 console.info('[portal] DATABASE_URL:', process.env.DATABASE_URL ? 'set' : 'MISSING');
 
+function ensureChromiumRuntimeDir(baseDir) {
+  const dir = path.join(baseDir, '.cache', 'chromium-runtime');
+  fs.mkdirSync(dir, { recursive: true });
+  process.env.TMPDIR = dir;
+  process.env.TEMP = dir;
+  process.env.TMP = dir;
+  return dir;
+}
+
+ensureChromiumRuntimeDir(root);
+
 function linkRuntimeUploads() {
   const uploadsSrc = path.join(root, 'public', 'uploads');
   const uploadsDest = path.join(root, '.next', 'standalone', 'public', 'uploads');
@@ -56,6 +67,7 @@ function copyDir(src, dest) {
 
 function startStandalone() {
   linkRuntimeUploads();
+  ensureChromiumRuntimeDir(path.join(root, '.next', 'standalone'));
   console.info(`[portal] Starting Next.js standalone on 0.0.0.0:${port}`);
   process.chdir(path.join(root, '.next', 'standalone'));
   require(standaloneServer);

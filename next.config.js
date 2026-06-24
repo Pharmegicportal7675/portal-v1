@@ -7,6 +7,10 @@ const PUPPETEER_TRACE = ['./node_modules/puppeteer-core/**'];
 /** @type {import('next').NextConfig} */
 const nextConfig = {
   output: 'standalone',
+  // Hostinger standalone: skip sharp /_next/image — serve public assets directly (avoids 503).
+  images: {
+    unoptimized: true,
+  },
   serverExternalPackages: [
     '@prisma/client',
     'prisma',

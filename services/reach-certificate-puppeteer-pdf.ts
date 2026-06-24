@@ -6,11 +6,15 @@ import { tmpdir } from 'node:os';
 import path from 'node:path';
 import { promisify } from 'node:util';
 import type { Browser, LaunchOptions } from 'puppeteer-core';
+import { getBundledChromiumLaunchArgs, getSystemChromeLaunchArgs } from '@/lib/chromium-launch-args';
+import { ensureChromiumRuntimeDir } from '@/lib/chromium-runtime-dir';
+import { formatPdfLaunchError } from '@/lib/format-pdf-launch-error';
 import {
   isReachPuppeteerPdfAvailable,
   resolveSystemChromeExecutable,
   usesBundledChromiumFallback,
 } from '@/lib/reach-pdf-environment';
+import { withPdfGenerationLock } from '@/lib/pdf-generation-lock';
 import { loadBundledChromiumModule, loadPuppeteerCore } from '@/lib/puppeteer-runtime';
 import { launchBundledChromiumBrowser } from '@/services/reach-certificate-bundled-chromium';
 
@@ -19,8 +23,24 @@ export { isReachPuppeteerPdfAvailable, resolveSystemChromeExecutable, usesBundle
 const execFileAsync = promisify(execFile);
 
 function usePdfWorker(): boolean {
-  // Subprocess worker is opt-in only — in-process createRequire is more reliable on Hostinger.
+  // Opt-in only — worker adds an extra Node process and worsens Hostinger ulimit (EAGAIN).
   return process.env.REACH_PDF_USE_WORKER === '1';
+}
+
+function isProcessLimitError(message: string): boolean {
+  const lower = message.toLowerCase();
+  return lower.includes('eagain') || lower.includes('failed to launch the browser process');
+}
+
+let sharedBrowser: Browser | null = null;
+let sharedBrowserLaunch: Promise<Browser> | null = null;
+
+async function resetSharedBrowser(): Promise<void> {
+  if (sharedBrowser) {
+    await closeBrowserSafely(sharedBrowser);
+    sharedBrowser = null;
+  }
+  sharedBrowserLaunch = null;
 }
 
 function isModuleLoadError(message: string): boolean {
@@ -92,6 +112,9 @@ async function buildWorkerEnv(logPath: string, nodePath: string): Promise<NodeJS
     NODE_PATH: nodePath,
     REACH_PDF_LOG_FILE: logPath,
     REACH_PDF_USE_BUNDLED_CHROMIUM: useBundled ? '1' : process.env.REACH_PDF_USE_BUNDLED_CHROMIUM,
+    TMPDIR: ensureChromiumRuntimeDir(),
+    TEMP: process.env.TMPDIR,
+    TMP: process.env.TMPDIR,
   };
 
   if (!systemChrome) {
@@ -263,6 +286,24 @@ function prefersBundledChromium(): boolean {
   return process.env.REACH_PDF_USE_BUNDLED_CHROMIUM === '1';
 }
 
+async function closeBrowserSafely(browser: Browser): Promise<void> {
+  try {
+    await Promise.race([
+      browser.close(),
+      new Promise<void>((_, reject) => {
+        setTimeout(() => reject(new Error('browser.close timeout')), 15_000);
+      }),
+    ]);
+  } catch (err) {
+    console.warn('[reach-pdf] browser.close failed, killing process:', err);
+    try {
+      browser.process()?.kill('SIGKILL');
+    } catch {
+      // ignore
+    }
+  }
+}
+
 async function launchSystemChromeBrowser(): Promise<Browser | null> {
   const executablePath = await resolveSystemChromeExecutable();
   if (!executablePath) return null;
@@ -272,13 +313,8 @@ async function launchSystemChromeBrowser(): Promise<Browser | null> {
   const options: LaunchOptions = {
     headless: true,
     executablePath,
-    args: [
-      '--no-sandbox',
-      '--disable-setuid-sandbox',
-      '--disable-dev-shm-usage',
-      '--disable-gpu',
-      '--font-render-hinting=none',
-    ],
+    args: getSystemChromeLaunchArgs(['--font-render-hinting=none']),
+    pipe: true,
   };
 
   try {
@@ -290,52 +326,67 @@ async function launchSystemChromeBrowser(): Promise<Browser | null> {
 }
 
 async function launchBrowser(): Promise<Browser> {
-  if (!prefersBundledChromium()) {
-    const systemBrowser = await launchSystemChromeBrowser();
-    if (systemBrowser) return systemBrowser;
-  }
+  ensureChromiumRuntimeDir();
 
-  if (usesBundledChromiumFallback()) {
-    return launchBundledChromiumBrowser();
-  }
+  try {
+    if (!prefersBundledChromium()) {
+      const systemBrowser = await launchSystemChromeBrowser();
+      if (systemBrowser) return systemBrowser;
+    }
 
-  throw new Error(
-    'Chromium/Chrome not found for PDF generation. Install Google Chrome or enable bundled Chromium on Linux.'
-  );
+    if (usesBundledChromiumFallback()) {
+      return await launchBundledChromiumBrowser();
+    }
+
+    throw new Error(
+      'Chromium/Chrome not found for PDF generation. Install Google Chrome on the server (see deployment.md).'
+    );
+  } catch (err) {
+    throw formatPdfLaunchError(err);
+  }
 }
 
-function useEphemeralBrowser(): boolean {
-  return (
-    process.platform === 'linux' ||
-    process.env.NODE_ENV === 'production' ||
-    process.env.REACH_PDF_CLOSE_BROWSER === '1'
-  );
-}
+async function acquireSharedBrowser(): Promise<Browser> {
+  if (sharedBrowser?.connected) {
+    return sharedBrowser;
+  }
 
-let browserPromise: Promise<Browser> | null = null;
+  if (!sharedBrowserLaunch) {
+    sharedBrowserLaunch = launchBrowser()
+      .then((browser) => {
+        sharedBrowser = browser;
+        browser.on('disconnected', () => {
+          sharedBrowser = null;
+          sharedBrowserLaunch = null;
+        });
+        return browser;
+      })
+      .catch((err) => {
+        sharedBrowserLaunch = null;
+        throw err;
+      });
+  }
+
+  return sharedBrowserLaunch;
+}
 
 async function getBrowser(): Promise<Browser> {
-  if (useEphemeralBrowser()) {
-    return launchBrowser();
-  }
-
-  if (!browserPromise) {
-    browserPromise = launchBrowser().catch((err) => {
-      browserPromise = null;
-      throw err;
-    });
-  }
-  return browserPromise;
+  return acquireSharedBrowser();
 }
 
-async function closeBrowserIfNeeded(browser: Browser): Promise<void> {
-  if (useEphemeralBrowser()) {
-    await browser.close();
-  }
+async function closeBrowserIfNeeded(_browser: Browser): Promise<void> {
+  // Keep one warm Chromium — closing per PDF causes fork storms (EAGAIN) on Hostinger.
 }
 
 async function generateHtmlPdfInProcess(html: string, format: 'reach' | 'tcc'): Promise<Buffer> {
-  const browser = await getBrowser();
+  let browser: Browser;
+  try {
+    browser = await getBrowser();
+  } catch (err) {
+    await resetSharedBrowser();
+    throw err;
+  }
+
   const page = await browser.newPage();
   const viewport =
     format === 'tcc'
@@ -375,8 +426,14 @@ async function generateHtmlPdfInProcess(html: string, format: 'reach' | 'tcc'): 
     });
 
     return Buffer.from(pdf);
+  } catch (err) {
+    const message = err instanceof Error ? err.message : String(err);
+    if (isProcessLimitError(message)) {
+      await resetSharedBrowser();
+    }
+    throw formatPdfLaunchError(err);
   } finally {
-    await page.close();
+    await page.close().catch(() => {});
     await closeBrowserIfNeeded(browser);
   }
 }
@@ -399,9 +456,9 @@ async function generateHtmlPdfWithStrategy(html: string, format: 'reach' | 'tcc'
 }
 
 export async function generateTccHtmlPdfFromHtml(html: string): Promise<Buffer> {
-  return generateHtmlPdfWithStrategy(html, 'tcc');
+  return withPdfGenerationLock(() => generateHtmlPdfWithStrategy(html, 'tcc'));
 }
 
 export async function generateReachHtmlPdfFromHtml(html: string): Promise<Buffer> {
-  return generateHtmlPdfWithStrategy(html, 'reach');
+  return withPdfGenerationLock(() => generateHtmlPdfWithStrategy(html, 'reach'));
 }
