@@ -40,6 +40,8 @@ function resolveWorkerScript(): string {
 async function runPdfWorker(html: string, format: 'reach' | 'tcc'): Promise<Buffer> {
   const htmlPath = path.join(tmpdir(), `reach-pdf-${randomUUID()}.html`);
   const scriptPath = resolveWorkerScript();
+  const workerRoot = path.dirname(path.dirname(scriptPath));
+  const workerTimeoutMs = Number(process.env.REACH_PDF_WORKER_TIMEOUT_MS || '110000');
 
   await writeFile(htmlPath, html, 'utf8');
 
@@ -48,23 +50,53 @@ async function runPdfWorker(html: string, format: 'reach' | 'tcc'): Promise<Buff
     const stderrChunks: Buffer[] = [];
 
     const child = spawn(process.execPath, [scriptPath, htmlPath, format], {
-      env: process.env,
+      cwd: workerRoot,
+      env: {
+        ...process.env,
+        NODE_PATH: path.join(workerRoot, 'node_modules'),
+      },
       stdio: ['ignore', 'pipe', 'pipe'],
     });
 
+    const timer = setTimeout(() => {
+      child.kill('SIGTERM');
+      setTimeout(() => child.kill('SIGKILL'), 5000);
+    }, workerTimeoutMs);
+
     child.stdout.on('data', (chunk: Buffer) => stdoutChunks.push(chunk));
     child.stderr.on('data', (chunk: Buffer) => stderrChunks.push(chunk));
-    child.on('error', reject);
-    child.on('close', async (code) => {
+    child.on('error', (err) => {
+      clearTimeout(timer);
+      reject(err);
+    });
+    child.on('close', async (code, signal) => {
+      clearTimeout(timer);
       await unlink(htmlPath).catch(() => {});
 
-      if (code !== 0) {
-        const detail = Buffer.concat(stderrChunks).toString('utf8').trim();
-        reject(new Error(detail || `PDF worker exited with code ${code ?? 'unknown'}`));
+      const stderr = Buffer.concat(stderrChunks).toString('utf8').trim();
+      const pdf = Buffer.concat(stdoutChunks);
+
+      if (code === 0 && pdf.length > 0) {
+        resolve(pdf);
         return;
       }
 
-      resolve(Buffer.concat(stdoutChunks));
+      if (signal) {
+        reject(
+          new Error(
+            stderr ||
+              `PDF worker killed by ${signal} (likely timeout or out of memory on Hostinger). Use Node.js 22.x, redeploy, and retry.`
+          )
+        );
+        return;
+      }
+
+      reject(
+        new Error(
+          stderr ||
+            `PDF worker exited with code ${code ?? 'unknown'} (empty stderr — check Hostinger Node version is 22.x and runtime logs).`
+        )
+      );
     });
   });
 }

@@ -131,7 +131,13 @@ After changing `NEXT_PUBLIC_*` vars, **redeploy** the app.
 
 ### RC HTML Certificate PDF (Puppeteer)
 
-On **Hostinger Linux**, RC HTML→PDF works automatically:
+On **Hostinger Linux**, RC HTML→PDF uses an isolated **PDF worker** (`scripts/reach-html-to-pdf.cjs`).
+
+**Requirements:**
+- **Node.js 22.x** in hPanel (required by `puppeteer-core` 25 and `@sparticuz/chromium-min` 148)
+- `NEXT_PUBLIC_APP_URL=https://portal.pharmegichealthcare.com`
+
+PDF engine order:
 
 1. Uses **system Chrome** if installed (`PUPPETEER_EXECUTABLE_PATH` optional).
 2. Otherwise falls back to **bundled Chromium** (`@sparticuz/chromium-min`) — no SSH Chrome install required.
