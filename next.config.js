@@ -34,6 +34,10 @@ const nextConfig = {
     '/api/tcc/application': PRISMA_TRACE,
     '/api/reach/certificates/bulk-email': PRISMA_TRACE,
     '/api/reach/certificates/delete': PRISMA_TRACE,
+    '/api/reach/certificates/issue': PRISMA_TRACE,
+    '/api/reach/certificates/update': PRISMA_TRACE,
+    '/api/reach/certificates/send-email': PRISMA_TRACE,
+    '/api/reach/certificates/resend-email': PRISMA_TRACE,
     '/api/client-chemicals/remove': PRISMA_TRACE,
     '/api/reach-certificate/pdf-html': [
       './node_modules/@sparticuz/chromium-min/**',

@@ -3,12 +3,6 @@
 import { useMemo, useState, useTransition, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
-import {
-  issueReachCertificateFromPreviewAction,
-  sendReachCertificateEmailAction,
-  resendReachCertificateEmailAction,
-  updateReachCertificateAction,
-} from '@/actions/reach';
 import { Button } from '@/components/ui/Button';
 import { Badge } from '@/components/ui/Badge';
 import { Input } from '@/components/ui/Input';
@@ -90,6 +84,21 @@ type ReachCertificatePreviewClientProps = {
 
 function formatEmailList(emails: string[]): string {
   return emails.length > 0 ? emails.join(', ') : '—';
+}
+
+async function postReachJson<T>(url: string, body: unknown): Promise<T> {
+  const response = await fetch(url, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    credentials: 'same-origin',
+    body: JSON.stringify(body),
+  });
+
+  try {
+    return (await response.json()) as T;
+  } catch {
+    throw new Error(response.status === 404 ? 'Service not found. Redeploy and try again.' : 'Request failed.');
+  }
 }
 
 export default function ReachCertificatePreviewClient({
@@ -226,12 +235,16 @@ export default function ReachCertificatePreviewClient({
     }
 
     startUpdateTransition(async () => {
-      const res = await updateReachCertificateAction(cert.id, {
-        registrationNumber: registrationNumber.trim(),
-        issuedDate,
-        validatedDate,
-        tonnageBand,
-      });
+      const res = await postReachJson<{ success: boolean; message?: string; error?: string }>(
+        '/api/reach/certificates/update',
+        {
+          certificateId: cert.id,
+          registrationNumber: registrationNumber.trim(),
+          issuedDate,
+          validatedDate,
+          tonnageBand,
+        }
+      );
       if (res.success) {
         toast.success(res.message || 'RC Certificate updated.');
         setIsEditing(false);
@@ -254,12 +267,17 @@ export default function ReachCertificatePreviewClient({
     }
 
     startIssueTransition(async () => {
-      const res = await issueReachCertificateFromPreviewAction(clientId, chemicalId, {
-        registrationNumber: registrationNumber.trim(),
-        issuedDate,
-        validatedDate,
-        tonnageBand,
-      });
+      const res = await postReachJson<{ success: boolean; message?: string; error?: string }>(
+        '/api/reach/certificates/issue',
+        {
+          clientId,
+          chemicalId,
+          registrationNumber: registrationNumber.trim(),
+          issuedDate,
+          validatedDate,
+          tonnageBand,
+        }
+      );
       if (res.success) {
         toast.success(res.message || 'RC Certificate issued successfully.');
         router.push(backHref);
@@ -273,7 +291,10 @@ export default function ReachCertificatePreviewClient({
   const handleSendMail = () => {
     if (!cert) return;
     startSendTransition(async () => {
-      const res = await sendReachCertificateEmailAction(cert.id);
+      const res = await postReachJson<{ success: boolean; message?: string; error?: string }>(
+        '/api/reach/certificates/send-email',
+        { certificateId: cert.id }
+      );
       if (res.success) {
         toast.success(res.message || 'Certificate email sent successfully.');
         router.refresh();
@@ -286,7 +307,10 @@ export default function ReachCertificatePreviewClient({
   const handleResendMail = () => {
     if (!cert) return;
     startResendTransition(async () => {
-      const res = await resendReachCertificateEmailAction(cert.id);
+      const res = await postReachJson<{ success: boolean; message?: string; error?: string }>(
+        '/api/reach/certificates/resend-email',
+        { certificateId: cert.id }
+      );
       if (res.success) {
         toast.success(res.message || 'Certificate email resent.');
         router.refresh();
