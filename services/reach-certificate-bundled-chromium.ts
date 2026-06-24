@@ -21,6 +21,12 @@ async function resolveBundledExecutablePath(): Promise<string> {
   const packUrl = getBundledChromiumPackUrl();
 
   try {
+    chromium.setGraphicsMode = false;
+  } catch {
+    // optional — reduces RAM on shared hosting
+  }
+
+  try {
     return await chromium.executablePath(packUrl);
   } catch (err) {
     const code = err && typeof err === 'object' && 'code' in err ? String(err.code) : '';

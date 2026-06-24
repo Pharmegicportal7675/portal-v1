@@ -1,6 +1,5 @@
 import type { DbClient } from '@/lib/db/types';
 import { CERTIFICATES_BUCKET } from '@/lib/storage';
-import { convertReachDocxToPdf } from '@/services/reach-certificate-docx';
 
 const PDF_CONTENT_TYPE = 'application/pdf';
 const DOCX_CONTENT_TYPE =
@@ -27,14 +26,6 @@ async function tryStoredPdf(
   if (fileName.toLowerCase().endsWith('.pdf')) {
     return { buffer, fileName };
   }
-  if (fileName.toLowerCase().endsWith('.docx')) {
-    try {
-      const pdfBuffer = await convertReachDocxToPdf(buffer);
-      return { buffer: pdfBuffer, fileName: fileName.replace(/\.docx$/i, '.pdf') };
-    } catch {
-      return null;
-    }
-  }
   return null;
 }
 
@@ -46,7 +37,6 @@ export async function loadReachCertificateStoredPdf(
 ): Promise<{ buffer: Buffer; fileName: string } | null> {
   const candidates = new Set<string>();
   candidates.add(`${certificateNumber}.pdf`);
-  candidates.add(`${certificateNumber}.docx`);
 
   const fromUrl = fileUrl ? extractCertificateFileName(fileUrl) : null;
   if (fromUrl) candidates.add(fromUrl);

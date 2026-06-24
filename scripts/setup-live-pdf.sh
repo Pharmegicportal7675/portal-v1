@@ -1,11 +1,11 @@
 #!/usr/bin/env bash
-# LibreOffice setup for TCC DOCX→PDF on Linux VPS. RC certificates use HTML→PDF (Puppeteer).
+# Hostinger/VPS: PDF uses puppeteer-core + @sparticuz/chromium-min only (no LibreOffice).
 set -euo pipefail
 
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 cd "$ROOT"
 
-echo "==> Pharmegic PDF setup (LibreOffice for TCC)"
+echo "==> Pharmegic live PDF setup (Puppeteer)"
 echo "    Project: $ROOT"
 echo ""
 
@@ -17,19 +17,18 @@ restart_app() {
     echo "==> Restarting app (systemctl)..."
     sudo systemctl restart pharmegic-portal
   else
-    echo "==> Restart your Node app manually (pm2 restart all or systemctl)."
+    echo "==> Restart your Node app manually after env changes."
   fi
 }
 
-echo "==> Installing LibreOffice Writer..."
-sudo apt-get update
-sudo apt-get install -y libreoffice-writer
-soffice --version || libreoffice --version
+echo "==> Required env (Hostinger hPanel):"
+echo "    NEXT_PUBLIC_APP_URL=https://portal.pharmegichealthcare.com"
+echo "    Node.js 20.x or 22.x"
+echo "    Remove PUPPETEER_EXECUTABLE_PATH unless Chrome is installed"
+echo ""
 
 restart_app
 
 echo ""
-echo "SUCCESS: LibreOffice installed for TCC PDF conversion."
-echo "RC certificates use HTML → PDF (Puppeteer) — set PUPPETEER_EXECUTABLE_PATH on Hostinger VPS."
-echo ""
+echo "SUCCESS: PDF engine is puppeteer-core + @sparticuz/chromium-min."
 echo "Verify: https://portal.pharmegichealthcare.com/api/health/pdf-converter"

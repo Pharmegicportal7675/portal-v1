@@ -1,5 +1,4 @@
 import type { DbClient } from '@/lib/db/types';
-import { buildReachDocxData } from '@/lib/reach-pdf-data';
 import type { ReachCertPdfInput } from '@/lib/reach-certificate-preview';
 import { generateReachCertificateHtmlPdf } from '@/lib/reach-certificate-html-pdf-server';
 import type { LoadedReachCertificateInput } from '@/lib/reach-certificate-api-input';
@@ -7,7 +6,6 @@ import {
   loadReachCertificateStoredPdf,
   uploadReachCertificateFile,
 } from '@/lib/reach-certificate-storage';
-import { convertReachDocxToPdf, generateReachCertificateDocx } from '@/services/reach-certificate-docx';
 
 const PDF_CONTENT_TYPE = 'application/pdf';
 
@@ -18,18 +16,7 @@ export type ReachCertificateDownloadFile = {
   format: 'pdf';
 };
 
-function buildFreshReachDocx(input: ReachCertPdfInput): Buffer {
-  return generateReachCertificateDocx(
-    buildReachDocxData(input.client, input.chemical, {
-      registrationNumber: input.registrationNumber,
-      issuedDate: input.issuedDate,
-      validatedDate: input.validatedDate,
-      tonnageBand: input.tonnageBand,
-    })
-  );
-}
-
-/** Builds a PDF — prefers stored upload, then HTML/Puppeteer, then DOCX conversion. */
+/** Builds a PDF — prefers stored upload, then HTML/Puppeteer (puppeteer-core + chromium-min). */
 export async function resolveReachCertificateDownloadFile(
   supabase: DbClient,
   input: ReachCertPdfInput & LoadedReachCertificateInput,
@@ -64,22 +51,11 @@ export async function resolveReachCertificateDownloadFile(
       format: 'pdf',
     };
   } catch (htmlErr) {
-    const freshDocx = buildFreshReachDocx(input);
-    try {
-      const pdfBuffer = await convertReachDocxToPdf(freshDocx);
-      return {
-        buffer: pdfBuffer,
-        contentType: PDF_CONTENT_TYPE,
-        fileName: `${input.certificateNumber}.pdf`,
-        format: 'pdf',
-      };
-    } catch {
-      const message =
-        htmlErr instanceof Error
-          ? htmlErr.message
-          : 'PDF generation is not available on this server.';
-      throw new Error(message);
-    }
+    const message =
+      htmlErr instanceof Error
+        ? htmlErr.message
+        : 'RC certificate PDF generation failed (Puppeteer/Chromium).';
+    throw new Error(message);
   }
 }
 

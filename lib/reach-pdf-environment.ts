@@ -1,11 +1,5 @@
 import fs from 'node:fs';
 
-const LIBREOFFICE_PATHS = [
-  '/usr/bin/soffice',
-  '/usr/bin/libreoffice',
-  '/snap/bin/libreoffice',
-];
-
 function chromeCandidates(): string[] {
   const fromEnv = [process.env.PUPPETEER_EXECUTABLE_PATH, process.env.CHROME_PATH].filter(
     (value): value is string => Boolean(value?.trim())
@@ -32,11 +26,6 @@ function chromeCandidates(): string[] {
 
 export function isReachPuppeteerPdfAvailable(): boolean {
   return process.env.REACH_PDF_DISABLED !== '1';
-}
-
-export function isLibreOfficeInstalled(): boolean {
-  if (process.platform === 'win32') return true;
-  return LIBREOFFICE_PATHS.some((bin) => fs.existsSync(bin));
 }
 
 export async function resolveSystemChromeExecutable(): Promise<string | null> {

@@ -129,9 +129,9 @@ Optional env fallbacks (only if DB SMTP fields are empty):
 
 After changing `NEXT_PUBLIC_*` vars, **redeploy** the app.
 
-### RC HTML Certificate PDF (Puppeteer)
+### Certificate PDF (Puppeteer — RC + TCC)
 
-On **Hostinger Linux**, RC HTML→PDF runs **in-process** via `createRequire` (no subprocess by default).
+All certificate PDFs use **puppeteer-core** + **@sparticuz/chromium-min** (HTML → PDF). LibreOffice is not used.
 
 **Requirements:**
 - **Node.js 20.x or 22.x** in hPanel (`puppeteer-core` 23 + `@sparticuz/chromium-min` 131)

@@ -96,28 +96,8 @@ const xml = applyPlaceholders(zip.files['word/document.xml'].asText());
 zip.file('word/document.xml', xml);
 fs.writeFileSync(docxOut, zip.generate({ type: 'nodebuffer', compression: 'DEFLATE' }));
 
-const librePaths = [
-  'soffice',
-  'libreoffice',
-  'C:\\Program Files\\LibreOffice\\program\\soffice.exe',
-];
-
 let converted = false;
-for (const bin of librePaths) {
-  try {
-    await execFileAsync(bin, ['--headless', '--convert-to', 'pdf', '--outdir', outDir, docxOut], {
-      timeout: 120000,
-    });
-    if (fs.existsSync(pdfOut)) {
-      converted = true;
-      break;
-    }
-  } catch {
-    // try next
-  }
-}
-
-if (!converted && process.platform === 'win32') {
+if (process.platform === 'win32') {
   try {
     await convertWithWordCom(docxOut, pdfOut);
     converted = fs.existsSync(pdfOut);
@@ -127,8 +107,11 @@ if (!converted && process.platform === 'win32') {
 }
 
 if (!converted || !fs.existsSync(pdfOut)) {
-  console.error('PDF conversion failed. Install LibreOffice or use Windows with Microsoft Word.');
-  process.exit(1);
+  console.warn(
+    'Sample PDF not generated (LibreOffice removed — production uses puppeteer-core + chromium-min).'
+  );
+  console.warn('DOCX sample written; use admin RC HTML preview for PDF on the server.');
+  process.exit(0);
 }
 
 console.log(`Settings preview DOCX kept at ${docxOut} (${fs.statSync(docxOut).size} bytes)`);

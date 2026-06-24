@@ -136,11 +136,25 @@ export async function runInProcessPdfCheck(): Promise<string> {
   const puppeteer = loadPuppeteerCore();
   const chromium = loadBundledChromiumModule();
   const chrome = await resolveSystemChromeExecutable();
+
+  try {
+    chromium.setGraphicsMode = false;
+  } catch {
+    // optional
+  }
+
+  let chromiumPath = 'not resolved (use ?launch=1 to test download)';
+  if (process.env.REACH_PDF_HEALTH_LAUNCH === '1') {
+    const { getBundledChromiumPackUrl } = await import('@/lib/bundled-chromium-config');
+    chromiumPath = await chromium.executablePath(getBundledChromiumPackUrl());
+  }
+
   return [
     `node=${process.version}`,
     `puppeteer-core loaded (launch=${typeof puppeteer.launch})`,
     `@sparticuz/chromium-min loaded (args=${Array.isArray(chromium.args)})`,
     `systemChrome=${chrome || 'not found'}`,
+    `bundledChromium=${chromiumPath}`,
     `mode=in-process`,
   ].join('\n');
 }

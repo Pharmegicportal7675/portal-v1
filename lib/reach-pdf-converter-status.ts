@@ -1,5 +1,4 @@
 import {
-  isLibreOfficeInstalled,
   isReachPuppeteerPdfAvailable,
   resolveSystemChromeExecutable,
   usesBundledChromiumFallback,
@@ -7,21 +6,18 @@ import {
 import { resolvePdfRenderBaseUrl } from '@/lib/reach-pdf-render-url';
 
 export type ReachPdfConverterStatus = {
-  /** RC certificates: HTML → PDF via Puppeteer/Chromium */
+  /** RC + TCC certificates: HTML → PDF via Puppeteer/Chromium */
+  pdfEngine: 'puppeteer-core + @sparticuz/chromium-min';
   htmlPdfEnabled: boolean;
   htmlPdfRenderUrl: string | null;
   systemChromeFound: boolean;
   htmlPdfUsesBundledChromiumFallback: boolean;
-  /** TCC / legacy DOCX routes: LibreOffice on VPS only */
-  docxPdfAvailable: boolean;
-  libreOfficeInstalled: boolean;
   platform: string;
   hosting: 'hostinger' | 'local';
   recommendedAction: string | null;
 };
 
 export async function resolveReachPdfConverterStatus(): Promise<ReachPdfConverterStatus> {
-  const libreOfficeInstalled = isLibreOfficeInstalled();
   const hosting =
     process.platform === 'linux' && process.env.NODE_ENV === 'production' ? 'hostinger' : 'local';
   const htmlPdfEnabled = isReachPuppeteerPdfAvailable();
@@ -55,12 +51,11 @@ export async function resolveReachPdfConverterStatus(): Promise<ReachPdfConverte
   }
 
   return {
+    pdfEngine: 'puppeteer-core + @sparticuz/chromium-min',
     htmlPdfEnabled,
     htmlPdfRenderUrl,
     systemChromeFound,
     htmlPdfUsesBundledChromiumFallback,
-    docxPdfAvailable: libreOfficeInstalled,
-    libreOfficeInstalled,
     platform: process.platform,
     hosting,
     recommendedAction,

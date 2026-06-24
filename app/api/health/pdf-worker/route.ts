@@ -1,11 +1,16 @@
-import { NextResponse } from 'next/server';
+import { NextRequest, NextResponse } from 'next/server';
 import { runInProcessPdfCheck, runPdfWorkerCheck } from '@/services/reach-certificate-puppeteer-pdf';
 
 export const dynamic = 'force-dynamic';
 export const runtime = 'nodejs';
+export const maxDuration = 120;
 
-export async function GET() {
+export async function GET(request: NextRequest) {
   try {
+    if (request.nextUrl.searchParams.get('launch') === '1') {
+      process.env.REACH_PDF_HEALTH_LAUNCH = '1';
+    }
+
     const inProcess = await runInProcessPdfCheck();
     let worker: string | null = null;
     let workerError: string | null = null;
