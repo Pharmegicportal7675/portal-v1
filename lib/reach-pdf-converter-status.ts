@@ -1,8 +1,8 @@
-import { isLibreOfficeInstalled } from '@/services/reach-certificate-docx';
 import {
+  isLibreOfficeInstalled,
   isReachPuppeteerPdfAvailable,
   resolveSystemChromeExecutable,
-} from '@/services/reach-certificate-puppeteer-pdf';
+} from '@/lib/reach-pdf-environment';
 import { resolvePdfRenderBaseUrl } from '@/lib/reach-pdf-render-url';
 
 export type ReachPdfConverterStatus = {

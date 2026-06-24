@@ -1,53 +1,10 @@
-import puppeteer from 'puppeteer-core';
 import type { Browser, LaunchOptions } from 'puppeteer-core';
+import {
+  isReachPuppeteerPdfAvailable,
+  resolveSystemChromeExecutable,
+} from '@/lib/reach-pdf-environment';
 
-/** Hostinger VPS: launch fresh Chromium per request instead of reusing a long-lived process. */
-function useEphemeralBrowser(): boolean {
-  return (
-    process.platform === 'linux' ||
-    process.env.NODE_ENV === 'production' ||
-    process.env.REACH_PDF_CLOSE_BROWSER === '1'
-  );
-}
-
-function chromeCandidates(): string[] {
-  const fromEnv = [process.env.PUPPETEER_EXECUTABLE_PATH, process.env.CHROME_PATH].filter(
-    (value): value is string => Boolean(value?.trim())
-  );
-
-  if (process.platform === 'win32') {
-    return [
-      ...fromEnv,
-      'C:\\Program Files\\Google\\Chrome\\Application\\chrome.exe',
-      'C:\\Program Files (x86)\\Google\\Chrome\\Application\\chrome.exe',
-      'C:\\Program Files\\Microsoft\\Edge\\Application\\msedge.exe',
-    ];
-  }
-
-  return [
-    ...fromEnv,
-    '/usr/bin/google-chrome',
-    '/usr/bin/google-chrome-stable',
-    '/usr/bin/chromium',
-    '/usr/bin/chromium-browser',
-    '/snap/bin/chromium',
-  ];
-}
-
-export async function resolveSystemChromeExecutable(): Promise<string | null> {
-  const { access } = await import('node:fs/promises');
-
-  for (const candidate of chromeCandidates()) {
-    try {
-      await access(candidate);
-      return candidate;
-    } catch {
-      // try next path
-    }
-  }
-
-  return null;
-}
+export { isReachPuppeteerPdfAvailable, resolveSystemChromeExecutable };
 
 async function launchBrowser(): Promise<Browser> {
   const executablePath = await resolveSystemChromeExecutable();
@@ -56,6 +13,8 @@ async function launchBrowser(): Promise<Browser> {
       'Chromium/Chrome not found for PDF generation. On Hostinger, install Google Chrome and set PUPPETEER_EXECUTABLE_PATH=/usr/bin/google-chrome-stable'
     );
   }
+
+  const puppeteer = await import('puppeteer-core');
 
   const options: LaunchOptions = {
     headless: true,
@@ -69,7 +28,16 @@ async function launchBrowser(): Promise<Browser> {
     ],
   };
 
-  return puppeteer.launch(options);
+  return puppeteer.default.launch(options);
+}
+
+/** Hostinger VPS: launch fresh Chromium per request instead of reusing a long-lived process. */
+function useEphemeralBrowser(): boolean {
+  return (
+    process.platform === 'linux' ||
+    process.env.NODE_ENV === 'production' ||
+    process.env.REACH_PDF_CLOSE_BROWSER === '1'
+  );
 }
 
 let browserPromise: Promise<Browser> | null = null;
@@ -178,6 +146,3 @@ export async function generateReachHtmlPdfFromHtml(html: string): Promise<Buffer
   }
 }
 
-export function isReachPuppeteerPdfAvailable(): boolean {
-  return process.env.REACH_PDF_DISABLED !== '1';
-}
