@@ -17,6 +17,7 @@ import { buildClientDateStoragePath, extractStorageRelativePath, CERTIFICATES_UP
 import { revalidatePath } from 'next/cache';
 import { notifyAllAdmins, notifyUser } from '@/lib/notifications';
 import { notifyTccApplicationByEmail } from '@/lib/tcc-application-notification';
+import { getTccCertificateValidUntilDate } from '@/lib/tcc-certificate-dates';
 import {
   computeTccQuotaForExportDate,
   getReachCertAllocatedQuota,
@@ -289,6 +290,7 @@ export async function applyForTccAction(prevState: unknown, formData: FormData) 
         euImporterCompanyName: euImporter.eu_importer_company_name,
         euImporterAddress: euImporter.eu_importer_address,
         purchaseOrderNumber: euImporter.purchase_order_number,
+        invoiceNumber: euImporter.invoice_number,
         poAttachment: {
           buffer: Buffer.from(await boFile.arrayBuffer()),
           fileName: boFile.name,
@@ -395,6 +397,7 @@ export async function applyForTccAction(prevState: unknown, formData: FormData) 
         euImporterCompanyName: euImporter.eu_importer_company_name,
         euImporterAddress: euImporter.eu_importer_address,
         purchaseOrderNumber: euImporter.purchase_order_number,
+        invoiceNumber: euImporter.invoice_number,
         currentAvailableMt: availableBeforeRequest,
         projectedBalanceMt: Math.max(0, availableBeforeRequest - euData.quantity_mt),
         rcCertificateNumber: reachCert?.certificate_number ?? null,
@@ -917,17 +920,24 @@ export async function adminUpdateTccApplicationAction(prevState: unknown, formDa
       );
     }
 
-    if (result.data.issue_date && certId) {
-      const issueDate = new Date(`${result.data.issue_date}T12:00:00`);
-      const expiresAt = new Date(issueDate);
-      expiresAt.setFullYear(expiresAt.getFullYear() + 1);
+    if (certId) {
+      const issueDateRaw =
+        result.data.issue_date?.trim() ||
+        existing.certificate_issue_date?.split('T')[0] ||
+        beforeIssueDate?.split('T')[0] ||
+        new Date().toISOString().split('T')[0];
+      const expiresAt = getTccCertificateValidUntilDate(result.data.export_date, issueDateRaw);
+
+      const certUpdate: { expires_at: string; issued_at?: string } = {
+        expires_at: expiresAt.toISOString(),
+      };
+      if (result.data.issue_date) {
+        certUpdate.issued_at = new Date(`${result.data.issue_date}T12:00:00`).toISOString();
+      }
 
       const { error: certDateError } = await adminSupabase
         .from('certificates')
-        .update({
-          issued_at: issueDate.toISOString(),
-          expires_at: expiresAt.toISOString(),
-        })
+        .update(certUpdate)
         .eq('id', certId)
         .eq('tcc_application_id', applicationId)
         .eq('type', 'TCC');

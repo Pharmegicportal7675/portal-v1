@@ -3,6 +3,7 @@ import type { TccPdfApplication, TccPdfChemical, TccPdfClient } from '@/lib/tcc-
 import { CERTIFICATES_BUCKET } from '@/lib/storage';
 import { generateTccCertificateHtmlPdf } from '@/lib/tcc-certificate-html-pdf-server';
 import { findReachCertificateForExportDate, REACH_CERTIFICATE_TYPE } from '@/lib/reach-certificate';
+import { getTccCertificateValidUntilIso } from '@/lib/tcc-certificate-dates';
 
 const REACH_QUOTA_CERT_SELECT =
   'id, certificate_number, client_id, chemical_id, status, expires_at, issued_at, type, allocated_quantity, tonnage_band, registration_number';
@@ -192,7 +193,9 @@ export function buildTccCertificatePdfInputFromCert(cert: {
     chemical,
     application,
     registrationNumber: cert.registration_number,
-    validUntilDate: cert.expires_at?.split('T')[0] || application.export_date || '',
+    validUntilDate:
+      cert.expires_at?.split('T')[0] ||
+      getTccCertificateValidUntilIso(application.export_date),
     deliveryChallanNo:
       application.purchase_order_number?.trim() || application.tracking_id || undefined,
   };
@@ -278,9 +281,8 @@ export async function buildTccApplicationPreviewInput(
   const issueDateRaw = app.certificate_issue_date
     ? String(app.certificate_issue_date).split('T')[0]
     : new Date().toISOString().split('T')[0];
-  const issueDate = new Date(`${issueDateRaw}T12:00:00`);
-  const expiryDate = new Date(issueDate);
-  expiryDate.setFullYear(expiryDate.getFullYear() + 1);
+  const exportDateRaw = app.export_date ? String(app.export_date).split('T')[0] : null;
+  const validUntilIso = getTccCertificateValidUntilIso(exportDateRaw, issueDateRaw);
 
   const application: TccPdfApplication = {
     quantity_mt: app.quantity_mt,
@@ -301,7 +303,7 @@ export async function buildTccApplicationPreviewInput(
     application,
     registrationNumber:
       reachCert?.registration_number?.trim() || app.registration_number?.trim() || null,
-    validUntilDate: expiryDate.toISOString().split('T')[0],
+    validUntilDate: validUntilIso,
     deliveryChallanNo: app.tracking_id?.trim() || app.purchase_order_number?.trim() || undefined,
   };
 }

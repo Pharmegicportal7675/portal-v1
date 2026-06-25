@@ -490,6 +490,7 @@ export function TccApplicationViewDialog({
                 <DetailItem label="Company name">{displayApp.eu_importer_company_name || '—'}</DetailItem>
                 <DetailItem label="Address">{displayApp.eu_importer_address || '—'}</DetailItem>
                 <DetailItem label="Purchase order number">{displayApp.purchase_order_number || '—'}</DetailItem>
+                <DetailItem label="Invoice No.">{displayApp.invoice_number || '—'}</DetailItem>
               </div>
             </div>
 

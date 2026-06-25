@@ -1,5 +1,5 @@
 import nodemailer from 'nodemailer';
-import { buildEmailShell, escapeEmailHtml, formatEmailDate, withEmailLogoAttachments } from '@/lib/email-branding';
+import { buildEmailShell, buildEmailDetailsTable, escapeEmailHtml, formatEmailDate, withEmailLogoAttachments } from '@/lib/email-branding';
 import { getRegulatoryRegistrationLabel, isEuReachFramework } from '@/lib/regulatory-registrations';
 
 export interface SmtpConfig {
@@ -95,6 +95,7 @@ interface SendTccApplicationNotificationOptions {
   euImporterCompanyName?: string | null;
   euImporterAddress?: string | null;
   purchaseOrderNumber?: string | null;
+  invoiceNumber?: string | null;
   currentAvailableMt?: number | null;
   projectedBalanceMt?: number | null;
   rcCertificateNumber?: string | null;
@@ -155,6 +156,7 @@ function getTccApplicationNotificationHtml(
         <p><strong>Company:</strong> ${escapeEmailHtml(details.euImporterCompanyName || '—')}</p>
         <p><strong>Address:</strong> ${escapeEmailHtml(details.euImporterAddress || '—')}</p>
         <p><strong>Purchase order number:</strong> ${escapeEmailHtml(details.purchaseOrderNumber || '—')}</p>
+        <p><strong>Invoice No.:</strong> ${escapeEmailHtml(details.invoiceNumber || '—')}</p>
       </div>
 
       ${quotaSection}
@@ -181,6 +183,7 @@ export async function sendTccApplicationNotificationEmail({
   euImporterCompanyName,
   euImporterAddress,
   purchaseOrderNumber,
+  invoiceNumber,
   currentAvailableMt,
   projectedBalanceMt,
   rcCertificateNumber,
@@ -206,6 +209,7 @@ export async function sendTccApplicationNotificationEmail({
     euImporterCompanyName,
     euImporterAddress,
     purchaseOrderNumber,
+    invoiceNumber,
     currentAvailableMt,
     projectedBalanceMt,
     rcCertificateNumber,
@@ -327,20 +331,19 @@ function getCertificateEmailHtml(
 ): string {
   const bodyHtml = `
       <p>Dear <strong>${escapeEmailHtml(companyName)}</strong>,</p>
-      <p>Your Tonnage Compliance Certificate (TCC) application has been <strong>approved</strong>. Please find the official certificate attached to this email.</p>
+      <p>Your Tonnage Coverage Certificate (TCC) application has been <strong>approved</strong>. Please find the official certificate attached to this email.</p>
       <div class="cert-box">
         <div style="font-size:11px;color:#064e3b;font-weight:700;margin-bottom:6px;letter-spacing:0.1em;">CERTIFICATE NUMBER</div>
         <div class="cert-number">${escapeEmailHtml(certNumber)}</div>
       </div>
-      <div class="details">
-        <div class="detail-row"><span class="label">Issued To</span><span class="value">${escapeEmailHtml(companyName)}</span></div>
-        <div class="detail-row"><span class="label">Substance</span><span class="value">${escapeEmailHtml(chemicalName)}</span></div>
-        <div class="detail-row"><span class="label">Status</span><span class="value" style="color:#16a34a;">✓ Active &amp; Valid</span></div>
-      </div>
-      <p style="font-size:13px;color:#64748b;">The PDF certificate is attached to this email. Please store it safely for compliance records. For verification, visit our public verification portal.</p>`;
+      ${buildEmailDetailsTable([
+        { label: 'Issued To', value: companyName },
+        { label: 'Substance', value: chemicalName },
+      ])}
+      <p style="font-size:13px;color:#64748b;">The PDF certificate is attached to this email. Please store it safely for compliance records.</p>`;
 
   return buildEmailShell({
-    subtitle: 'Tonnage Compliance Certificate Registry',
+    subtitle: 'Tonnage Coverage Certificate',
     bodyHtml,
   });
 }

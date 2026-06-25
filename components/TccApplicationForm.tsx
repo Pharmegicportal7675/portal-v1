@@ -122,6 +122,7 @@ export default function TccApplicationForm({
   const [purchaseOrderNumber, setPurchaseOrderNumber] = useState(
     editApplication?.purchase_order_number ?? ''
   );
+  const [invoiceNumber, setInvoiceNumber] = useState(editApplication?.invoice_number ?? '');
   const [caseNumber, setCaseNumber] = useState('');
   const [boFile, setBoFile] = useState<File | null>(null);
   const allowedFrameworks = REGULATORY_REGISTRATION_OPTIONS.filter((option) =>
@@ -145,6 +146,7 @@ export default function TccApplicationForm({
     setEuImporterCompanyName(editApplication.eu_importer_company_name?.trim() ?? '');
     setEuImporterAddress(editApplication.eu_importer_address ?? '');
     setPurchaseOrderNumber(editApplication.purchase_order_number ?? '');
+    setInvoiceNumber(editApplication.invoice_number ?? '');
     setBoFile(null);
     setError(null);
   }, [editApplication]);
@@ -336,6 +338,9 @@ export default function TccApplicationForm({
       payload.append('eu_importer_company_name', euImporterCompanyName.trim());
       payload.append('eu_importer_address', euImporterAddress.trim());
       payload.append('purchase_order_number', purchaseOrderNumber.trim());
+      if (invoiceNumber.trim()) {
+        payload.append('invoice_number', invoiceNumber.trim());
+      }
       payload.append('regulatory_framework', regulatoryFramework);
       if (boFile) {
         payload.append('bo_attachment', boFile);
@@ -507,6 +512,17 @@ export default function TccApplicationForm({
                       value={purchaseOrderNumber}
                       onChange={(e) => setPurchaseOrderNumber(e.target.value)}
                       required
+                    />
+                  </div>
+
+                  <div className="space-y-2 sm:col-span-2">
+                    <FormLabel>Invoice No.</FormLabel>
+                    <Input
+                      type="text"
+                      name="invoice_number"
+                      value={invoiceNumber}
+                      onChange={(e) => setInvoiceNumber(e.target.value)}
+                      placeholder="Enter invoice number"
                     />
                   </div>
                 </div>

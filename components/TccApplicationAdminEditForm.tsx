@@ -102,6 +102,9 @@ export function TccApplicationAdminEditForm({
       payload.append('eu_importer_company_name', form.eu_importer_company_name.trim());
       payload.append('eu_importer_address', form.eu_importer_address.trim());
       payload.append('purchase_order_number', form.purchase_order_number.trim());
+      if (form.invoice_number.trim()) {
+        payload.append('invoice_number', form.invoice_number.trim());
+      }
       payload.append('quantity_mt', form.quantity_mt);
       payload.append('export_date', form.export_date);
       if (form.certificateId) {
@@ -129,6 +132,7 @@ export function TccApplicationAdminEditForm({
         eu_importer_company_name: form.eu_importer_company_name.trim(),
         eu_importer_address: form.eu_importer_address.trim(),
         purchase_order_number: form.purchase_order_number.trim(),
+        invoice_number: form.invoice_number.trim() || null,
         quantity_mt: Number(form.quantity_mt),
         export_date: form.export_date,
         registration_number: form.registration_number.trim(),
@@ -170,6 +174,14 @@ export function TccApplicationAdminEditForm({
               value={form.purchase_order_number}
               onChange={(e) => updateField('purchase_order_number', e.target.value)}
               required
+            />
+          </div>
+          <div className="space-y-2 sm:col-span-2">
+            <FormLabel>Invoice No.</FormLabel>
+            <Input
+              value={form.invoice_number}
+              onChange={(e) => updateField('invoice_number', e.target.value)}
+              placeholder="Enter invoice number"
             />
           </div>
           <div className="space-y-2 sm:col-span-2">

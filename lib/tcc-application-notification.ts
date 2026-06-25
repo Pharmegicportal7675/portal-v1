@@ -16,6 +16,7 @@ export type TccApplicationNotificationDetails = {
   euImporterCompanyName?: string | null;
   euImporterAddress?: string | null;
   purchaseOrderNumber?: string | null;
+  invoiceNumber?: string | null;
   currentAvailableMt?: number | null;
   projectedBalanceMt?: number | null;
   rcCertificateNumber?: string | null;

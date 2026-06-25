@@ -126,6 +126,32 @@ export function escapeEmailHtml(value: string): string {
     .replace(/"/g, '&quot;');
 }
 
+export function buildEmailDetailsTable(
+  rows: Array<{ label: string; value: string; valueColor?: string }>
+): string {
+  const rowsHtml = rows
+    .map((row, index) => {
+      const border =
+        index < rows.length - 1 ? 'border-bottom:1px solid #e2e8f0;' : '';
+      return `
+        <tr>
+          <td style="padding:12px 14px;color:#64748b;font-size:13px;font-weight:600;width:40%;vertical-align:top;${border}">
+            ${escapeEmailHtml(row.label)}
+          </td>
+          <td style="padding:12px 14px;color:${row.valueColor || '#0f172a'};font-size:14px;font-weight:700;text-align:right;vertical-align:top;${border}">
+            ${escapeEmailHtml(row.value)}
+          </td>
+        </tr>`;
+    })
+    .join('');
+
+  return `
+    <table role="presentation" cellpadding="0" cellspacing="0" width="100%" style="background:#f8fafc;border:1px solid #e2e8f0;border-radius:8px;margin:16px 0;border-collapse:separate;">
+      <tbody>${rowsHtml}
+      </tbody>
+    </table>`;
+}
+
 export function buildEmailShell(options: {
   subtitle?: string;
   bodyHtml: string;

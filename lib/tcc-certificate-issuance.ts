@@ -4,6 +4,7 @@ import { buildClientDateStoragePath } from '@/lib/storage-paths';
 import { resolveTccPdfChemicalTonnageBand } from '@/lib/tcc-certificate-pdf';
 import type { TccPdfChemical } from '@/lib/tcc-certificate-html-data';
 import { generateUniqueTccCertificateNumber } from '@/lib/tcc-certificate-number';
+import { getTccCertificateValidUntilDate, getTccCertificateValidUntilIso } from '@/lib/tcc-certificate-dates';
 import { CERTIFICATES_BUCKET, ensureCertificatesBucket } from '@/lib/storage';
 
 type TccIssuanceApplication = {
@@ -60,8 +61,10 @@ export async function upsertTccCertificateForApplication(
   const { application: rawApplication, issueDateIso, registrationNumber } = params;
   const application = normalizeIssuanceApplication(rawApplication);
   const { issueDate, issueDateRaw } = parseIssueDateIso(issueDateIso);
-  const expiryDate = new Date(issueDate);
-  expiryDate.setFullYear(expiryDate.getFullYear() + 1);
+  const exportDate =
+    application.export_date != null ? String(application.export_date).split('T')[0] : null;
+  const expiryDate = getTccCertificateValidUntilDate(exportDate, issueDateRaw);
+  const validUntilIso = getTccCertificateValidUntilIso(exportDate, issueDateRaw);
 
   const { data: existingCert } = await supabase
     .from('certificates')
@@ -88,7 +91,7 @@ export async function upsertTccCertificateForApplication(
     chemical,
     application: application as never,
     registrationNumber: registrationNumber ?? null,
-    validUntilDate: expiryDate.toISOString().split('T')[0],
+    validUntilDate: validUntilIso,
     deliveryChallanNo: application.tracking_id,
     issuedDate: issueDateRaw,
   });

@@ -37,6 +37,7 @@ import {
   TccApplicationAdminEditForm,
   buildTccAdminEditValues,
 } from '@/components/TccApplicationAdminEditForm';
+import { getTccCertificateValidUntilDate } from '@/lib/tcc-certificate-dates';
 import type { TccViewApplication } from '@/components/TccApplicationViewDialog';
 
 type TccApplicationPreview = {
@@ -290,9 +291,21 @@ export default function CertificatePreviewClient({
               setTccApp((prev) => (prev ? { ...prev, ...appUpdates } : prev));
               if (certificateIssuedAt) {
                 setIssuedAt(certificateIssuedAt);
-                const nextExpiry = new Date(certificateIssuedAt);
-                nextExpiry.setFullYear(nextExpiry.getFullYear() + 1);
-                setExpiresAt(nextExpiry.toISOString());
+                const exportDate =
+                  appUpdates.export_date ?? viewApplication.export_date ?? null;
+                setExpiresAt(
+                  getTccCertificateValidUntilDate(
+                    exportDate ? String(exportDate).split('T')[0] : null,
+                    certificateIssuedAt.split('T')[0]
+                  ).toISOString()
+                );
+              } else if (appUpdates.export_date) {
+                setExpiresAt(
+                  getTccCertificateValidUntilDate(
+                    String(appUpdates.export_date).split('T')[0],
+                    issuedAt?.split('T')[0] ?? null
+                  ).toISOString()
+                );
               }
               setIsEditing(false);
               setPreviewVersion((v) => v + 1);
@@ -360,6 +373,12 @@ export default function CertificatePreviewClient({
                       <div>
                         <p className="text-xs text-slate-400 font-bold uppercase tracking-wider mb-0.5">PO number</p>
                         <p className="font-semibold text-slate-700">{tccApp.purchase_order_number}</p>
+                      </div>
+                    )}
+                    {tccApp.invoice_number && (
+                      <div>
+                        <p className="text-xs text-slate-400 font-bold uppercase tracking-wider mb-0.5">Invoice No.</p>
+                        <p className="font-semibold text-slate-700">{tccApp.invoice_number}</p>
                       </div>
                     )}
                     {tccApp.registration_number && (
