@@ -9,6 +9,8 @@ import { FormLabel } from './ui/FormLabel';
 import { ModalErrorBox } from './ui/ModalErrorBox';
 import { toast } from '@/store/toast';
 import type { TccViewApplication } from './TccApplicationViewDialog';
+import { getTccCertificateValidUntilIso } from '@/lib/tcc-certificate-dates';
+import { resolveTccApplicationIssueDate } from '@/lib/tcc-application-certificate';
 
 export type TccAdminEditValues = {
   applicationId: string;
@@ -19,6 +21,7 @@ export type TccAdminEditValues = {
   invoice_number: string;
   quantity_mt: string;
   issue_date: string;
+  valid_until_date: string;
   export_date: string;
   registration_number: string;
   remarks: string;
@@ -40,6 +43,15 @@ function formatDateInput(value: string | null | undefined) {
   return value.slice(0, 10);
 }
 
+function resolveCertificateValidUntil(app: TccViewApplication): string {
+  const cert = app.certificates;
+  const certRow = cert ? (Array.isArray(cert) ? cert[0] : cert) : null;
+  if (certRow?.expires_at) return formatDateInput(certRow.expires_at);
+
+  const issueDate = resolveCertificateIssuedAt(app) || formatDateInput(resolveTccApplicationIssueDate(app));
+  return getTccCertificateValidUntilIso(app.export_date, issueDate || null);
+}
+
 export function buildTccAdminEditValues(app: TccViewApplication): TccAdminEditValues {
   const cert = app.certificates;
   const certRow = cert ? (Array.isArray(cert) ? cert[0] : cert) : null;
@@ -53,6 +65,7 @@ export function buildTccAdminEditValues(app: TccViewApplication): TccAdminEditVa
     invoice_number: app.invoice_number?.trim() ?? '',
     quantity_mt: String(app.quantity_mt ?? ''),
     issue_date: resolveCertificateIssuedAt(app),
+    valid_until_date: resolveCertificateValidUntil(app),
     export_date: formatDateInput(app.export_date),
     registration_number: app.registration_number?.trim() ?? '',
     remarks: app.remarks?.trim() ?? '',
@@ -71,6 +84,7 @@ function flattenActionError(error: unknown): string {
 
 export type TccAdminEditSavedUpdates = Partial<TccViewApplication> & {
   certificateIssuedAt?: string;
+  certificateExpiresAt?: string;
 };
 
 interface TccApplicationAdminEditFormProps {
@@ -113,6 +127,9 @@ export function TccApplicationAdminEditForm({
       if (form.issue_date) {
         payload.append('issue_date', form.issue_date);
       }
+      if (form.valid_until_date) {
+        payload.append('valid_until_date', form.valid_until_date);
+      }
       payload.append('registration_number', form.registration_number.trim());
       payload.append('remarks', form.remarks.trim());
 
@@ -127,6 +144,9 @@ export function TccApplicationAdminEditForm({
       const issueDateIso = form.issue_date
         ? new Date(`${form.issue_date}T12:00:00`).toISOString()
         : null;
+      const expiresAtIso = form.valid_until_date
+        ? new Date(`${form.valid_until_date}T12:00:00`).toISOString()
+        : null;
 
       onSaved({
         eu_importer_company_name: form.eu_importer_company_name.trim(),
@@ -140,6 +160,7 @@ export function TccApplicationAdminEditForm({
         updated_at: new Date().toISOString(),
         certificate_issue_date: form.issue_date || null,
         ...(issueDateIso ? { certificateIssuedAt: issueDateIso } : {}),
+        ...(expiresAtIso ? { certificateExpiresAt: expiresAtIso } : {}),
       });
     });
   };
@@ -197,6 +218,18 @@ export function TccApplicationAdminEditForm({
               {form.certificateId
                 ? 'Updates the issued date on the generated certificate.'
                 : 'Saved on the application and used as the certificate issue date when you approve.'}
+            </p>
+          </div>
+          <div className="space-y-2">
+            <FormLabel>Valid upto</FormLabel>
+            <DatePicker
+              value={form.valid_until_date}
+              onChange={(value) => updateField('valid_until_date', value)}
+            />
+            <p className="text-[10px] text-slate-500 font-medium">
+              {form.certificateId
+                ? 'Updates the validity end date shown on the TCC certificate.'
+                : 'Applied to the certificate when it is issued on approval.'}
             </p>
           </div>
           <div className="space-y-2">

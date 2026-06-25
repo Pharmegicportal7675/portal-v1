@@ -7,6 +7,7 @@ type TccApplicationCertificateInput = {
   status: string;
   updated_at?: string | null;
   certificate_issue_date?: string | null;
+  export_date?: string | null;
   certificates?: TccCertificateRow | TccCertificateRow[] | null;
 };
 
@@ -20,7 +21,7 @@ export function resolveTccCertificateRow(
   return cert;
 }
 
-/** Issue date: issued certificate → stored issue date → approval timestamp. */
+/** Issue date: issued certificate → stored issue date → export date → approval timestamp. */
 export function resolveTccApplicationIssueDate(
   app: TccApplicationCertificateInput | null | undefined
 ): string | null {
@@ -30,6 +31,11 @@ export function resolveTccApplicationIssueDate(
 
   if (app.certificate_issue_date) {
     const raw = String(app.certificate_issue_date).split('T')[0];
+    return `${raw}T12:00:00.000Z`;
+  }
+
+  if (app.export_date) {
+    const raw = String(app.export_date).split('T')[0];
     return `${raw}T12:00:00.000Z`;
   }
 

@@ -135,6 +135,8 @@ export const adminTccApplicationUpdateSchema = z.object({
   export_date: z.string().min(1, { message: 'Expected export date is required' }),
   issue_date: z
     .preprocess((val) => (val == null || val === '' ? undefined : String(val)), z.string().optional()),
+  valid_until_date: z
+    .preprocess((val) => (val == null || val === '' ? undefined : String(val)), z.string().optional()),
   certificate_id: z
     .preprocess((val) => (val == null || val === '' ? undefined : String(val)), z.string().uuid().optional()),
   registration_number: z

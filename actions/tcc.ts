@@ -733,6 +733,7 @@ function parseAdminTccUpdateFormData(formData: FormData) {
     quantity_mt: formData.get('quantity_mt'),
     export_date: formData.get('export_date'),
     issue_date: formData.get('issue_date') ?? '',
+    valid_until_date: formData.get('valid_until_date') ?? '',
     certificate_id: formData.get('certificate_id') ?? '',
     registration_number: formData.get('registration_number') ?? '',
     remarks: formData.get('remarks') ?? '',
@@ -796,18 +797,22 @@ export async function adminUpdateTccApplicationAction(prevState: unknown, formDa
     }
 
     let beforeIssueDate = existingApp.certificate_issue_date;
+    let beforeExpiresAt: string | null = null;
     if (certId) {
       const { data: certRow } = await adminSupabase
         .from('certificates')
-        .select('issued_at')
+        .select('issued_at, expires_at')
         .eq('id', certId)
         .maybeSingle();
       if (certRow?.issued_at) {
         beforeIssueDate = certRow.issued_at.split('T')[0];
       }
+      if (certRow?.expires_at) {
+        beforeExpiresAt = certRow.expires_at.split('T')[0];
+      }
     }
 
-    const beforeSnapshot = {
+    const beforeSnapshot: Record<string, unknown> = {
       eu_importer_company_name: existingApp.eu_importer_company_name,
       eu_importer_address: existingApp.eu_importer_address,
       purchase_order_number: existingApp.purchase_order_number,
@@ -818,6 +823,9 @@ export async function adminUpdateTccApplicationAction(prevState: unknown, formDa
       registration_number: existingApp.registration_number,
       remarks: existingApp.remarks,
     };
+    if (certId) {
+      beforeSnapshot.certificate_expires_at = beforeExpiresAt;
+    }
 
     const { data: chem } = await adminSupabase
       .from('chemicals')
@@ -920,13 +928,26 @@ export async function adminUpdateTccApplicationAction(prevState: unknown, formDa
       );
     }
 
+    let afterExpiresAt: string | null = null;
+
     if (certId) {
       const issueDateRaw =
         result.data.issue_date?.trim() ||
         existing.certificate_issue_date?.split('T')[0] ||
         beforeIssueDate?.split('T')[0] ||
         new Date().toISOString().split('T')[0];
-      const expiresAt = getTccCertificateValidUntilDate(result.data.export_date, issueDateRaw);
+      const validUntilInput = result.data.valid_until_date?.trim();
+      let expiresAt: Date;
+      if (validUntilInput) {
+        expiresAt = new Date(`${validUntilInput}T12:00:00`);
+        const issueBaseline = new Date(`${issueDateRaw}T12:00:00`);
+        if (expiresAt < issueBaseline) {
+          return { success: false, error: 'Valid upto date cannot be before issue date.' };
+        }
+      } else {
+        expiresAt = getTccCertificateValidUntilDate(result.data.export_date, issueDateRaw);
+      }
+      afterExpiresAt = expiresAt.toISOString().split('T')[0];
 
       const certUpdate: { expires_at: string; issued_at?: string } = {
         expires_at: expiresAt.toISOString(),
@@ -959,7 +980,7 @@ export async function adminUpdateTccApplicationAction(prevState: unknown, formDa
       await regenerateTccCertificateFile(adminSupabase, certId);
     }
 
-    const afterSnapshot = {
+    const afterSnapshot: Record<string, unknown> = {
       eu_importer_company_name: result.data.eu_importer_company_name.trim(),
       eu_importer_address: result.data.eu_importer_address.trim(),
       purchase_order_number: result.data.purchase_order_number.trim(),
@@ -970,6 +991,9 @@ export async function adminUpdateTccApplicationAction(prevState: unknown, formDa
       registration_number: result.data.registration_number?.trim() || null,
       remarks: result.data.remarks?.trim() || null,
     };
+    if (certId && afterExpiresAt) {
+      afterSnapshot.certificate_expires_at = afterExpiresAt;
+    }
     const fieldChanges = buildTccApplicationFieldChanges(beforeSnapshot, afterSnapshot);
 
     await adminSupabase.from('activity_logs').insert({

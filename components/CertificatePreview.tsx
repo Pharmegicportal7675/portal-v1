@@ -287,10 +287,14 @@ export default function CertificatePreviewClient({
             values={buildTccAdminEditValues(viewApplication)}
             onCancel={() => setIsEditing(false)}
             onSaved={(updates) => {
-              const { certificateIssuedAt, ...appUpdates } = updates;
+              const { certificateIssuedAt, certificateExpiresAt, ...appUpdates } = updates;
               setTccApp((prev) => (prev ? { ...prev, ...appUpdates } : prev));
               if (certificateIssuedAt) {
                 setIssuedAt(certificateIssuedAt);
+              }
+              if (certificateExpiresAt) {
+                setExpiresAt(certificateExpiresAt);
+              } else if (certificateIssuedAt) {
                 const exportDate =
                   appUpdates.export_date ?? viewApplication.export_date ?? null;
                 setExpiresAt(

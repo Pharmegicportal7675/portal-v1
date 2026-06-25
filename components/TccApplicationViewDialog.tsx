@@ -54,6 +54,7 @@ export interface TccViewCertificate {
   certificate_number: string;
   file_url: string | null;
   issued_at: string;
+  expires_at?: string | null;
   registration_number?: string | null;
   mail_sent?: boolean;
   mail_sent_at?: string | null;
@@ -356,16 +357,20 @@ export function TccApplicationViewDialog({
             values={buildTccAdminEditValues(displayApp)}
             onCancel={() => setIsEditing(false)}
             onSaved={(updates) => {
-              const { certificateIssuedAt, ...appUpdates } = updates;
+              const { certificateIssuedAt, certificateExpiresAt, ...appUpdates } = updates;
               setDisplayApp((prev) => {
                 if (!prev) return prev;
                 let next = { ...prev, ...appUpdates };
-                if (certificateIssuedAt) {
+                if (certificateIssuedAt || certificateExpiresAt) {
                   const existingCert = resolveCertificate(prev);
                   if (existingCert) {
                     next = {
                       ...next,
-                      certificates: { ...existingCert, issued_at: certificateIssuedAt },
+                      certificates: {
+                        ...existingCert,
+                        ...(certificateIssuedAt ? { issued_at: certificateIssuedAt } : {}),
+                        ...(certificateExpiresAt ? { expires_at: certificateExpiresAt } : {}),
+                      },
                     };
                   }
                 }
@@ -412,6 +417,9 @@ export function TccApplicationViewDialog({
               </DetailItem>
               <DetailItem label="Issue date">
                 {formatDisplayDate(resolveIssueDate(displayApp))}
+              </DetailItem>
+              <DetailItem label="Invoice No.">
+                {displayApp.invoice_number?.trim() || '—'}
               </DetailItem>
               <DetailItem label="Quantity requested">
                 <span className="text-lg font-black text-teal-800">{displayApp.quantity_mt} MT</span>
@@ -490,7 +498,6 @@ export function TccApplicationViewDialog({
                 <DetailItem label="Company name">{displayApp.eu_importer_company_name || '—'}</DetailItem>
                 <DetailItem label="Address">{displayApp.eu_importer_address || '—'}</DetailItem>
                 <DetailItem label="Purchase order number">{displayApp.purchase_order_number || '—'}</DetailItem>
-                <DetailItem label="Invoice No.">{displayApp.invoice_number || '—'}</DetailItem>
               </div>
             </div>
 
