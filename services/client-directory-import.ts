@@ -2,7 +2,12 @@ import type { DbClient } from '@/lib/db/types';
 import { hashPassword } from '@/lib/auth/password';
 import { createReachCertificate } from '@/actions/reach';
 import { getTonnageBandMaxQuota } from '@/lib/quota';
-import { REACH_CERTIFICATE_TYPE } from '@/lib/reach-certificate';
+import {
+  findReachCertificateYearConflict,
+  getReachCertificateYear,
+  isReachCertificateType,
+  type ReachCertificateRecord,
+} from '@/lib/reach-certificate';
 import {
   CLIENT_IMPORT_DEFAULT_PASSWORD,
   type ParsedClientImportRow,
@@ -439,22 +444,44 @@ async function ensureChemicalId(
   return newChem.id;
 }
 
-async function hasActiveReachCertificate(
+async function hasReachCertificateInYear(
   adminSupabase: DbClient,
   clientId: string,
-  chemicalId: string
-): Promise<boolean> {
+  chemicalId: string,
+  params: {
+    issuedDate: string;
+    chemicalName: string;
+    casNumber: string;
+    registrationNumber: string;
+  }
+): Promise<{ exists: boolean; reason?: string }> {
+  const certYear = getReachCertificateYear(params.issuedDate);
+  if (certYear == null) return { exists: false };
+
   const { data } = await adminSupabase
     .from('certificates')
-    .select('id')
+    .select(
+      'id, issued_at, expires_at, status, certificate_number, type, chemical_id, registration_number, chemicals(cas_number)'
+    )
     .eq('client_id', clientId)
-    .eq('chemical_id', chemicalId)
-    .eq('type', REACH_CERTIFICATE_TYPE)
     .neq('status', 'revoked')
-    .limit(1)
-    .maybeSingle();
+    .order('issued_at', { ascending: false });
 
-  return Boolean(data?.id);
+  const existingReachCerts = ((data || []) as ReachCertificateRecord[]).filter(isReachCertificateType);
+  const yearConflict = findReachCertificateYearConflict(
+    existingReachCerts,
+    chemicalId,
+    certYear,
+    params.chemicalName,
+    params.casNumber,
+    params.registrationNumber
+  );
+
+  if (yearConflict) {
+    return { exists: true, reason: yearConflict };
+  }
+
+  return { exists: false };
 }
 
 async function issueReachCertificateForImportedSubstance(
@@ -471,8 +498,15 @@ async function issueReachCertificateForImportedSubstance(
 
   if (dryRun) return { ok: true, issued: true };
 
-  const alreadyIssued = await hasActiveReachCertificate(adminSupabase, clientId, chemicalId);
-  if (alreadyIssued) return { ok: true, issued: false };
+  const yearGuard = await hasReachCertificateInYear(adminSupabase, clientId, chemicalId, {
+    issuedDate: substance.issued_date,
+    chemicalName: substance.chemical_name,
+    casNumber: substance.cas_number,
+    registrationNumber: substance.registration_number,
+  });
+  if (yearGuard.exists) {
+    return { ok: true, issued: false };
+  }
 
   const bandMax = getTonnageBandMaxQuota(substance.tonnage_band);
   const allocated =

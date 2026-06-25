@@ -239,6 +239,68 @@ export async function deleteClientAction(clientId: string) {
   }
 }
 
+export async function deleteSelectedClientsAction(clientIds: string[]) {
+  const session = await requireAdmin();
+  if (!session || session.role !== 'SUPER_ADMIN') {
+    return { success: false, error: 'Only Super Admin can bulk delete clients.' };
+  }
+
+  const uniqueIds = [...new Set((clientIds || []).map((id) => String(id).trim()).filter(Boolean))];
+  if (uniqueIds.length === 0) {
+    return { success: false, error: 'No clients selected for deletion.' };
+  }
+
+  const adminSupabase = createAdminClient();
+  const deletedCompanies: string[] = [];
+  const failed: string[] = [];
+
+  for (const clientId of uniqueIds) {
+    try {
+      const { data: client, error: fetchError } = await adminSupabase
+        .from('clients')
+        .select('id, company_name')
+        .eq('id', clientId)
+        .maybeSingle();
+
+      if (fetchError) throw fetchError;
+      if (!client) {
+        failed.push(`${clientId}: Client not found.`);
+        continue;
+      }
+
+      const { error: userError } = await adminSupabase.from('users').delete().eq('client_id', clientId);
+      if (userError) throw userError;
+
+      const { error: clientError } = await adminSupabase.from('clients').delete().eq('id', clientId);
+      if (clientError) throw clientError;
+
+      deletedCompanies.push(client.company_name);
+    } catch (err) {
+      const message = err instanceof Error ? err.message : String(err);
+      failed.push(`${clientId}: ${message}`);
+    }
+  }
+
+  revalidatePath('/admin/clients');
+  revalidatePath('/admin/rc-certificates');
+  revalidatePath('/admin/approvals');
+
+  if (failed.length > 0) {
+    return {
+      success: deletedCompanies.length > 0,
+      error: `Deleted ${deletedCompanies.length} clients, ${failed.length} failed.`,
+      deletedCompanies,
+      failed,
+    };
+  }
+
+  return {
+    success: true,
+    message: `${deletedCompanies.length} selected clients and related RC/TCC data deleted permanently.`,
+    deletedCompanies,
+  };
+}
+
 // ============================================================================
 // ADD NEW CHEMICAL AND ASSIGN TO CLIENT
 // ============================================================================

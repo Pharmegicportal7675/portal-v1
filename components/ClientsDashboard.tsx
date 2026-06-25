@@ -4,7 +4,12 @@ import { useState, useTransition, useEffect, useMemo } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { createClient } from '@/lib/db/browser';
-import { updateClientAction, deleteClientAction, getClientChemicalIdsForEditAction } from '@/actions/clients';
+import {
+  updateClientAction,
+  deleteClientAction,
+  deleteSelectedClientsAction,
+  getClientChemicalIdsForEditAction,
+} from '@/actions/clients';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from './ui/Card';
 import { Button } from './ui/Button';
 import { Input } from './ui/Input';
@@ -101,6 +106,7 @@ export default function ClientsDashboard({ initialClients, chemicals, adminRole 
   // Modals state
   const [isEditOpen, setIsEditOpen] = useState(false);
   const [isDeleteOpen, setIsDeleteOpen] = useState(false);
+  const [isBulkDeleteOpen, setIsBulkDeleteOpen] = useState(false);
 
   // Active client being edited/deleted
   const [selectedClient, setSelectedClient] = useState<Client | null>(null);
@@ -291,6 +297,7 @@ export default function ClientsDashboard({ initialClients, chemicals, adminRole 
   };
 
   const canDeleteClient = adminRole === 'MASTER_ADMIN' || adminRole === 'SUPER_ADMIN';
+  const canBulkDeleteClients = adminRole === 'SUPER_ADMIN';
 
   const handleDeleteClient = async () => {
     if (!selectedClient) return;
@@ -303,6 +310,28 @@ export default function ClientsDashboard({ initialClients, chemicals, adminRole 
         router.refresh();
       } else {
         toast.error(res.error || 'Failed to delete client.');
+      }
+    });
+  };
+
+  const handleBulkDeleteClients = async () => {
+    if (selectedClientIds.length === 0) return;
+
+    startTransition(async () => {
+      const res = await deleteSelectedClientsAction(selectedClientIds);
+      if (res.success) {
+        toast.success(
+          res.message ||
+            `Deleted ${selectedClientIds.length} clients and related RC/TCC records.`
+        );
+        if (res.failed?.length) {
+          toast.error(`Some deletions failed (${res.failed.length}).`);
+        }
+        setSelectedClientIds([]);
+        setIsBulkDeleteOpen(false);
+        router.refresh();
+      } else {
+        toast.error(res.error || 'Failed to delete selected clients.');
       }
     });
   };
@@ -361,6 +390,22 @@ export default function ClientsDashboard({ initialClients, chemicals, adminRole 
         </div>
         <div className="flex flex-wrap items-center gap-2 sm:self-start">
           <ClientDirectoryImport />
+          {canBulkDeleteClients && (
+            <Button
+              variant="destructive"
+              onClick={() => setIsBulkDeleteOpen(true)}
+              disabled={selectedClientIds.length === 0 || isPending}
+              className="disabled:opacity-50"
+              title={
+                selectedClientIds.length === 0
+                  ? 'Select clients to delete'
+                  : `Delete ${selectedClientIds.length} selected clients`
+              }
+            >
+              <Trash2 className="h-4 w-4 mr-2" />
+              Delete Selected ({selectedClientIds.length})
+            </Button>
+          )}
           <ClientDirectoryExport
             filteredClientIds={filteredClientIds}
             selectedClientIds={selectedClientIds}
@@ -575,6 +620,43 @@ export default function ClientsDashboard({ initialClients, chemicals, adminRole 
               className="bg-rose-600 hover:bg-rose-700 text-white border-rose-600 hover:border-rose-700"
             >
               Yes, Delete Permanently
+            </Button>
+          </div>
+        </div>
+      </Dialog>
+
+      <Dialog
+        isOpen={isBulkDeleteOpen}
+        onClose={() => setIsBulkDeleteOpen(false)}
+        title="Delete Selected Clients"
+      >
+        <div className="space-y-4">
+          <p className="text-sm text-slate-600 font-medium">
+            Delete <span className="font-bold text-slate-800">{selectedClientIds.length}</span>{' '}
+            selected clients with their related RC certificates, TCC applications/certificates, and
+            linked compliance records?
+          </p>
+          <div className="p-3 bg-rose-50 border border-rose-100 rounded-lg text-xs text-rose-700 font-semibold space-y-1">
+            <p className="font-bold">WARNING: THIS ACTION IS PERMANENT & CANNOT BE UNDONE.</p>
+            <p>Only Super Admin can perform this bulk deletion.</p>
+          </div>
+          <div className="flex justify-end gap-3 pt-2">
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => setIsBulkDeleteOpen(false)}
+              disabled={isPending}
+            >
+              Cancel
+            </Button>
+            <Button
+              type="button"
+              variant="destructive"
+              onClick={handleBulkDeleteClients}
+              isLoading={isPending}
+              disabled={isPending || selectedClientIds.length === 0}
+            >
+              Delete Selected Permanently
             </Button>
           </div>
         </div>
