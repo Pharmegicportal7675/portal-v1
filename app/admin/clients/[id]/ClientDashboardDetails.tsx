@@ -78,6 +78,7 @@ import { CertificatePdfDownloadLink } from '@/components/CertificatePdfDownloadL
 import { TableDataExport } from '@/components/TableDataExport';
 import { ResponsiveTableScroll } from '@/components/ui/ResponsiveTableScroll';
 import { formatDisplayDate } from '@/lib/date-filter';
+import { buildTccExportColumns } from '@/lib/tcc-export-columns';
 import type { CsvColumn } from '@/lib/export-csv';
 import { processTccAction } from '@/actions/tcc';
 import { canClientEditTccApplication } from '@/lib/tcc-application';
@@ -403,22 +404,14 @@ export default function ClientDashboardDetails({
     setSelectedTccAppIds(allTccSelected ? [] : tccHistory.map((app) => app.id));
   };
 
-  const TCC_CLIENT_EXPORT_COLUMNS: CsvColumn<(typeof tccHistory)[number]>[] = [
-    { header: 'Company', value: () => client.company_name },
-    {
-      header: 'Certificate No.',
-      value: (app) => resolveTccCertificateNumber(app) || '',
-    },
-    {
-      header: 'Substance',
-      value: (app) => app.chemicals?.chemical_name || 'N/A',
-    },
-    { header: 'Quantity (MT)', value: (app) => app.quantity_mt },
-    { header: 'Registration Number', value: (app) => app.registration_number },
-    { header: 'Submitted', value: (app) => formatDisplayDate(app.created_at) },
-    { header: 'Export Date', value: (app) => formatDisplayDate(app.export_date) },
-    { header: 'Status', value: (app) => app.status },
-  ];
+  const TCC_CLIENT_EXPORT_COLUMNS = useMemo(
+    () =>
+      buildTccExportColumns({
+        companyName: client.company_name,
+        clientEmail: client.email,
+      }),
+    [client.company_name, client.email]
+  );
 
   const [isTccViewOpen, setIsTccViewOpen] = useState(false);
   const [viewTccApp, setViewTccApp] = useState<TccViewApplication | null>(null);

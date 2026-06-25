@@ -27,7 +27,7 @@ import { CertificatePdfDownloadLink } from '@/components/CertificatePdfDownloadL
 import { TableDataExport } from '@/components/TableDataExport';
 import { ResponsiveTableScroll } from './ui/ResponsiveTableScroll';
 import type { TccEmailDefaults } from '@/components/TccApplicationViewDialog';
-import type { CsvColumn } from '@/lib/export-csv';
+import { buildTccExportColumns, type TccExportApplication } from '@/lib/tcc-export-columns';
 import { toast } from '@/store/toast';
 import { isEuReachFramework } from '@/lib/regulatory-registrations';
 import {
@@ -51,6 +51,7 @@ interface CertificateRow {
   certificate_number: string;
   file_url: string | null;
   issued_at: string;
+  expires_at?: string | null;
   registration_number?: string | null;
   mail_sent?: boolean;
   mail_sent_at?: string | null;
@@ -58,31 +59,16 @@ interface CertificateRow {
   last_resend_at?: string | null;
 }
 
-interface Application {
+interface Application extends TccExportApplication {
   id: string;
-  tracking_id?: string | null;
   client_id: string;
   chemical_id: string;
-  quantity_mt: number;
   registration_number: string | null;
-  export_date: string | null;
-  remarks?: string | null;
-  status: 'pending' | 'approved' | 'rejected' | 'changes_required' | 'modification_requested';
   rejection_reason: string | null;
-  eu_importer_company_name?: string | null;
-  eu_importer_address?: string | null;
-  purchase_order_number?: string | null;
-  invoice_number?: string | null;
   bo_attachment_url: string | null;
   bo_attachment_name: string | null;
-  created_at: string;
   updated_at: string;
-  certificate_issue_date?: string | null;
-  rc_remaining_quota?: number | null;
   rc_period_certificate?: string | null;
-  rc_tonnage_band?: string | null;
-  rc_registration_number?: string | null;
-  rc_certificate_year?: number | null;
   regulatory_framework?: string | null;
   client_chemicals?: { available_quantity: number; registration_number?: string | null } | null;
   clients: {
@@ -140,22 +126,7 @@ function getCertificateNumber(app: Application): string | null {
   return resolveTccApplicationCertificateNumber(app);
 }
 
-const TCC_EXPORT_COLUMNS: CsvColumn<Application>[] = [
-  { header: 'Company', value: (app) => app.clients.company_name },
-  { header: 'Client Email', value: (app) => app.clients.email },
-  { header: 'Tracking ID', value: (app) => app.tracking_id },
-  { header: 'Substance', value: (app) => app.chemicals.chemical_name },
-  { header: 'CAS Number', value: (app) => app.chemicals.cas_number },
-  { header: 'EC Number', value: (app) => app.chemicals.ec_number },
-  { header: 'Quantity (MT)', value: (app) => app.quantity_mt },
-  { header: 'Registration Number', value: (app) => resolveTccApplicationRegistrationNumber(app) },
-  { header: 'Export Date', value: (app) => formatDisplayDate(app.export_date) },
-  { header: 'Submitted', value: (app) => formatDisplayDate(app.created_at) },
-  { header: 'Issue Date', value: (app) => formatDisplayDate(getIssueDate(app)) },
-  { header: 'Approve Date', value: (app) => formatDisplayDate(getApproveDate(app)) },
-  { header: 'Status', value: (app) => app.status },
-  { header: 'Certificate No.', value: (app) => getCertificateNumber(app) },
-];
+const TCC_EXPORT_COLUMNS = buildTccExportColumns();
 
 export default function ApprovalsDashboard({ initialApplications, emailDefaults }: ApprovalsDashboardProps) {
   const router = useRouter();

@@ -240,7 +240,7 @@ const REACH_QUOTA_CERT_SELECT =
 const TCC_APPROVED_EXPORT_SELECT =
   'id, client_id, chemical_id, quantity_mt, status, export_date, reach_certificate_id, updated_at, created_at, certificates!certificates_tcc_application_id_fkey(issued_at)';
 
-async function enrichTccApplicationsWithRcQuota(
+export async function enrichTccApplicationsWithRcQuota(
   supabase: DbClient,
   applications: Record<string, unknown>[]
 ) {

@@ -3,6 +3,7 @@ import { createAdminClient } from '@/lib/db/admin';
 import { getSession } from '@/lib/auth/session';
 import { redirect } from 'next/navigation';
 import { getLatestReachCertForChemical, type ReachCertificateRecord } from '@/lib/reach-certificate';
+import { enrichTccApplicationsWithRcQuota } from '@/services/db';
 
 export const loadClientProfileData = cache(async function loadClientProfileData(clientId: string) {
   const session = await getSession();
@@ -39,7 +40,7 @@ export const loadClientProfileData = cache(async function loadClientProfileData(
     adminSupabase.from('client_contacts').select('*').eq('client_id', clientId).order('created_at', { ascending: false }),
     adminSupabase
       .from('tcc_applications')
-      .select('*, chemicals(*), certificates!certificates_tcc_application_id_fkey(*), client_chemicals(available_quantity)')
+      .select('*, chemicals(*), certificates!certificates_tcc_application_id_fkey(*), client_chemicals(available_quantity, registration_number)')
       .eq('client_id', clientId)
       .order('created_at', { ascending: false }),
     adminSupabase
@@ -56,12 +57,15 @@ export const loadClientProfileData = cache(async function loadClientProfileData(
     adminSupabase.from('admin_settings').select('smtp_from, smtp_cc_default').eq('id', 1).maybeSingle(),
   ]);
 
-  const tccHistory = (tccHistoryRaw || []).map((row: { chemicals?: unknown; certificates?: unknown; client_chemicals?: unknown }) => ({
-    ...row,
-    chemicals: Array.isArray(row.chemicals) ? row.chemicals[0] : row.chemicals,
-    certificates: Array.isArray(row.certificates) ? row.certificates[0] ?? null : row.certificates,
-    client_chemicals: Array.isArray(row.client_chemicals) ? row.client_chemicals[0] ?? null : row.client_chemicals,
-  }));
+  const tccHistory = await enrichTccApplicationsWithRcQuota(
+    adminSupabase,
+    (tccHistoryRaw || []).map((row: { chemicals?: unknown; certificates?: unknown; client_chemicals?: unknown }) => ({
+      ...row,
+      chemicals: Array.isArray(row.chemicals) ? row.chemicals[0] : row.chemicals,
+      certificates: Array.isArray(row.certificates) ? row.certificates[0] ?? null : row.certificates,
+      client_chemicals: Array.isArray(row.client_chemicals) ? row.client_chemicals[0] ?? null : row.client_chemicals,
+    }))
+  );
 
   const internalNotes = (internalNotesData || []).map((note: { id: string; note: string; created_at: string; users?: { email?: string } | null }) => ({
     id: note.id,
@@ -157,7 +161,7 @@ export async function loadClientPortalData(clientId: string) {
       .order('created_at', { ascending: false }),
     adminSupabase
       .from('tcc_applications')
-      .select('*, chemicals(*), certificates!certificates_tcc_application_id_fkey(*)')
+      .select('*, chemicals(*), certificates!certificates_tcc_application_id_fkey(*), client_chemicals(available_quantity, registration_number)')
       .eq('client_id', clientId)
       .order('created_at', { ascending: false }),
     adminSupabase
@@ -179,12 +183,16 @@ export async function loadClientPortalData(clientId: string) {
     return null;
   }
 
-  const tccHistory = (tccHistoryRaw || []).map(
-    (row: { chemicals?: unknown; certificates?: unknown }) => ({
+  const tccHistory = await enrichTccApplicationsWithRcQuota(
+    adminSupabase,
+    (tccHistoryRaw || []).map((row: { chemicals?: unknown; certificates?: unknown; client_chemicals?: unknown }) => ({
       ...row,
       chemicals: Array.isArray(row.chemicals) ? row.chemicals[0] : row.chemicals,
       certificates: Array.isArray(row.certificates) ? row.certificates[0] ?? null : row.certificates,
-    })
+      client_chemicals: Array.isArray(row.client_chemicals)
+        ? row.client_chemicals[0] ?? null
+        : row.client_chemicals,
+    }))
   );
 
   const normalizedCertificates = (certificates || []).map(
