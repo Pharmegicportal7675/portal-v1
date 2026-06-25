@@ -16,16 +16,20 @@ function readPort() {
 const root = __dirname;
 const port = readPort();
 process.env.PORT = String(port);
+// Linux/Hostinger often sets HOSTNAME to the container name — Next must bind 0.0.0.0.
+delete process.env.HOSTNAME;
 process.env.HOSTNAME = '0.0.0.0';
 
 const buildIdPath = path.join(root, '.next', 'BUILD_ID');
-const standaloneServer = path.join(root, '.next', 'standalone', 'server.js');
+const standaloneDir = path.join(root, '.next', 'standalone');
+const standaloneServer = path.join(standaloneDir, 'server.js');
 const nextBin = path.join(root, 'node_modules', 'next', 'dist', 'bin', 'next');
 
 console.info('[portal] NODE_ENV:', process.env.NODE_ENV);
 console.info('[portal] Node.js:', process.version);
 console.info('[portal] PORT:', port);
 console.info('[portal] DATABASE_URL:', process.env.DATABASE_URL ? 'set' : 'MISSING');
+console.info('[portal] Standalone bundle:', fs.existsSync(standaloneServer) ? 'found' : 'missing');
 
 function ensureChromiumRuntimeDir(baseDir) {
   const dir = path.join(baseDir, '.cache', 'chromium-runtime');
@@ -38,9 +42,28 @@ function ensureChromiumRuntimeDir(baseDir) {
 
 ensureChromiumRuntimeDir(root);
 
+function verifyStandaloneBundle() {
+  const required = [
+    standaloneServer,
+    path.join(standaloneDir, '.next', 'BUILD_ID'),
+    path.join(standaloneDir, 'generated', 'prisma', 'index.js'),
+    path.join(standaloneDir, 'node_modules', 'next', 'package.json'),
+  ];
+  const missing = required.filter((file) => !fs.existsSync(file));
+  if (missing.length > 0) {
+    console.error('[portal] FATAL: incomplete standalone bundle. Missing:');
+    for (const file of missing) {
+      console.error(`  - ${path.relative(root, file)}`);
+    }
+    console.error('[portal] Run "npm run build" on the server, then restart.');
+    return false;
+  }
+  return true;
+}
+
 function linkRuntimeUploads() {
   const uploadsSrc = path.join(root, 'public', 'uploads');
-  const uploadsDest = path.join(root, '.next', 'standalone', 'public', 'uploads');
+  const uploadsDest = path.join(standaloneDir, 'public', 'uploads');
   if (!fs.existsSync(uploadsSrc)) return;
 
   fs.mkdirSync(path.dirname(uploadsDest), { recursive: true });
@@ -66,11 +89,24 @@ function copyDir(src, dest) {
 }
 
 function startStandalone() {
+  if (!verifyStandaloneBundle()) {
+    process.exit(1);
+  }
+
   linkRuntimeUploads();
-  ensureChromiumRuntimeDir(path.join(root, '.next', 'standalone'));
+  ensureChromiumRuntimeDir(standaloneDir);
   console.info(`[portal] Starting Next.js standalone on 0.0.0.0:${port}`);
-  process.chdir(path.join(root, '.next', 'standalone'));
-  require(standaloneServer);
+
+  try {
+    process.chdir(standaloneDir);
+    delete process.env.HOSTNAME;
+    process.env.HOSTNAME = '0.0.0.0';
+    require(standaloneServer);
+  } catch (err) {
+    console.error('[portal] FATAL: standalone server failed to start.');
+    console.error(err);
+    process.exit(1);
+  }
 }
 
 function startNextCli() {
@@ -105,8 +141,19 @@ function startNextCli() {
   });
 }
 
+process.on('uncaughtException', (err) => {
+  console.error('[portal] uncaughtException:', err);
+  process.exit(1);
+});
+
+process.on('unhandledRejection', (reason) => {
+  console.error('[portal] unhandledRejection:', reason);
+  process.exit(1);
+});
+
 if (fs.existsSync(standaloneServer)) {
   startStandalone();
 } else {
+  console.warn('[portal] Standalone server.js not found — falling back to next start.');
   startNextCli();
 }

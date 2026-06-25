@@ -85,9 +85,17 @@ if (fs.existsSync(chromiumHelper)) {
 console.info('[postbuild] Ensuring PDF packages in standalone/node_modules…');
 
 const pdfRoots = ['puppeteer-core', '@sparticuz/chromium-min'];
+const runtimeRoots = [
+  'mariadb',
+  '@prisma/adapter-mariadb',
+  'bcryptjs',
+  'jose',
+  'nodemailer',
+  '@prisma/client',
+];
 const packagesToCopy = new Set();
 
-for (const pkg of pdfRoots) {
+for (const pkg of [...pdfRoots, ...runtimeRoots]) {
   for (const name of collectPackageTree(pkg)) {
     packagesToCopy.add(name);
   }
