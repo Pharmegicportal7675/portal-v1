@@ -100,10 +100,6 @@ interface Application {
   certificates: CertificateRow | CertificateRow[] | null;
 }
 
-function isAwaitingReview(status: string) {
-  return status === 'pending' || status === 'changes_required' || status === 'modification_requested';
-}
-
 interface ApprovalsDashboardProps {
   initialApplications: Application[];
   emailDefaults?: TccEmailDefaults;
@@ -656,11 +652,6 @@ export default function ApprovalsDashboard({ initialApplications, emailDefaults 
                               <Download className="h-3.5 w-3.5" />
                               PDF
                             </CertificatePdfDownloadLink>
-                          )}
-                          {isAwaitingReview(app.status) && (
-                            <Badge variant="warning" className="text-[10px] py-0.5">
-                              Review in View
-                            </Badge>
                           )}
                           <Button
                             size="sm"
