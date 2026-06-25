@@ -10,6 +10,7 @@ import {
 } from '@/lib/reach-certificate';
 import {
   CLIENT_IMPORT_DEFAULT_PASSWORD,
+  normalizeCasNumber,
   type ParsedClientImportRow,
   type ParsedContactImportRow,
   type ParsedSubstanceImportRow,
@@ -401,18 +402,51 @@ async function resolveClientId(
   return null;
 }
 
+function buildReachImportIssueKey(
+  clientId: string,
+  substance: Pick<ParsedSubstanceImportRow, 'cas_number' | 'chemical_name' | 'issued_date'>
+): string | null {
+  const year = getReachCertificateYear(substance.issued_date);
+  if (year == null) return null;
+  const cas = normalizeCasNumber(substance.cas_number).toLowerCase();
+  const name = substance.chemical_name.trim().toLowerCase();
+  return `${clientId}:${cas || name}:${year}`;
+}
+
+export async function findChemicalIdByNormalizedCas(
+  adminSupabase: DbClient,
+  casNumber: string
+): Promise<string | null> {
+  const normalized = normalizeCasNumber(casNumber);
+  if (!normalized) return null;
+
+  const { data: exactMatch } = await adminSupabase
+    .from('chemicals')
+    .select('id, cas_number')
+    .eq('cas_number', normalized)
+    .maybeSingle();
+
+  if (exactMatch?.id) return exactMatch.id;
+
+  const { data: chemicals } = await adminSupabase.from('chemicals').select('id, cas_number');
+  for (const chemical of chemicals || []) {
+    if (normalizeCasNumber(chemical.cas_number) === normalized) {
+      return chemical.id;
+    }
+  }
+
+  return null;
+}
+
 async function ensureChemicalId(
   adminSupabase: DbClient,
   substance: ParsedSubstanceImportRow,
   dryRun: boolean
 ): Promise<string | null> {
-  const { data: existingChem } = await adminSupabase
-    .from('chemicals')
-    .select('id')
-    .eq('cas_number', substance.cas_number)
-    .maybeSingle();
+  const normalizedCas = normalizeCasNumber(substance.cas_number);
+  const existingChemId = await findChemicalIdByNormalizedCas(adminSupabase, normalizedCas);
 
-  if (existingChem?.id) {
+  if (existingChemId) {
     if (!dryRun) {
       await adminSupabase
         .from('chemicals')
@@ -421,18 +455,18 @@ async function ensureChemicalId(
           ec_number: substance.ec_number,
           tonnage_band: substance.tonnage_band,
         })
-        .eq('id', existingChem.id);
+        .eq('id', existingChemId);
     }
-    return existingChem.id;
+    return existingChemId;
   }
 
-  if (dryRun) return `dry-chem-${substance.cas_number}`;
+  if (dryRun) return `dry-chem-${normalizedCas}`;
 
   const { data: newChem, error } = await adminSupabase
     .from('chemicals')
     .insert({
       chemical_name: substance.chemical_name,
-      cas_number: substance.cas_number,
+      cas_number: normalizedCas,
       ec_number: substance.ec_number,
       tonnage_band: substance.tonnage_band,
       status: 'active',
@@ -490,22 +524,33 @@ async function issueReachCertificateForImportedSubstance(
   chemicalId: string,
   substance: ParsedSubstanceImportRow,
   userId: string,
-  dryRun: boolean
+  dryRun: boolean,
+  issuedInBatch?: Set<string>
 ): Promise<{ ok: true; issued: boolean } | { ok: false; reason: string }> {
   if (!substance.registration_number.trim() || !substance.issued_date || !substance.validity_date) {
     return { ok: false, reason: 'Registration number and validity dates are required to issue RC.' };
   }
 
-  if (dryRun) return { ok: true, issued: true };
-
-  const yearGuard = await hasReachCertificateInYear(adminSupabase, clientId, chemicalId, {
-    issuedDate: substance.issued_date,
-    chemicalName: substance.chemical_name,
-    casNumber: substance.cas_number,
-    registrationNumber: substance.registration_number,
-  });
-  if (yearGuard.exists) {
+  const batchKey = buildReachImportIssueKey(clientId, substance);
+  if (batchKey && issuedInBatch?.has(batchKey)) {
     return { ok: true, issued: false };
+  }
+
+  if (clientId !== 'dry-run-client') {
+    const yearGuard = await hasReachCertificateInYear(adminSupabase, clientId, chemicalId, {
+      issuedDate: substance.issued_date,
+      chemicalName: substance.chemical_name,
+      casNumber: substance.cas_number,
+      registrationNumber: substance.registration_number,
+    });
+    if (yearGuard.exists) {
+      return { ok: true, issued: false };
+    }
+  }
+
+  if (dryRun) {
+    if (batchKey) issuedInBatch?.add(batchKey);
+    return { ok: true, issued: true };
   }
 
   const bandMax = getTonnageBandMaxQuota(substance.tonnage_band);
@@ -527,6 +572,7 @@ async function issueReachCertificateForImportedSubstance(
     return { ok: false, reason: rcResult.error || 'Failed to issue RC certificate.' };
   }
 
+  if (batchKey) issuedInBatch?.add(batchKey);
   return { ok: true, issued: true };
 }
 
@@ -536,7 +582,8 @@ async function importSubstanceRow(
   clientCache: Map<string, string | null>,
   pendingClients: ParsedClientImportRow[],
   dryRun: boolean,
-  userId: string
+  userId: string,
+  issuedInBatch: Set<string>
 ): Promise<SubstanceImportRowResult> {
   const base = {
     company_name: substance.company_name,
@@ -576,10 +623,18 @@ async function importSubstanceRow(
       chemicalId,
       substance,
       userId,
-      true
+      true,
+      issuedInBatch
     );
     if (!issuePreview.ok) {
       return { ...base, status: 'failed', reason: issuePreview.reason };
+    }
+    if (!issuePreview.issued) {
+      return {
+        ...base,
+        status: 'skipped',
+        reason: 'RC certificate already exists for this substance and year.',
+      };
     }
     return {
       ...base,
@@ -623,7 +678,8 @@ async function importSubstanceRow(
         chemicalId,
         substance,
         userId,
-        false
+        false,
+        issuedInBatch
       );
       if (!issueResult.ok) {
         return { ...base, status: 'failed', reason: issueResult.reason };
@@ -631,8 +687,10 @@ async function importSubstanceRow(
 
       return {
         ...base,
-        status: 'created',
-        reason: 'Substance restored, assigned, and RC certificate issued.',
+        status: issueResult.issued ? 'created' : 'skipped',
+        reason: issueResult.issued
+          ? 'Substance restored, assigned, and RC certificate issued.'
+          : 'Substance restored; RC certificate already exists for this year.',
       };
     }
 
@@ -642,7 +700,8 @@ async function importSubstanceRow(
       chemicalId,
       substance,
       userId,
-      false
+      false,
+      issuedInBatch
     );
 
     const patch: Record<string, unknown> = {};
@@ -715,7 +774,8 @@ async function importSubstanceRow(
     chemicalId,
     substance,
     userId,
-    false
+    false,
+    issuedInBatch
   );
 
   if (!issueResult.ok) {
@@ -729,8 +789,10 @@ async function importSubstanceRow(
 
   return {
     ...base,
-    status: 'created',
-    reason: 'Substance assigned and RC certificate issued.',
+    status: issueResult.issued ? 'created' : 'skipped',
+    reason: issueResult.issued
+      ? 'Substance assigned and RC certificate issued.'
+      : 'Substance assigned; RC certificate already exists for this year.',
   };
 }
 
@@ -888,6 +950,7 @@ export async function importClientDirectoryRows(
   }
 
   const substanceResults: SubstanceImportRowResult[] = [];
+  const issuedInBatch = new Set<string>();
   for (const substance of input.substances) {
     substanceResults.push(
       await importSubstanceRow(
@@ -896,7 +959,8 @@ export async function importClientDirectoryRows(
         clientCache,
         clientsWithPassword,
         dryRun,
-        input.userId
+        input.userId,
+        issuedInBatch
       )
     );
   }

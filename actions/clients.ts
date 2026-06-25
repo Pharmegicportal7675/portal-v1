@@ -13,6 +13,8 @@ import {
 import { internalNoteSchema, changeEmailSchema, changePasswordSchema } from '@/lib/validations';
 import { revalidatePath } from 'next/cache';
 import { extractStorageRelativePath } from '@/lib/storage-paths';
+import { normalizeCasNumber } from '@/lib/client-directory-import';
+import { findChemicalIdByNormalizedCas } from '@/services/client-directory-import';
 import { CERTIFICATES_BUCKET } from '@/lib/storage';
 
 // ============================================================================
@@ -356,7 +358,7 @@ export async function addNewChemicalToClientAction(clientId: string, data: any) 
 
   if (!data.chemical_name?.trim()) return { success: false, error: 'Substance name is required.' };
 
-  const casNumber = data.cas_number?.trim();
+  const casNumber = normalizeCasNumber(data.cas_number || '');
   if (!casNumber) return { success: false, error: 'CAS number is required.' };
 
   const registrationNumber = data.registration_number?.trim();
@@ -425,13 +427,7 @@ export async function addNewChemicalToClientAction(clientId: string, data: any) 
         .eq('id', chemicalId);
     } else {
     // 1. Reuse existing chemical by CAS, or create new
-    const { data: existingChem } = await adminSupabase
-      .from('chemicals')
-      .select('id')
-      .eq('cas_number', casNumber)
-      .maybeSingle();
-
-    chemicalId = existingChem?.id;
+    chemicalId = (await findChemicalIdByNormalizedCas(adminSupabase, casNumber)) ?? undefined;
 
     if (!chemicalId) {
       const { data: newChem, error: chemErr } = await adminSupabase

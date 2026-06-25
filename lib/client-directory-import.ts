@@ -76,7 +76,10 @@ export const SUBSTANCE_IMPORT_DEFAULTS = {
 } as const;
 
 export function normalizeCasNumber(value: string): string {
-  return String(value || '').trim();
+  return String(value || '')
+    .trim()
+    .replace(/\.$/, '')
+    .replace(/\s+/g, '');
 }
 
 function parseTonnageBand(value: string): string | null {
