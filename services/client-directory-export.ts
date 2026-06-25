@@ -4,9 +4,13 @@ import {
   formatTonnageBandForExport,
   IMPORT_TEMPLATE_SHEET_NAME,
   mergeImportCompatibleRows,
+  normalizeCasNumber,
   toImportDateValue,
 } from '@/lib/client-directory-import';
-import { REACH_CERTIFICATE_TYPE } from '@/lib/reach-certificate';
+import {
+  getReachCertificateYear,
+  isReachCertificateType,
+} from '@/lib/reach-certificate';
 import { resolveDisplayedTonnageBand } from '@/lib/quota';
 import { buildExcelArrayBuffer, type ExcelSheet } from '@/lib/export-excel';
 
@@ -50,9 +54,11 @@ export async function buildClientDirectoryExportBuffer(
     supabase.from('users').select('client_id, email, login_password').in('client_id', clientIds),
     supabase
       .from('certificates')
-      .select('client_id, chemical_id, tonnage_band, issued_at')
+      .select(
+        'client_id, chemical_id, registration_number, issued_at, expires_at, tonnage_band, allocated_quantity, status, type, certificate_number, chemicals(chemical_name, cas_number, ec_number, tonnage_band)'
+      )
       .in('client_id', clientIds)
-      .eq('type', REACH_CERTIFICATE_TYPE)
+      .neq('status', 'revoked')
       .order('issued_at', { ascending: false }),
   ]);
 
@@ -69,11 +75,19 @@ export async function buildClientDirectoryExportBuffer(
     (users || []).map((user: any) => [user.client_id as string, user])
   );
 
-  const tonnageByClientChemical = new Map<string, string>();
-  for (const cert of reachCerts || []) {
-    const key = `${cert.client_id}:${cert.chemical_id}`;
-    if (!tonnageByClientChemical.has(key) && cert.tonnage_band?.trim()) {
-      tonnageByClientChemical.set(key, cert.tonnage_band.trim());
+  const reachCertificates = ((reachCerts || []) as any[]).filter(isReachCertificateType);
+
+  // One export row per client + chemical + calendar year (newest cert wins if duplicates exist).
+  const certRowByYearKey = new Map<string, any>();
+  for (const cert of reachCertificates) {
+    const year = getReachCertificateYear(cert.issued_at);
+    if (year == null || !cert.chemical_id) continue;
+
+    const chemical = unwrapRelation(cert.chemicals) as ChemicalRef | null;
+    const cas = normalizeCasNumber(chemical?.cas_number || '').toLowerCase();
+    const yearKey = `${cert.client_id}:${cert.chemical_id}:${cas}:${year}`;
+    if (!certRowByYearKey.has(yearKey)) {
+      certRowByYearKey.set(yearKey, cert);
     }
   }
 
@@ -107,16 +121,52 @@ export async function buildClientDirectoryExportBuffer(
     'Position / Role': contact.role ?? '',
   }));
 
-  const authorizedChemicalRows: ExportRow[] = (clientChemicals || []).map((row: any) => {
-    const chemical = unwrapRelation(row.chemicals) as ChemicalRef | null;
-    const tonnageKey = `${row.client_id}:${row.chemical_id}`;
+  const authorizedChemicalRows: ExportRow[] = [];
+
+  for (const cert of certRowByYearKey.values()) {
+    const certRow = cert as {
+      client_id: string;
+      chemical_id: string;
+      registration_number?: string | null;
+      issued_at: string;
+      expires_at?: string | null;
+      tonnage_band?: string | null;
+      allocated_quantity?: number | null;
+      status?: string | null;
+      chemicals?: ChemicalRef | ChemicalRef[] | null;
+    };
+    const chemical = unwrapRelation(certRow.chemicals);
     const tonnageBand = resolveDisplayedTonnageBand(
-      tonnageByClientChemical.get(tonnageKey),
+      certRow.tonnage_band,
       chemical?.tonnage_band,
       ''
     );
-    return {
-      'Company Name': clientNameById.get(row.client_id) ?? '',
+    authorizedChemicalRows.push({
+      'Company Name': String(clientNameById.get(certRow.client_id) ?? ''),
+      'Substance Name': chemical?.chemical_name ?? '',
+      'CAS Number': chemical?.cas_number ?? '',
+      'EC Number': chemical?.ec_number ?? '',
+      'Tonnage Band': formatTonnageBandForExport(tonnageBand),
+      'Available Quantity (MT)': certRow.allocated_quantity ?? 0,
+      'Registration Number': certRow.registration_number ?? '',
+      'Issued Date': toImportDateValue(certRow.issued_at),
+      'Validity Date': toImportDateValue(certRow.expires_at),
+      Status: certRow.status ?? 'active',
+    });
+  }
+
+  const clientChemicalsWithCert = new Set(
+    reachCertificates.map((cert: any) => `${cert.client_id}:${cert.chemical_id}`)
+  );
+
+  for (const row of clientChemicals || []) {
+    const linkKey = `${row.client_id}:${row.chemical_id}`;
+    if (clientChemicalsWithCert.has(linkKey)) continue;
+
+    const chemical = unwrapRelation(row.chemicals) as ChemicalRef | null;
+    const tonnageBand = resolveDisplayedTonnageBand(null, chemical?.tonnage_band, '');
+    authorizedChemicalRows.push({
+      'Company Name': String(clientNameById.get(row.client_id) ?? ''),
       'Substance Name': chemical?.chemical_name ?? '',
       'CAS Number': chemical?.cas_number ?? '',
       'EC Number': chemical?.ec_number ?? '',
@@ -126,7 +176,15 @@ export async function buildClientDirectoryExportBuffer(
       'Issued Date': toImportDateValue(row.issued_date),
       'Validity Date': toImportDateValue(row.validity_date),
       Status: row.status ?? 'active',
-    };
+    });
+  }
+
+  authorizedChemicalRows.sort((a, b) => {
+    const companyCompare = String(a['Company Name']).localeCompare(String(b['Company Name']));
+    if (companyCompare !== 0) return companyCompare;
+    const substanceCompare = String(a['Substance Name']).localeCompare(String(b['Substance Name']));
+    if (substanceCompare !== 0) return substanceCompare;
+    return String(a['Issued Date']).localeCompare(String(b['Issued Date']));
   });
 
   const allRows = mergeImportCompatibleRows([
