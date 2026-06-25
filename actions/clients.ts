@@ -12,6 +12,8 @@ import {
 } from '@/lib/regulatory-registrations';
 import { internalNoteSchema, changeEmailSchema, changePasswordSchema } from '@/lib/validations';
 import { revalidatePath } from 'next/cache';
+import { extractStorageRelativePath } from '@/lib/storage-paths';
+import { CERTIFICATES_BUCKET } from '@/lib/storage';
 
 // ============================================================================
 // HELPER: Verify admin session
@@ -37,6 +39,46 @@ async function getClientYearExportedMt(
     .eq('status', 'approved');
 
   return sumApprovedExports(data || [], chemicalId);
+}
+
+async function deleteClientStorageFiles(
+  adminSupabase: ReturnType<typeof createAdminClient>,
+  clientId: string
+) {
+  const storagePaths = new Set<string>();
+
+  const [{ data: certRows }, { data: tccRows }] = await Promise.all([
+    adminSupabase
+      .from('certificates')
+      .select('file_url, certificate_number')
+      .eq('client_id', clientId),
+    adminSupabase
+      .from('tcc_applications')
+      .select('bo_attachment_url')
+      .eq('client_id', clientId),
+  ]);
+
+  for (const cert of certRows || []) {
+    if (cert.file_url) {
+      const relative = extractStorageRelativePath(cert.file_url);
+      if (relative) storagePaths.add(relative);
+    }
+    // Legacy fallback files that may not be reflected in file_url
+    if (cert.certificate_number) {
+      storagePaths.add(`${cert.certificate_number}.pdf`);
+      storagePaths.add(`${cert.certificate_number}.docx`);
+    }
+  }
+
+  for (const app of tccRows || []) {
+    if (!app.bo_attachment_url) continue;
+    const relative = extractStorageRelativePath(app.bo_attachment_url);
+    if (relative) storagePaths.add(relative);
+  }
+
+  if (storagePaths.size > 0) {
+    await adminSupabase.storage.from(CERTIFICATES_BUCKET).remove([...storagePaths]);
+  }
 }
 
 // ============================================================================
@@ -219,6 +261,8 @@ export async function deleteClientAction(clientId: string) {
     if (fetchError) throw fetchError;
     if (!client) return { success: false, error: 'Client not found.' };
 
+    await deleteClientStorageFiles(adminSupabase, clientId);
+
     // Delete user credentials first (users.client_id FK is SET NULL, not CASCADE)
     const { error: userError } = await adminSupabase.from('users').delete().eq('client_id', clientId);
     if (userError) throw userError;
@@ -267,6 +311,8 @@ export async function deleteSelectedClientsAction(clientIds: string[]) {
         failed.push(`${clientId}: Client not found.`);
         continue;
       }
+
+      await deleteClientStorageFiles(adminSupabase, clientId);
 
       const { error: userError } = await adminSupabase.from('users').delete().eq('client_id', clientId);
       if (userError) throw userError;
