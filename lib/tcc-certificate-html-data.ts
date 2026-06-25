@@ -1,6 +1,6 @@
 import { getTccTemplatePreviewSample } from '@/lib/certificate-template-preview-data';
 import { buildReachAddressLines, formatReachCertDate } from '@/lib/reach-certificate-data';
-import { splitEuImporterAddress } from '@/lib/tcc-eu-importer';
+import { buildEuImporterFullAddress, splitEuImporterAddress } from '@/lib/tcc-eu-importer';
 
 export type TccPdfClient = {
   company_name: string;
@@ -47,6 +47,7 @@ export type TccCertificateDocxData = {
   euImporterAddr1: string;
   euImporterAddr2: string;
   euImporterAddr3: string;
+  euImporterFullAddress: string;
   volumeMt: string;
   deliveryChallanNo: string;
   exportDate: string;
@@ -178,6 +179,11 @@ function buildTccDocxFields(input: {
     euImporterAddr1,
     euImporterAddr2,
     euImporterAddr3,
+    euImporterFullAddress: buildEuImporterFullAddress(
+      euImporterAddr1,
+      euImporterAddr2,
+      euImporterAddr3
+    ),
     volumeMt: `${Number(input.application.quantity_mt)} MT`,
     deliveryChallanNo:
       input.deliveryChallanNo?.trim() ||

@@ -60,6 +60,7 @@ export function getTccTemplatePreviewSample(): TccCertificateDocxData {
     euImporterAddr1: 'Industriestrasse 12',
     euImporterAddr2: '60329 Frankfurt',
     euImporterAddr3: 'Germany',
+    euImporterFullAddress: 'Industriestrasse 12 60329 Frankfurt Dist. Germany',
     volumeMt: '25.00',
     deliveryChallanNo: 'DC-2026-001',
     exportDate: '15.03.2026',

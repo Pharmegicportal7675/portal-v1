@@ -144,9 +144,7 @@ export default function TccCertificateHtmlDocument({ data }: TccCertificateHtmlD
             </div>
             <div className="tcc-party-content">
               <p className="tcc-party-name">{data.euImporterName}</p>
-              <p className="tcc-party-address">{data.euImporterAddr1}</p>
-              <p className="tcc-party-address">{data.euImporterAddr2}</p>
-              <p className="tcc-party-address">{data.euImporterAddr3}</p>
+              <p className="tcc-party-address">{data.euImporterFullAddress}</p>
             </div>
           </div>
         </div>
