@@ -218,7 +218,7 @@ export default function ReachCertificatePreviewClient({
   const downloadDocxUrl = docxPreviewUrl;
   const downloadFileName = cert
     ? `${cert.certificate_number}.pdf`
-    : `RC-preview-${chemicalId.slice(0, 8)}.pdf`;
+    : `CT-preview-${chemicalId.slice(0, 8)}.pdf`;
   const downloadLabel = 'Download PDF';
 
   const backHref = `/admin/clients/${clientId}`;
@@ -246,12 +246,12 @@ export default function ReachCertificatePreviewClient({
         }
       );
       if (res.success) {
-        toast.success(res.message || 'RC Certificate updated.');
+        toast.success(res.message || 'CT Certificate updated.');
         setIsEditing(false);
         setPreviewVersion((v) => v + 1);
         router.refresh();
       } else {
-        toast.error(res.error || 'Failed to update RC certificate.');
+        toast.error(res.error || 'Failed to update CT certificate.');
       }
     });
   };
@@ -279,11 +279,11 @@ export default function ReachCertificatePreviewClient({
         }
       );
       if (res.success) {
-        toast.success(res.message || 'RC Certificate issued successfully.');
+        toast.success(res.message || 'CT Certificate issued successfully.');
         router.push(backHref);
         router.refresh();
       } else {
-        toast.error(res.error || 'Failed to issue RC certificate.');
+        toast.error(res.error || 'Failed to issue CT certificate.');
       }
     });
   };
@@ -331,7 +331,7 @@ export default function ReachCertificatePreviewClient({
           </Link>
           <div>
             <h1 className="text-xl font-black text-slate-800 tracking-tight flex items-center gap-2 flex-wrap">
-              RC Certificate Review
+              CT Certificate Review
               {cert ? (
                 <span className="font-mono text-primary text-base">{cert.certificate_number}</span>
               ) : (
@@ -466,7 +466,7 @@ export default function ReachCertificatePreviewClient({
           </div>
           <p className="text-xs text-slate-500 mt-3">
             {isPending
-              ? 'Review the certificate preview below. Update fields if needed, then issue the RC certificate.'
+              ? 'Review the certificate preview below. Update fields if needed, then issue the CT certificate.'
               : 'Save changes to update the stored certificate and regenerate the PDF/DOCX files.'}
           </p>
           {cert && isEditing && (

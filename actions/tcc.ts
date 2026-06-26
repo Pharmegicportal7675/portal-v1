@@ -166,7 +166,7 @@ async function validateClientTccSubmission(
       ok: false as const,
       error:
         quotaResult.error ||
-        'A REACH Compliance Certificate is required for the selected export shipment date.',
+        'A CT Compliance Certificate is required for the selected export shipment date.',
     };
   }
 
@@ -176,7 +176,7 @@ async function validateClientTccSubmission(
       : new Date(quotaResult.reachCert.issued_at).toLocaleDateString();
     return {
       ok: false as const,
-      error: `Insufficient quota for RC period (${periodLabel}). Requested: ${data.quantity_mt} MT, Available: ${quotaResult.remainingQuota} MT.`,
+      error: `Insufficient quota for CT period (${periodLabel}). Requested: ${data.quantity_mt} MT, Available: ${quotaResult.remainingQuota} MT.`,
     };
   }
 
@@ -869,14 +869,14 @@ export async function adminUpdateTccApplicationAction(prevState: unknown, formDa
           success: false,
           error:
             quotaResult.error ||
-            'No REACH Compliance Certificate covers the selected export shipment date.',
+            'No CT Compliance Certificate covers the selected export shipment date.',
         };
       }
 
       if (newQuantity > quotaResult.remainingQuota) {
         return {
           success: false,
-          error: `Quantity exceeds available quota for RC period ${quotaResult.reachCert.certificate_number}. Only ${quotaResult.remainingQuota} MT remaining.`,
+          error: `Quantity exceeds available quota for CT period ${quotaResult.reachCert.certificate_number}. Only ${quotaResult.remainingQuota} MT remaining.`,
         };
       }
     } else if (existing.status === 'approved' && quantityChanged) {
@@ -1153,7 +1153,7 @@ export async function processTccAction(
         return {
           success: false,
           error:
-            'Cannot approve: no REACH Compliance Certificate covers the export shipment date.',
+            'Cannot approve: no CT Compliance Certificate covers the export shipment date.',
         };
       }
 
@@ -1173,7 +1173,7 @@ export async function processTccAction(
       if (requested > remaining) {
         return {
           success: false,
-          error: `Cannot approve: ${exportedMt} MT already used for this RC period (${reachCert.certificate_number}). Only ${remaining} MT remaining.`,
+          error: `Cannot approve: ${exportedMt} MT already used for this CT period (${reachCert.certificate_number}). Only ${remaining} MT remaining.`,
         };
       }
 

@@ -61,14 +61,14 @@ export async function GET(request: NextRequest) {
       .single();
 
     if (error || !cert || !isReachCertificateType(cert)) {
-      return NextResponse.json({ error: 'RC certificate not found.' }, { status: 404 });
+      return NextResponse.json({ error: 'CT certificate not found.' }, { status: 404 });
     }
 
     const clientRecord = Array.isArray(cert.clients) ? cert.clients[0] : cert.clients;
     const chemicalRecord = Array.isArray(cert.chemicals) ? cert.chemicals[0] : cert.chemicals;
 
     if (!clientRecord || !chemicalRecord) {
-      return NextResponse.json({ error: 'RC certificate not found.' }, { status: 404 });
+      return NextResponse.json({ error: 'CT certificate not found.' }, { status: 404 });
     }
 
     const isAdmin = session.role === 'MASTER_ADMIN' || session.role === 'SUPER_ADMIN';

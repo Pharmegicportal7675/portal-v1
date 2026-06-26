@@ -246,11 +246,11 @@ export default function TccApplicationForm({
 
     if (isEuReach) {
       if (noReachForExportDate) {
-        return quotaContext?.error || 'No Active RC Certificate Available.';
+        return quotaContext?.error || 'No Active CT Certificate Available.';
       }
 
       if (noQuotaLeft) {
-        return 'No remaining quota for this RC validity period. Contact your administrator.';
+        return 'No remaining quota for this CT validity period. Contact your administrator.';
       }
 
       if (selectedSubstance && Number(quantity) > initialQuota) {
@@ -385,7 +385,7 @@ export default function TccApplicationForm({
         <p className="text-sm text-slate-500 font-medium">
           {isEditing
             ? 'Update your TCC application. Changes are allowed until the administrator approves it.'
-            : 'Apply for an official TCC permit. A valid REACH Compliance Certificate (1-year validity) is required per substance before TCC application.'}
+            : 'Apply for an official TCC permit. A valid CT Compliance Certificate (1-year validity) is required per substance before TCC application.'}
         </p>
       </div>
 
@@ -429,7 +429,7 @@ export default function TccApplicationForm({
                   <p className="text-sm font-bold text-slate-800">{option.label}</p>
                   <p className="text-xs text-slate-500 mt-1">
                     {option.value === 'eu_reach'
-                      ? 'Full EU TCC application with RC quota calculation and certificate approval.'
+                      ? 'Full EU TCC application with CT quota calculation and certificate approval.'
                       : 'Notification-only request. Admin receives email; no EU certificate issuance.'}
                   </p>
                 </div>
@@ -456,9 +456,9 @@ export default function TccApplicationForm({
         <div className="p-4 bg-amber-50 border border-amber-200 rounded-xl text-sm text-amber-900 font-medium flex gap-3 items-start">
           <AlertCircle className="h-5 w-5 text-amber-600 shrink-0 mt-0.5" />
           <div>
-            <p className="font-bold">REACH Compliance Certificate Required</p>
+            <p className="font-bold">CT Compliance Certificate Required</p>
             <p className="text-xs text-amber-800 mt-1 leading-relaxed">
-              No substances are eligible for TCC application. Each substance must have an active REACH Compliance Certificate issued by your administrator (valid for 1 year).
+              No substances are eligible for TCC application. Each substance must have an active CT Compliance Certificate issued by your administrator (valid for 1 year).
             </p>
           </div>
         </div>
@@ -539,7 +539,7 @@ export default function TccApplicationForm({
                         const hasRc = (s.reach_certificates?.length ?? 0) > 0;
                         let label = `${s.chemical_name} (CAS: ${s.cas_number})`;
                         if (isEuReach && !hasRc) {
-                          label += ' — RC certificate required';
+                          label += ' — CT certificate required';
                         }
                         return {
                           value: s.id,
@@ -562,7 +562,7 @@ export default function TccApplicationForm({
                   />
                   {isEuReach && matchedReachCert && (
                     <p className="text-[10px] text-slate-500 font-medium">
-                      RC period:{' '}
+                      CT period:{' '}
                       <span className="font-bold text-slate-700">
                         {new Date(matchedReachCert.issued_at).toLocaleDateString()} –{' '}
                         {matchedReachCert.expires_at
@@ -574,7 +574,7 @@ export default function TccApplicationForm({
                   )}
                   {isEuReach && noReachForExportDate && (
                     <p className="text-[11px] text-rose-600 font-semibold">
-                      No RC certificate covers this export date.
+                      No CT certificate covers this export date.
                     </p>
                   )}
                 </div>
@@ -602,7 +602,7 @@ export default function TccApplicationForm({
                   />
                   {isEuReach && selectedSubstance && exportDate && matchedReachCert && (
                     <p className="text-[10px] text-slate-500 font-medium">
-                      Available for this RC period:{' '}
+                      Available for this CT period:{' '}
                       <span className="font-bold text-slate-700">{initialQuota} MT</span>
                     </p>
                   )}
@@ -735,8 +735,8 @@ export default function TccApplicationForm({
                       <div>
                         <p>Select export shipment date</p>
                         <p className="text-[10px] text-slate-500 mt-0.5 font-medium">
-                          Quota is calculated from the RC certificate period that matches your export date.
-                          A 2025 export uses 2025 RC quota; a 2026 export uses the 2026 RC certificate.
+                          Quota is calculated from the CT certificate period that matches your export date.
+                          A 2025 export uses 2025 CT quota; a 2026 export uses the 2026 CT certificate.
                         </p>
                       </div>
                     </div>
@@ -744,10 +744,10 @@ export default function TccApplicationForm({
                     <div className="p-3 bg-amber-50 text-amber-800 border border-amber-100 rounded-lg text-xs font-semibold flex gap-2 items-start">
                       <AlertCircle className="h-4 w-4 mt-0.5 shrink-0" />
                       <div>
-                        <p>No RC Certificate For This Date</p>
+                        <p>No CT Certificate For This Date</p>
                         <p className="text-[10px] text-amber-700 mt-0.5 font-medium">
                           {quotaContext?.error ||
-                            'Choose an export date within an issued RC validity period, or ask your administrator to issue a new RC certificate.'}
+                            'Choose an export date within an issued CT validity period, or ask your administrator to issue a new CT certificate.'}
                         </p>
                       </div>
                     </div>
@@ -757,7 +757,7 @@ export default function TccApplicationForm({
                       <div>
                         <p>Quota Limit Exceeded</p>
                         <p className="text-[10px] text-rose-600 mt-0.5 font-medium">
-                          You cannot request more than {initialQuota} MT for this RC validity period.
+                          You cannot request more than {initialQuota} MT for this CT validity period.
                         </p>
                       </div>
                     </div>
@@ -775,7 +775,7 @@ export default function TccApplicationForm({
                     <div className="p-3 bg-emerald-50 text-emerald-700 border border-emerald-100 rounded-lg text-xs font-semibold flex gap-2 items-start">
                       <CheckCircle className="h-4 w-4 mt-0.5 shrink-0" />
                       <div>
-                        <p>RC Period &amp; Quota Verified</p>
+                        <p>CT Period &amp; Quota Verified</p>
                         <p className="text-[10px] text-emerald-600 mt-0.5 font-medium">
                           Using {matchedReachCert?.certificate_number} (
                           {matchedReachCert?.issued_at

@@ -28,7 +28,7 @@ export async function POST(request: NextRequest) {
     return NextResponse.json(
       {
         success: false,
-        error: err instanceof Error ? err.message : 'Failed to delete RC certificate.',
+        error: err instanceof Error ? err.message : 'Failed to delete CT certificate.',
       },
       { status: 500 }
     );

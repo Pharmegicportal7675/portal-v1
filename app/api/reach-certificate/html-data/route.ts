@@ -25,7 +25,7 @@ export async function GET(request: NextRequest) {
   if (certificateId) {
     const input = await loadReachCertificateInputByCertificateId(adminSupabase, certificateId);
     if (!input) {
-      return NextResponse.json({ error: 'RC certificate not found.' }, { status: 404 });
+      return NextResponse.json({ error: 'CT certificate not found.' }, { status: 404 });
     }
 
     const isAdmin = session.role === 'MASTER_ADMIN' || session.role === 'SUPER_ADMIN';

@@ -43,7 +43,7 @@ export default function Sidebar({ role, companyName, regulatoryRegistrations = [
   const adminLinks = [
     { href: '/admin', label: 'Dashboard', icon: LayoutDashboard },
     { href: '/admin/clients', label: 'Clients', icon: Users },
-    { href: '/admin/rc-certificates', label: 'RC Certificate', icon: FileText },
+    { href: '/admin/rc-certificates', label: 'CT Certificate', icon: FileText },
     { href: '/admin/approvals', label: 'TCC Approvals', icon: CheckSquare },
     { href: '/admin/settings', label: 'Settings', icon: Settings },
   ];

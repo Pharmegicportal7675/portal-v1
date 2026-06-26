@@ -156,7 +156,7 @@ export function computeTccQuotaForExportDate(params: {
       exportedMt: 0,
       bandMax: getTonnageBandMaxQuota(params.tonnageBand),
       error:
-        'No Active RC Certificate Available.',
+        'No Active CT Certificate Available.',
     };
   }
 

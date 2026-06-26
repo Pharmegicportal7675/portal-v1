@@ -15,8 +15,8 @@ const routeMaps: Record<string, string> = {
   client: 'Client Portal',
   apply: 'Apply for TCC',
   certificates: 'My Certificates',
-  'rc-certificates': 'RC Certificates',
-  'rc-preview': 'RC Certificate Preview',
+  'rc-certificates': 'CT Certificates',
+  'rc-preview': 'CT Certificate Preview',
   super: 'Super Admin',
   'activity-logs': 'Activity Log',
 };

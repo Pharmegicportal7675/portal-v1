@@ -131,7 +131,7 @@ export async function updateRcSmtpSettingsAction(smtpData: SmtpFormPayload) {
 
     if (error) throw error;
     revalidatePath('/admin/settings');
-    return { success: true, message: 'RC certificate SMTP settings saved.' };
+    return { success: true, message: 'CT certificate SMTP settings saved.' };
   } catch (err: unknown) {
     const message = err instanceof Error ? err.message : String(err);
     return { success: false, error: message };

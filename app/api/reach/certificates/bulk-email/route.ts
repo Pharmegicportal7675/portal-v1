@@ -26,7 +26,7 @@ export async function POST(request: NextRequest) {
     return NextResponse.json(
       {
         success: false,
-        error: err instanceof Error ? err.message : 'Failed to send RC certificates.',
+        error: err instanceof Error ? err.message : 'Failed to send CT certificates.',
       },
       { status: 500 }
     );

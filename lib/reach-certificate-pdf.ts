@@ -57,7 +57,7 @@ export async function resolveReachCertificateDownloadFile(
     const message =
       htmlErr instanceof Error
         ? htmlErr.message
-        : 'RC certificate PDF generation failed (Puppeteer/Chromium).';
+        : 'CT certificate PDF generation failed (Puppeteer/Chromium).';
     throw new Error(message);
   }
 }

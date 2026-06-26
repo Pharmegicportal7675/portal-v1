@@ -62,4 +62,4 @@ export function clientHasEuReachRegistration(
 }
 
 export const EU_REACH_CERTIFICATE_REQUIRED_MESSAGE =
-  'EU REACH must be enabled on this client profile to issue EU REACH (RC) or TCC certificates.';
+  'EU REACH must be enabled on this client profile to issue EU REACH (CT) or TCC certificates.';

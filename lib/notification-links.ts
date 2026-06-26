@@ -32,7 +32,12 @@ export function resolveNotificationLink(
     return '/client';
   }
 
-  if (title.includes('rc compliance certificate') || title.includes('rc certificate')) {
+  if (
+    title.includes('ct certificate') ||
+    title.includes('ct compliance certificate') ||
+    title.includes('rc compliance certificate') ||
+    title.includes('rc certificate')
+  ) {
     return '/client';
   }
 

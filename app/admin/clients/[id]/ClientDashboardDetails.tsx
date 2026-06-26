@@ -200,7 +200,7 @@ export default function ClientDashboardDetails({
       : viewMode === 'certificates'
         ? `${client.company_name} — TCC Certificates`
         : viewMode === 'rc-certificates'
-          ? `${client.company_name} — RC Certificates`
+          ? `${client.company_name} — CT Certificates`
           : `${client.company_name}`;
 
   const reachByChemical = useMemo(
@@ -1018,7 +1018,7 @@ export default function ClientDashboardDetails({
     startTransition(async () => {
       const res = await addNewChemicalToClientAction(client.id, payload);
       if (res.success) {
-        toast.success(res.message || 'RC Certificate issued successfully.');
+        toast.success(res.message || 'CT Certificate issued successfully.');
         closeAssignChemModal();
         router.refresh();
       } else {
@@ -1055,7 +1055,7 @@ export default function ClientDashboardDetails({
       return;
     }
     if (!row.canRenew) {
-      toast.error('An active RC certificate already exists. Renew when the latest certificate has expired.');
+      toast.error('An active CT certificate already exists. Renew when the latest certificate has expired.');
       return;
     }
     openRenewRcModal(row.clientChem as ClientChemRow, row.latestCert.id);
@@ -1126,10 +1126,10 @@ export default function ClientDashboardDetails({
         closeRcCertModal();
         router.refresh();
         setTimeout(() => {
-          toast.success(res.message || 'New RC certificate issued. Previous certificates remain on record.');
+          toast.success(res.message || 'New CT certificate issued. Previous certificates remain on record.');
         }, 300);
       } else {
-        setModalError('assignChem', toErrorMessage(res.error, 'Failed to renew RC certificate.'));
+        setModalError('assignChem', toErrorMessage(res.error, 'Failed to renew CT certificate.'));
       }
     });
   };
@@ -1179,7 +1179,7 @@ export default function ClientDashboardDetails({
           tonnageBand: assignChemData.tonnage_band,
         });
         if (!certRes.success) {
-          setModalError('assignChem', toErrorMessage(certRes.error, 'Failed to update RC certificate.'));
+          setModalError('assignChem', toErrorMessage(certRes.error, 'Failed to update CT certificate.'));
           return;
         }
         certMessage = certRes.message;
@@ -1199,13 +1199,13 @@ export default function ClientDashboardDetails({
             : (bandMax ?? 0),
         });
         if (!issueRes.success) {
-          setModalError('assignChem', toErrorMessage(issueRes.error, 'Failed to issue RC certificate.'));
+          setModalError('assignChem', toErrorMessage(issueRes.error, 'Failed to issue CT certificate.'));
           return;
         }
         certMessage = issueRes.message;
       }
 
-      toast.success(certMessage || editRes.message || 'Substance and RC details updated.');
+      toast.success(certMessage || editRes.message || 'Substance and CT details updated.');
       closeRcCertModal();
       router.refresh();
     });
@@ -1307,18 +1307,18 @@ export default function ClientDashboardDetails({
 
   const handleBulkSendRcCertificates = () => {
     if (selectedRcCertIds.length === 0) {
-      toast.error('Select at least one RC certificate.');
+      toast.error('Select at least one CT certificate.');
       return;
     }
 
     startTransition(async () => {
       const res = await sendBulkReachCertificatesEmailAction(client.id, selectedRcCertIds);
       if (res.success) {
-        toast.success(res.message || 'RC certificates sent successfully.');
+        toast.success(res.message || 'CT certificates sent successfully.');
         setSelectedRcCertIds([]);
         router.refresh();
       } else {
-        toast.error(res.error || 'Failed to send RC certificates.');
+        toast.error(res.error || 'Failed to send CT certificates.');
       }
     });
   };
@@ -1572,7 +1572,7 @@ export default function ClientDashboardDetails({
       summary.certs.map((cert) => ({ summary, cert }))
     );
     if (allCertRows.length === 0) {
-      setModalError('substances', 'No RC certificate data to export.');
+      setModalError('substances', 'No CT certificate data to export.');
       return;
     }
     setModalError('substances', null);
@@ -1743,14 +1743,14 @@ export default function ClientDashboardDetails({
       </div>
       )}
 
-      {/* 3. RC Certificates — Chemical Summary */}
+      {/* 3. CT Certificates — Chemical Summary */}
       {showChemicalsSection && (
       <>
       {!hasEuReach && canManageRc && (
         <div className="mb-4 rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-900">
           <p className="font-semibold">EU REACH not enabled</p>
           <p className="mt-1 text-xs text-amber-800">
-            This client is not registered for EU REACH. EU REACH (RC) and TCC certificates can only be
+            This client is not registered for EU REACH. EU REACH (CT) and TCC certificates can only be
             issued when EU REACH is enabled on the client profile.
           </p>
         </div>
@@ -1766,7 +1766,7 @@ export default function ClientDashboardDetails({
         selectedIds={selectedRcCertIds}
         onSelectedIdsChange={setSelectedRcCertIds}
         tccHistory={tccHistory}
-        title="RC Compliance Certificates (Year-wise)"
+        title="CT Compliance Certificates (Year-wise)"
         description="Manage issue/expiry dates & remaining quota per year | Expired certificates retain quantity for TCC applications using old date."
         extraActions={
           <>
@@ -1785,7 +1785,7 @@ export default function ClientDashboardDetails({
             )}
             {canIssueRc && (
               <Button size="sm" className="h-8 bg-teal-700 hover:bg-teal-800 ml-2 font-bold" onClick={openAssignChemModal}>
-                + Assign Sub. (New RC)
+                + Assign Sub. (New CT)
               </Button>
             )}
           </>
@@ -1892,7 +1892,7 @@ export default function ClientDashboardDetails({
       <Dialog
         isOpen={!!rcHistoryTarget}
         onClose={() => setRcHistoryTarget(null)}
-        title={rcHistoryTarget ? `${rcHistoryTarget.chemicalName} — RC History` : 'RC History'}
+        title={rcHistoryTarget ? `${rcHistoryTarget.chemicalName} — CT History` : 'CT History'}
       >
         <ResponsiveTableScroll>
           <table className="w-full text-sm text-left">
@@ -2018,18 +2018,18 @@ export default function ClientDashboardDetails({
       <Dialog
         isOpen={!!rcDeleteTarget}
         onClose={() => setRcDeleteTarget(null)}
-        title={rcDeleteTarget?.kind === 'pending' ? 'Remove Assigned Substance' : 'Delete RC Certificate'}
+        title={rcDeleteTarget?.kind === 'pending' ? 'Remove Assigned Substance' : 'Delete CT Certificate'}
       >
         <div className="space-y-4">
           <p className="text-sm text-slate-600">
             {rcDeleteTarget?.kind === 'pending' ? (
               <>
                 Remove assigned substance <strong>{rcDeleteTarget.chemical_name}</strong> from this client?
-                The pending RC certificate row will be removed.
+                The pending CT certificate row will be removed.
               </>
             ) : (
               <>
-                Permanently delete RC Certificate{' '}
+                Permanently delete CT Certificate{' '}
                 <strong className="font-mono text-slate-800">{rcDeleteTarget?.certificate_number}</strong>{' '}
                 for <strong>{rcDeleteTarget?.chemical_name}</strong>? It will be removed from the database and
                 storage — this cannot be undone.
@@ -2438,24 +2438,24 @@ export default function ClientDashboardDetails({
           </div>
         </div>
       </Dialog>
-      {/* Assign RC Certificate */}
+      {/* Assign CT Certificate */}
       <Dialog
         isOpen={isAssignChemModalOpen}
         onClose={closeAssignChemModal}
-        title={assignChemModalMode === 'issue' ? 'Issue RC Certificate' : 'Assign RC Certificate'}
+        title={assignChemModalMode === 'issue' ? 'Issue CT Certificate' : 'Assign CT Certificate'}
       >
         <div className="p-2 space-y-4">
           <p className="text-sm text-slate-600 font-medium">
             {assignChemModalMode === 'issue' ? (
               <>
-                Issue the first RC certificate for{' '}
+                Issue the first CT certificate for{' '}
                 <span className="font-bold text-slate-800">{assignChemData.chemical_name || 'this substance'}</span>.
                 Fill registration number and confirm dates, then save.
               </>
             ) : (
               <>
                 Add a substance to{' '}
-                <span className="font-bold text-slate-800">{client.company_name}</span> and issue an RC certificate for
+                <span className="font-bold text-slate-800">{client.company_name}</span> and issue an CT certificate for
                 the selected year. Existing year entries are preserved — duplicate substance + year is not allowed.
               </>
             )}
@@ -2584,29 +2584,29 @@ export default function ClientDashboardDetails({
               Cancel
             </Button>
             <Button className="bg-teal-700 hover:bg-teal-800" onClick={handleAssignChemical} isLoading={isPending}>
-              {assignChemModalMode === 'issue' ? 'Issue RC Certificate' : 'Save Certificate & Generate PDF'}
+              {assignChemModalMode === 'issue' ? 'Issue CT Certificate' : 'Save Certificate & Generate PDF'}
             </Button>
           </div>
         </div>
       </Dialog>
 
-      {/* Renew / Edit RC Certificate — RC Certificates tab only */}
+      {/* Renew / Edit CT Certificate — CT Certificates tab only */}
       <Dialog
         isOpen={isRcCertModalOpen}
         onClose={closeRcCertModal}
-        title={rcCertFormMode === 'renew' ? 'Renew RC Certificate' : 'Edit RC Certificate'}
+        title={rcCertFormMode === 'renew' ? 'Renew CT Certificate' : 'Edit CT Certificate'}
       >
         <div className="p-2 space-y-4">
           <p className="text-sm text-slate-600 font-medium">
             {rcCertFormMode === 'renew' ? (
               <>
-                Issue a new RC certificate for{' '}
+                Issue a new CT certificate for{' '}
                 <span className="font-bold text-slate-800">{assignChemData.chemical_name || 'this substance'}</span>.
                 The previous certificate stays on record. Use a different validity period.
               </>
             ) : (
               <>
-                Update RC certificate details for{' '}
+                Update CT certificate details for{' '}
                 <span className="font-bold text-slate-800">{assignChemData.chemical_name || 'this substance'}</span>.
               </>
             )}
@@ -2735,7 +2735,7 @@ export default function ClientDashboardDetails({
       >
         <div className="p-2 space-y-4">
           <p className="text-sm text-slate-600 font-medium">
-            Update substance and quota allocation. RC certificates are managed on the client overview page.
+            Update substance and quota allocation. CT certificates are managed on the client overview page.
           </p>
           <div className="space-y-4">
             <div>
@@ -2897,7 +2897,7 @@ export default function ClientDashboardDetails({
                     </span>
                     {selectedTccApp?.rc_period_certificate && (
                       <span className="block text-[10px] text-slate-500 font-medium mt-0.5">
-                        RC period: {selectedTccApp.rc_period_certificate}
+                        CT period: {selectedTccApp.rc_period_certificate}
                       </span>
                     )}
                   </div>

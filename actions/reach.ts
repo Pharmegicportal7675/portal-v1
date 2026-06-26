@@ -173,7 +173,7 @@ export async function createReachCertificate(input: CreateReachCertificateInput)
 
       return {
         success: true as const,
-        message: `RC Certificate ${existingExact.certificate_number} is already issued for ${chemical.chemical_name}. Record linked.`,
+        message: `CT Certificate ${existingExact.certificate_number} is already issued for ${chemical.chemical_name}. Record linked.`,
         certificateId: existingExact.id,
         certNumber: existingExact.certificate_number,
       };
@@ -284,7 +284,7 @@ export async function createReachCertificate(input: CreateReachCertificateInput)
   }
 
   if (!cert) {
-    throw new Error(lastInsertError?.message || 'Failed to create RC certificate record.');
+    throw new Error(lastInsertError?.message || 'Failed to create CT certificate record.');
   }
 
   await adminSupabase
@@ -304,7 +304,7 @@ export async function createReachCertificate(input: CreateReachCertificateInput)
     action: 'REACH_CERTIFICATE_ISSUED',
     entity_type: 'certificates',
     entity_id: cert.id,
-    description: `RC Certificate ${certNumber} issued for ${chemical.chemical_name}`,
+    description: `CT Certificate ${certNumber} issued for ${chemical.chemical_name}`,
   });
 
   const { data: clientUser } = await adminSupabase
@@ -317,8 +317,8 @@ export async function createReachCertificate(input: CreateReachCertificateInput)
     await notifyUser(
       adminSupabase,
       clientUser.id,
-      'RC Compliance Certificate Issued',
-      `Your RC certificate ${certNumber} for ${chemical.chemical_name} is valid until ${expiryDate.toLocaleDateString()}. You may now apply for TCC permits for this substance.`,
+      'CT Compliance Certificate Issued',
+      `Your CT certificate ${certNumber} for ${chemical.chemical_name} is valid until ${expiryDate.toLocaleDateString()}. You may now apply for TCC permits for this substance.`,
       '/client'
     );
   }
@@ -330,7 +330,7 @@ export async function createReachCertificate(input: CreateReachCertificateInput)
 
   return {
     success: true as const,
-    message: `RC Certificate issued for ${chemical.chemical_name}.`,
+    message: `CT Certificate issued for ${chemical.chemical_name}.`,
     certificateId: cert.id,
     certNumber,
   };
@@ -540,7 +540,7 @@ export async function renewReachCertificateAction(
       quantity_mt: data.available_quantity,
       transaction_type: 'assign',
       performed_by: session.userId,
-      notes: `RC renewed — quota set to ${data.available_quantity} MT`,
+      notes: `CT renewed — quota set to ${data.available_quantity} MT`,
     });
 
     await adminSupabase.from('activity_logs').insert({
@@ -549,7 +549,7 @@ export async function renewReachCertificateAction(
       action: 'REACH_CERTIFICATE_RENEWED',
       entity_type: 'certificates',
       entity_id: result.certificateId,
-      description: `RC renewed with ${data.available_quantity} MT quota until ${dates.validatedDate}`,
+      description: `CT renewed with ${data.available_quantity} MT quota until ${dates.validatedDate}`,
     });
 
     revalidatePath(`/admin/clients/${clientId}`);
@@ -558,7 +558,7 @@ export async function renewReachCertificateAction(
 
     return {
       success: true,
-      message: result.message || 'RC Certificate renewed successfully.',
+      message: result.message || 'CT Certificate renewed successfully.',
       certificateId: result.certificateId,
       certificateNumber: result.certNumber,
     };
@@ -695,7 +695,7 @@ export async function updateReachCertificateAction(
       action: 'REACH_CERTIFICATE_UPDATED',
       entity_type: 'certificates',
       entity_id: certId,
-      description: `RC ${cert.certificate_number} details updated`,
+      description: `CT ${cert.certificate_number} details updated`,
     });
 
     revalidatePath(`/admin/clients/${cert.client_id}`);
@@ -706,13 +706,13 @@ export async function updateReachCertificateAction(
     if (!regen.success) {
       return {
         success: true,
-        message: `RC Certificate ${cert.certificate_number} updated. PDF could not be regenerated: ${regen.error}`,
+        message: `CT Certificate ${cert.certificate_number} updated. PDF could not be regenerated: ${regen.error}`,
       };
     }
 
     return {
       success: true,
-      message: `RC Certificate ${cert.certificate_number} updated successfully.`,
+      message: `CT Certificate ${cert.certificate_number} updated successfully.`,
     };
   } catch (err: unknown) {
     const message = err instanceof Error ? err.message : String(err);
@@ -763,7 +763,7 @@ export async function issueReachCertificateWithDetailsAction(
 
     return {
       success: true as const,
-      message: result.message || 'RC Certificate issued.',
+      message: result.message || 'CT Certificate issued.',
       certificateId: result.certificateId,
       certNumber: result.certNumber,
     };
@@ -894,7 +894,7 @@ export async function sendReachCertificateEmailAction(certificateId: string) {
     await sendCertEmail({
       to: recipients.to,
       cc: recipients.cc,
-      subject: `REACH Compliance Certificate Issued — ${cert.certificate_number}`,
+      subject: `CT Compliance Certificate Issued — ${cert.certificate_number}`,
       certificateNumber: cert.certificate_number,
       companyName: cert.clients.company_name,
       chemicalName,
@@ -922,7 +922,7 @@ export async function sendReachCertificateEmailAction(certificateId: string) {
       action: 'REACH_CERTIFICATE_EMAIL_SENT',
       entity_type: 'certificates',
       entity_id: certificateId,
-      description: `RC certificate email sent to ${recipients.to}`,
+      description: `CT certificate email sent to ${recipients.to}`,
     });
 
     revalidatePath(`/admin/clients/${cert.client_id}/rc-certificates`);
@@ -956,7 +956,7 @@ export async function resendReachCertificateEmailAction(certificateId: string) {
     await sendCertEmail({
       to: recipients.to,
       cc: recipients.cc,
-      subject: `REACH Compliance Certificate (Resent) — ${cert.certificate_number}`,
+      subject: `CT Compliance Certificate (Resent) — ${cert.certificate_number}`,
       certificateNumber: cert.certificate_number,
       companyName: cert.clients.company_name,
       chemicalName,
@@ -984,7 +984,7 @@ export async function resendReachCertificateEmailAction(certificateId: string) {
       action: 'REACH_CERTIFICATE_EMAIL_RESENT',
       entity_type: 'certificates',
       entity_id: certificateId,
-      description: `RC certificate email resent (${(cert.mail_resend_count || 0) + 1}x)`,
+      description: `CT certificate email resent (${(cert.mail_resend_count || 0) + 1}x)`,
     });
 
     revalidatePath(`/admin/clients/${cert.client_id}/rc-certificates`);
@@ -1006,7 +1006,7 @@ export async function sendBulkReachCertificatesEmailAction(
 
   const uniqueIds = [...new Set(certificateIds.filter(Boolean))];
   if (uniqueIds.length === 0) {
-    return { success: false, error: 'Select at least one RC certificate.' };
+    return { success: false, error: 'Select at least one CT certificate.' };
   }
 
   const adminSupabase = createAdminClient();
@@ -1044,10 +1044,10 @@ export async function sendBulkReachCertificatesEmailAction(
     ]);
 
     if (error || !certs?.length) {
-      throw new Error('Selected RC certificates were not found.');
+      throw new Error('Selected CT certificates were not found.');
     }
     if (certs.length !== uniqueIds.length) {
-      throw new Error('Some selected RC certificates could not be found.');
+      throw new Error('Some selected CT certificates could not be found.');
     }
 
     const client = certs[0].clients;
@@ -1080,8 +1080,8 @@ export async function sendBulkReachCertificatesEmailAction(
 
     const subject =
       certs.length === 1
-        ? `REACH Compliance Certificate Issued — ${certs[0].certificate_number}`
-        : `REACH Compliance Certificates Issued — ${certs.length} Certificates`;
+        ? `CT Compliance Certificate Issued — ${certs[0].certificate_number}`
+        : `CT Compliance Certificates Issued — ${certs.length} Certificates`;
 
     await sendBulkReachCertificatesEmail({
       to: recipients.to,
@@ -1121,8 +1121,8 @@ export async function sendBulkReachCertificatesEmailAction(
         entity_type: 'certificates',
         entity_id: cert.id,
         description: alreadySent
-          ? `RC certificate email resent via bulk send (${(cert.mail_resend_count || 0) + 1}x)`
-          : `RC certificate email sent via bulk send to ${recipients.to}`,
+          ? `CT certificate email resent via bulk send (${(cert.mail_resend_count || 0) + 1}x)`
+          : `CT certificate email sent via bulk send to ${recipients.to}`,
       });
 
       if (cert.chemical_id) {
@@ -1134,7 +1134,7 @@ export async function sendBulkReachCertificatesEmailAction(
 
     return {
       success: true,
-      message: `${certs.length} RC certificate${certs.length > 1 ? 's' : ''} sent to ${recipients.to} in one email.`,
+      message: `${certs.length} CT certificate${certs.length > 1 ? 's' : ''} sent to ${recipients.to} in one email.`,
     };
   } catch (err: unknown) {
     const message = err instanceof Error ? err.message : String(err);
@@ -1233,7 +1233,7 @@ export async function deleteReachCertificateAction(certificateId: string, client
       .single();
 
     if (error || !cert || !isReachCertificateType(cert)) {
-      return { success: false, error: 'RC certificate not found.' };
+      return { success: false, error: 'CT certificate not found.' };
     }
 
     const storageFiles = [`${cert.certificate_number}.pdf`, `${cert.certificate_number}.docx`];
@@ -1248,7 +1248,7 @@ export async function deleteReachCertificateAction(certificateId: string, client
 
     if (deleteError) throw deleteError;
     if (!deleted) {
-      return { success: false, error: 'Failed to delete RC certificate from database.' };
+      return { success: false, error: 'Failed to delete CT certificate from database.' };
     }
 
     if (cert.chemical_id) {
@@ -1264,7 +1264,7 @@ export async function deleteReachCertificateAction(certificateId: string, client
       action: 'REACH_CERTIFICATE_DELETED',
       entity_type: 'certificates',
       entity_id: certificateId,
-      description: `RC Certificate ${cert.certificate_number} permanently deleted for ${chemicalName}`,
+      description: `CT Certificate ${cert.certificate_number} permanently deleted for ${chemicalName}`,
     });
 
     revalidatePath(`/admin/clients/${clientId}`);
@@ -1275,7 +1275,7 @@ export async function deleteReachCertificateAction(certificateId: string, client
 
     return {
       success: true,
-      message: `RC Certificate ${cert.certificate_number} permanently deleted.`,
+      message: `CT Certificate ${cert.certificate_number} permanently deleted.`,
     };
   } catch (err: unknown) {
     const message = err instanceof Error ? err.message : String(err);

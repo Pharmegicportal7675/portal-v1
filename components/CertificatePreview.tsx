@@ -213,7 +213,7 @@ export default function CertificatePreviewClient({
             </h1>
             <p className="text-sm text-slate-500 font-medium">
               {isReach
-                ? 'REACH Compliance Certificate — valid for 1 year. Required before TCC application.'
+                ? 'CT Compliance Certificate — valid for 1 year. Required before TCC application.'
                 : 'TCC Import Certificate — review, edit application data, and send to the client'}
             </p>
           </div>

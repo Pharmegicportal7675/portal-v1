@@ -528,7 +528,7 @@ async function issueReachCertificateForImportedSubstance(
   issuedInBatch?: Set<string>
 ): Promise<{ ok: true; issued: boolean } | { ok: false; reason: string }> {
   if (!substance.registration_number.trim() || !substance.issued_date || !substance.validity_date) {
-    return { ok: false, reason: 'Registration number and validity dates are required to issue RC.' };
+    return { ok: false, reason: 'Registration number and validity dates are required to issue CT.' };
   }
 
   const batchKey = buildReachImportIssueKey(clientId, substance);
@@ -569,7 +569,7 @@ async function issueReachCertificateForImportedSubstance(
   });
 
   if (!rcResult.success) {
-    return { ok: false, reason: rcResult.error || 'Failed to issue RC certificate.' };
+    return { ok: false, reason: rcResult.error || 'Failed to issue CT certificate.' };
   }
 
   if (batchKey) issuedInBatch?.add(batchKey);
@@ -633,13 +633,13 @@ async function importSubstanceRow(
       return {
         ...base,
         status: 'skipped',
-        reason: 'RC certificate already exists for this substance and year.',
+        reason: 'CT certificate already exists for this substance and year.',
       };
     }
     return {
       ...base,
       status: 'created',
-      reason: 'Ready to import (substance + RC certificate).',
+      reason: 'Ready to import (substance + CT certificate).',
     };
   }
 
@@ -689,8 +689,8 @@ async function importSubstanceRow(
         ...base,
         status: issueResult.issued ? 'created' : 'skipped',
         reason: issueResult.issued
-          ? 'Substance restored, assigned, and RC certificate issued.'
-          : 'Substance restored; RC certificate already exists for this year.',
+          ? 'Substance restored, assigned, and CT certificate issued.'
+          : 'Substance restored; CT certificate already exists for this year.',
       };
     }
 
@@ -730,7 +730,7 @@ async function importSubstanceRow(
         return {
           ...base,
           status: 'updated',
-          reason: 'RC certificate issued for existing substance assignment.',
+          reason: 'CT certificate issued for existing substance assignment.',
         };
       }
       return {
@@ -753,7 +753,7 @@ async function importSubstanceRow(
       ...base,
       status: 'updated',
       reason: issueResult.issued
-        ? 'Existing substance link updated and RC certificate issued.'
+        ? 'Existing substance link updated and CT certificate issued.'
         : 'Existing substance link updated with missing fields.',
     };
   }
@@ -791,8 +791,8 @@ async function importSubstanceRow(
     ...base,
     status: issueResult.issued ? 'created' : 'skipped',
     reason: issueResult.issued
-      ? 'Substance assigned and RC certificate issued.'
-      : 'Substance assigned; RC certificate already exists for this year.',
+      ? 'Substance assigned and CT certificate issued.'
+      : 'Substance assigned; CT certificate already exists for this year.',
   };
 }
 

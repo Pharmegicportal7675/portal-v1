@@ -320,7 +320,7 @@ export async function deleteSelectedClientsAction(clientIds: string[]) {
 
   return {
     success: true,
-    message: `${deletedCompanies.length} selected clients and related RC/TCC data deleted permanently.`,
+    message: `${deletedCompanies.length} selected clients and related CT/TCC data deleted permanently.`,
     deletedCompanies,
   };
 }
@@ -525,7 +525,7 @@ export async function addNewChemicalToClientAction(clientId: string, data: any) 
         action: 'REACH_CERTIFICATE_ISSUED',
         entity_type: 'certificates',
         entity_id: rcResult.certificateId,
-        description: `New year RC certificate for ${data.chemical_name.trim()}`,
+        description: `New year CT certificate for ${data.chemical_name.trim()}`,
       });
 
       revalidatePath(`/admin/clients/${clientId}`);
@@ -533,7 +533,7 @@ export async function addNewChemicalToClientAction(clientId: string, data: any) 
       revalidatePath(`/admin/clients/${clientId}/rc-certificates`);
       return {
         success: true,
-        message: `RC Certificate issued for ${data.chemical_name.trim()} (${issuedDate.slice(0, 4)}). Previous certificates remain on record.`,
+        message: `CT Certificate issued for ${data.chemical_name.trim()} (${issuedDate.slice(0, 4)}). Previous certificates remain on record.`,
         certificateId: rcResult.certificateId,
       };
     }
@@ -606,7 +606,7 @@ export async function addNewChemicalToClientAction(clientId: string, data: any) 
     revalidatePath(`/admin/clients/${clientId}/rc-certificates`);
     return {
       success: true,
-      message: 'Substance assigned and RC Certificate issued.',
+      message: 'Substance assigned and CT Certificate issued.',
       certificateId: rcResult.certificateId,
     };
   } catch (err) {
@@ -741,14 +741,14 @@ export async function permanentDeleteClientChemicalAction(clientId: string, chem
       entity_id: chemicalId,
       description:
         deletedCertCount > 0
-          ? `Permanently removed trashed substance assignment and ${deletedCertCount} RC certificate(s) from database`
+          ? `Permanently removed trashed substance assignment and ${deletedCertCount} CT certificate(s) from database`
           : 'Permanently removed trashed substance assignment',
     });
 
     revalidatePath(`/admin/clients/${clientId}`);
     revalidatePath(`/admin/clients/${clientId}/rc-certificates`);
     revalidatePath('/admin/rc-certificates');
-    return { success: true, message: 'Substance and related RC certificates permanently deleted.' };
+    return { success: true, message: 'Substance and related CT certificates permanently deleted.' };
   } catch (err) {
     return { success: false, error: formatErrorMessage(err) };
   }

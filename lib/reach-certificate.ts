@@ -366,7 +366,7 @@ export function findReachCertificatePeriodConflict(
     const certLabel = existing.certificate_number?.trim() || existing.id;
 
     if (existIssue === newIssue && existExpiry === newExpiry) {
-      return `Certificate ${certLabel} already uses issue date ${existIssue} and expiry date ${existExpiry} for ${chemicalName}. It is listed under RC Certificates — delete it there or choose different dates.`;
+      return `Certificate ${certLabel} already uses issue date ${existIssue} and expiry date ${existExpiry} for ${chemicalName}. It is listed under CT Certificates — delete it there or choose different dates.`;
     }
 
     if (
@@ -377,7 +377,7 @@ export function findReachCertificatePeriodConflict(
         existing.expires_at
       )
     ) {
-      return `Certificate ${certLabel} already covers ${existIssue} to ${existExpiry || 'open'} for ${chemicalName}. Choose non-overlapping dates or delete ${certLabel} from RC Certificates.`;
+      return `Certificate ${certLabel} already covers ${existIssue} to ${existExpiry || 'open'} for ${chemicalName}. Choose non-overlapping dates or delete ${certLabel} from CT Certificates.`;
     }
   }
 

@@ -109,7 +109,7 @@ export default function CertificatesList({ initialCertificates }: CertificatesLi
       <div>
         <h1 className="text-2xl font-black text-slate-800 tracking-tight">Compliance Certificates</h1>
         <p className="text-sm text-slate-500 font-medium">
-          Search and download REACH Compliance Certificates and Tonnage Compliance Certificates (TCC) issued to your organization.
+          Search and download CT Compliance Certificates and Tonnage Compliance Certificates (TCC) issued to your organization.
         </p>
       </div>
 

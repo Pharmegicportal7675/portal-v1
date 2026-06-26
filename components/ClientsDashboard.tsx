@@ -322,7 +322,7 @@ export default function ClientsDashboard({ initialClients, chemicals, adminRole 
       if (res.success) {
         toast.success(
           res.message ||
-            `Deleted ${selectedClientIds.length} clients and related RC/TCC records.`
+            `Deleted ${selectedClientIds.length} clients and related CT/TCC records.`
         );
         if (res.failed?.length) {
           toast.error(`Some deletions failed (${res.failed.length}).`);
@@ -633,7 +633,7 @@ export default function ClientsDashboard({ initialClients, chemicals, adminRole 
         <div className="space-y-4">
           <p className="text-sm text-slate-600 font-medium">
             Delete <span className="font-bold text-slate-800">{selectedClientIds.length}</span>{' '}
-            selected clients with their related RC certificates, TCC applications/certificates, and
+            selected clients with their related CT certificates, TCC applications/certificates, and
             linked compliance records?
           </p>
           <div className="p-3 bg-rose-50 border border-rose-100 rounded-lg text-xs text-rose-700 font-semibold space-y-1">

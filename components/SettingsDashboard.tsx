@@ -173,7 +173,7 @@ export default function SettingsDashboard({ initialSettings, initialTemplate }: 
 
   const handleSaveRcTemplate = () => {
     if (!initialTemplate?.id) {
-      toast.error('RC template record not initialized in database.');
+      toast.error('CT template record not initialized in database.');
       return;
     }
     startRcTemplateTransition(async () => {
@@ -185,10 +185,10 @@ export default function SettingsDashboard({ initialSettings, initialTemplate }: 
         rc_footer_text: rcFooterText,
       });
       if (res.success) {
-        toast.success(res.message || 'RC template settings updated.');
+        toast.success(res.message || 'CT template settings updated.');
         router.refresh();
       } else {
-        toast.error(res.error || 'Failed to update RC template.');
+        toast.error(res.error || 'Failed to update CT template.');
       }
     });
   };
@@ -256,7 +256,7 @@ export default function SettingsDashboard({ initialSettings, initialTemplate }: 
     setRcFooterText('Pharmegic Healthcare Compliance Division. For verification, scan the QR code.');
     setRcLogo(null);
     setRcSignature(null);
-    toast.info('RC template inputs reset to defaults.');
+    toast.info('CT template inputs reset to defaults.');
   };
 
   const handleResetTccTemplate = () => {
@@ -297,10 +297,10 @@ export default function SettingsDashboard({ initialSettings, initialTemplate }: 
         smtp_cc_default: rcSmtp.smtp_cc_default,
       });
       if (res.success) {
-        toast.success(res.message || 'RC SMTP settings saved.');
+        toast.success(res.message || 'CT SMTP settings saved.');
         router.refresh();
       } else {
-        toast.error(res.error || 'Failed to save RC SMTP settings.');
+        toast.error(res.error || 'Failed to save CT SMTP settings.');
       }
     });
   };
@@ -375,7 +375,7 @@ export default function SettingsDashboard({ initialSettings, initialTemplate }: 
       <div>
         <h1 className="text-2xl font-black text-slate-800 tracking-tight">Portal Configuration Settings</h1>
         <p className="text-sm text-slate-500 font-medium">
-          Manage admin profile, RC/TCC certificate templates, security credentials, and compliance alerts.
+          Manage admin profile, CT/TCC certificate templates, security credentials, and compliance alerts.
         </p>
       </div>
 
@@ -402,7 +402,7 @@ export default function SettingsDashboard({ initialSettings, initialTemplate }: 
             }`}
           >
             <FileText className="h-4.5 w-4.5" />
-            RC Template
+            CT Template
           </button>
           <button
             onClick={() => setActiveTab('tcc-template')}
@@ -446,7 +446,7 @@ export default function SettingsDashboard({ initialSettings, initialTemplate }: 
             }`}
           >
             <ShieldCheck className="h-4.5 w-4.5" />
-            RC Email SMTP
+            CT Email SMTP
           </button>
           <button
             onClick={() => setActiveTab('notification-email')}
@@ -515,7 +515,7 @@ export default function SettingsDashboard({ initialSettings, initialTemplate }: 
 
           {activeTab === 'rc-template' && (
             <CertificateTemplateSettingsPanel
-              title="RC Certificate Template"
+              title="CT Certificate Template"
               description="Manage EU REACH certificate branding, logo, signature, and theme colors."
               certificateType="rc"
               accentColor={rcAccentColor}
@@ -632,7 +632,7 @@ export default function SettingsDashboard({ initialSettings, initialTemplate }: 
               </CardHeader>
               <CardContent className="space-y-6">
                 <div className="bg-amber-50 border border-amber-200 rounded-xl p-4 text-xs font-semibold text-amber-700">
-                  Used only for TCC certificate delivery. Separate from RC certificate email settings.
+                  Used only for TCC certificate delivery. Separate from CT certificate email settings.
                 </div>
                 {renderSmtpFields(tccSmtp, setTccSmtp)}
                 <div className="flex justify-end pt-4 border-t border-slate-100">
@@ -648,21 +648,21 @@ export default function SettingsDashboard({ initialSettings, initialTemplate }: 
             </Card>
           )}
 
-          {/* TAB 5: RC SMTP */}
+          {/* TAB 5: CT SMTP */}
           {activeTab === 'smtp-rc' && (
             <Card className="border-slate-100 shadow-xs">
               <CardHeader>
                 <div className="flex items-center gap-2 text-primary">
                   <ShieldCheck className="h-5 w-5" />
-                  <CardTitle>RC Certificate Email SMTP</CardTitle>
+                  <CardTitle>CT Certificate Email SMTP</CardTitle>
                 </div>
                 <CardDescription>
-                  SMTP used when sending REACH Compliance Certificate (RC) emails to clients.
+                  SMTP used when sending CT Compliance Certificate emails to clients.
                 </CardDescription>
               </CardHeader>
               <CardContent className="space-y-6">
                 <div className="bg-teal-50 border border-teal-200 rounded-xl p-4 text-xs font-semibold text-teal-800">
-                  Used only for RC certificate delivery. Configure independently from TCC SMTP.
+                  Used only for CT certificate delivery. Configure independently from TCC SMTP.
                 </div>
                 {renderSmtpFields(rcSmtp, setRcSmtp)}
                 <div className="flex justify-end pt-4 border-t border-slate-100">
@@ -671,7 +671,7 @@ export default function SettingsDashboard({ initialSettings, initialTemplate }: 
                     isLoading={isRcSmtpPending}
                     disabled={isRcSmtpPending}
                   >
-                    Save RC SMTP Settings
+                    Save CT SMTP Settings
                   </Button>
                 </div>
               </CardContent>

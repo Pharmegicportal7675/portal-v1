@@ -130,7 +130,7 @@ function getTccApplicationNotificationHtml(
         <p><strong>Requested:</strong> - ${details.quantityMt} MT</p>
         <p><strong>Projected balance:</strong> ${details.projectedBalanceMt ?? 0} MT</p>
         <div class="quota-verified">
-          <strong>RC Period &amp; Quota Verified</strong><br />
+          <strong>CT Period &amp; Quota Verified</strong><br />
           ${rcPeriodLabel}
         </div>
       </div>`
@@ -401,11 +401,11 @@ export async function sendBulkReachCertificatesEmail({
         html,
         attachments,
       });
-      console.log(`[SMTP] Bulk RC certificate email sent: ${info.messageId}`);
+      console.log(`[SMTP] Bulk CT certificate email sent: ${info.messageId}`);
       return { success: true };
     } catch (error: unknown) {
       const msg = error instanceof Error ? error.message : String(error);
-      console.error('[SMTP] Bulk RC certificate email failed:', msg);
+      console.error('[SMTP] Bulk CT certificate email failed:', msg);
       logFallbackEmail(to, subject);
       return { success: true, fallback: true, error: msg };
     }
@@ -431,7 +431,7 @@ function getBulkReachCertificateEmailHtml(
 
   const bodyHtml = `
       <p>Dear <strong>${escapeEmailHtml(companyName)}</strong>,</p>
-      <p>Your <strong>REACH Compliance Certificates (RC)</strong> have been issued. Please find <strong>${certificates.length}</strong> official certificate${certificates.length > 1 ? 's' : ''} attached to this email.</p>
+      <p>Your <strong>CT Compliance Certificates</strong> have been issued. Please find <strong>${certificates.length}</strong> official certificate${certificates.length > 1 ? 's' : ''} attached to this email.</p>
       <table style="width:100%;border-collapse:collapse;background:#f8fafc;border-radius:8px;overflow:hidden;margin:20px 0;font-size:14px;">
         <thead>
           <tr>
@@ -441,10 +441,10 @@ function getBulkReachCertificateEmailHtml(
         </thead>
         <tbody>${rows}</tbody>
       </table>
-      <p style="font-size:13px;color:#64748b;">Each RC certificate is attached as a separate PDF file. These certificates are required before applying for a Tonnage Compliance Certificate (TCC).</p>`;
+      <p style="font-size:13px;color:#64748b;">Each CT certificate is attached as a separate PDF file. These certificates are required before applying for a Tonnage Compliance Certificate (TCC).</p>`;
 
   return buildEmailShell({
-    subtitle: 'REACH Compliance Certificate Registry',
+    subtitle: 'CT Compliance Certificate Registry',
     bodyHtml,
   });
 }
@@ -456,7 +456,7 @@ function getReachCertificateEmailHtml(
 ): string {
   const bodyHtml = `
       <p>Dear <strong>${escapeEmailHtml(companyName)}</strong>,</p>
-      <p>Your <strong>REACH Compliance Certificate (RC)</strong> has been issued. Please find the official certificate attached to this email.</p>
+      <p>Your <strong>CT Compliance Certificate</strong> has been issued. Please find the official certificate attached to this email.</p>
       <div class="cert-box">
         <div style="font-size:11px;color:#064e3b;font-weight:700;margin-bottom:6px;letter-spacing:0.1em;">CERTIFICATE NUMBER</div>
         <div class="cert-number">${escapeEmailHtml(certNumber)}</div>
@@ -466,10 +466,10 @@ function getReachCertificateEmailHtml(
         <div class="detail-row"><span class="label">Substance</span><span class="value">${escapeEmailHtml(chemicalName)}</span></div>
         <div class="detail-row"><span class="label">Status</span><span class="value" style="color:#16a34a;">✓ Active &amp; Valid</span></div>
       </div>
-      <p style="font-size:13px;color:#64748b;">The PDF certificate is attached. This RC certificate is required before applying for a Tonnage Coverage Certificate (TCC).</p>`;
+      <p style="font-size:13px;color:#64748b;">The PDF certificate is attached. This CT certificate is required before applying for a Tonnage Coverage Certificate (TCC).</p>`;
 
   return buildEmailShell({
-    subtitle: 'REACH Compliance Certificate Registry',
+    subtitle: 'CT Compliance Certificate Registry',
     bodyHtml,
   });
 }

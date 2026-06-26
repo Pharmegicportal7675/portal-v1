@@ -694,7 +694,7 @@ export default function ApprovalsDashboard({ initialApplications, emailDefaults 
                     </span>
                     {selectedApp?.rc_period_certificate && (
                       <span className="block text-[10px] text-slate-500 font-medium mt-0.5">
-                        RC period: {selectedApp.rc_period_certificate}
+                        CT period: {selectedApp.rc_period_certificate}
                       </span>
                     )}
                   </div>

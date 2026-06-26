@@ -12,10 +12,10 @@ export default function ReachCertificatePreviewError({
 }) {
   return (
     <div className="mx-auto max-w-lg space-y-4 rounded-xl border border-rose-100 bg-rose-50/50 p-6">
-      <h2 className="text-lg font-bold text-slate-900">RC preview could not load</h2>
+      <h2 className="text-lg font-bold text-slate-900">CT preview could not load</h2>
       <p className="text-sm text-slate-600">
         The certificate preview failed on the server. This is usually temporary — try again, or open
-        the client profile and use RC preview from there.
+        the client profile and use CT preview from there.
       </p>
       {error.message ? (
         <p className="rounded-md bg-white px-3 py-2 text-xs font-mono text-rose-700">{error.message}</p>
@@ -26,7 +26,7 @@ export default function ReachCertificatePreviewError({
         </Button>
         <Link href="/admin/rc-certificates">
           <Button type="button" variant="outline">
-            Back to RC Certificates
+            Back to CT Certificates
           </Button>
         </Link>
       </div>

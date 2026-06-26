@@ -75,7 +75,7 @@ export default function RcCertificatesDashboard({
 
   const handleBulkSendMail = () => {
     if (selectedIds.length === 0) {
-      toast.error('Select at least one RC certificate.');
+      toast.error('Select at least one CT certificate.');
       return;
     }
 
@@ -91,11 +91,11 @@ export default function RcCertificatesDashboard({
         { clientId, certificateIds: certIds }
       );
       if (res.success) {
-        toast.success(res.message || 'RC certificates sent successfully.');
+        toast.success(res.message || 'CT certificates sent successfully.');
         setSelectedIds([]);
         router.refresh();
       } else {
-        toast.error(res.error || 'Failed to send RC certificates.');
+        toast.error(res.error || 'Failed to send CT certificates.');
       }
     });
   };
@@ -153,7 +153,7 @@ export default function RcCertificatesDashboard({
         onSelectedIdsChange={setSelectedIds}
         onFilteredRowsChange={setFilteredRows as any}
         tccHistory={tccHistory}
-        title="RC Compliance Certificates (Year-wise)"
+        title="CT Compliance Certificates (Year-wise)"
         description="Manage issue/expiry dates & remaining quota per year | Expired certificates retain quantity for TCC applications using old date."
         extraActions={extraActions}
         exportFilename="rc-certificates"
@@ -207,18 +207,18 @@ export default function RcCertificatesDashboard({
       <Dialog
         isOpen={!!deleteTarget}
         onClose={() => setDeleteTarget(null)}
-        title={deleteTarget?.kind === 'pending' ? 'Remove Assigned Substance' : 'Delete RC Certificate'}
+        title={deleteTarget?.kind === 'pending' ? 'Remove Assigned Substance' : 'Delete CT Certificate'}
       >
         <div className="space-y-4">
           <p className="text-sm text-slate-600">
             {deleteTarget?.kind === 'pending' ? (
               <>
                 Remove assigned substance <strong>{deleteTarget.chemical_name}</strong> from this client?
-                The pending RC certificate row will be removed.
+                The pending CT certificate row will be removed.
               </>
             ) : (
               <>
-                Permanently delete RC Certificate{' '}
+                Permanently delete CT Certificate{' '}
                 <strong className="font-mono text-slate-800">{deleteTarget?.certificate_number}</strong> for{' '}
                 <strong>{deleteTarget?.chemical_name}</strong>? It will be removed from the database and storage —
                 this cannot be undone.

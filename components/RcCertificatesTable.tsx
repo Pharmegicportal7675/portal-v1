@@ -511,7 +511,7 @@ export default function RcCertificatesTable({
                       checked={allSelectableSelected}
                       onChange={toggleAllCertSelection}
                       disabled={selectableCertIds.length === 0}
-                      aria-label="Select all filtered RC certificates"
+                      aria-label="Select all filtered CT certificates"
                       className="h-4 w-4 rounded border-slate-300 text-teal-700 focus:ring-teal-600"
                     />
                   </th>
@@ -581,7 +581,7 @@ export default function RcCertificatesTable({
                     }
                     className="p-8 text-center text-slate-400 font-medium"
                   >
-                    No RC certificates match the selected filters.
+                    No CT certificates match the selected filters.
                   </td>
                 </tr>
               ) : (
@@ -642,7 +642,7 @@ export default function RcCertificatesTable({
                         {/* Status column */}
                         <td className="px-4 py-3.5 align-middle">
                           <Badge variant="neutral" className="text-[10px] uppercase font-bold bg-slate-100 text-slate-600 border border-slate-200">
-                            Missing RC
+                            Missing CT
                           </Badge>
                         </td>
 

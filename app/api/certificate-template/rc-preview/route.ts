@@ -28,7 +28,7 @@ export async function GET(_request: NextRequest) {
 
     return docxResponse(docxBuffer, 'rc-template-preview.docx');
   } catch (err: unknown) {
-    const message = err instanceof Error ? err.message : 'RC template preview failed.';
+    const message = err instanceof Error ? err.message : 'CT template preview failed.';
     return NextResponse.json({ error: message }, { status: 500 });
   }
 }
