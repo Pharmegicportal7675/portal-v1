@@ -6,10 +6,6 @@ import {
   resolveTccCertificateDownloadFile,
   buildTccCertificatePdfInputFromStoredCert,
 } from '@/lib/tcc-certificate-pdf';
-import { sendCertificateEmail as sendCertEmail } from '@/services/email';
-import { buildCertificateRecipients } from '@/lib/certificate-email-recipients';
-import { appendMailSentHistory } from '@/lib/certificate-mail-history';
-import { buildTccSmtpConfig } from '@/lib/certificate-smtp-settings';
 import { adminTccApplicationUpdateSchema, tccEuApplicationSchema, tccNotificationApplicationSchema } from '@/lib/validations';
 import { uploadBoAttachment, validateBoAttachment } from '@/lib/tcc-attachments';
 import { CERTIFICATES_BUCKET, ensureCertificatesBucket } from '@/lib/storage';
@@ -48,6 +44,10 @@ import {
 import { canClientEditTccApplication } from '@/lib/tcc-application';
 import { formatErrorMessage } from '@/lib/format-error';
 import { upsertTccCertificateForApplication } from '@/lib/tcc-certificate-issuance';
+import {
+  resendTccCertificateEmail,
+  sendTccCertificateEmailFirst,
+} from '@/lib/tcc-certificate-client-email';
 import { buildTccApplicationFieldChanges } from '@/lib/tcc-application-changes';
 import type { z } from 'zod';
 
@@ -1358,15 +1358,35 @@ export async function processTccAction(
         }
       }
 
+      const emailResult = await sendTccCertificateEmailFirst(
+        adminSupabase,
+        certId,
+        session.userId,
+        {
+          skipIfAlreadySent: true,
+          activityDescription: `Certificate email auto-sent on TCC approval to ${clientRecord?.email || 'client'}`,
+        }
+      );
+
+      let emailMessage = '';
+      if (emailResult.success && !emailResult.skipped) {
+        emailMessage = ` Email sent to ${emailResult.recipientEmail}.`;
+      } else if (!emailResult.success) {
+        console.error('[TCC APPROVE] Auto certificate email failed:', emailResult.error);
+        emailMessage = ' Email could not be sent automatically — use Send Mail To Client.';
+      }
+
       revalidatePath('/admin/approvals');
       revalidatePath('/admin', 'layout');
       revalidatePath('/client', 'layout');
+      revalidatePath(`/admin/certificate-preview/${certId}`);
+      revalidatePath(`/admin/clients/${app.client_id}`);
 
       return {
         success: true,
         message: certCreated
-          ? 'Application approved. Certificate generated.'
-          : 'Application approved. Certificate updated.',
+          ? `Application approved. Certificate generated.${emailMessage}`
+          : `Application approved. Certificate updated.${emailMessage}`,
         certificateId: certId,
       };
     } else {
@@ -1408,7 +1428,7 @@ export async function processTccAction(
 }
 
 // ============================================================================
-// SEND CERTIFICATE EMAIL (First send — admin manual trigger)
+// SEND CERTIFICATE EMAIL (Manual — retry if auto-send on approval failed)
 // ============================================================================
 export async function sendCertificateEmailAction(certificateId: string) {
   const session = await getSession();
@@ -1419,87 +1439,31 @@ export async function sendCertificateEmailAction(certificateId: string) {
   const adminSupabase = createAdminClient();
 
   try {
-    // Fetch certificate with all relations
-    const { data: cert, error } = await adminSupabase
+    const result = await sendTccCertificateEmailFirst(
+      adminSupabase,
+      certificateId,
+      session.userId
+    );
+
+    if (!result.success) {
+      return { success: false, error: result.error };
+    }
+
+    const { data: cert } = await adminSupabase
       .from('certificates')
-      .select(`
-        *,
-        chemicals (chemical_name, cas_number, ec_number, tonnage_band),
-        tcc_applications!certificates_tcc_application_id_fkey (
-          id, quantity_mt, registration_number, export_date, tracking_id, remarks,
-          eu_importer_company_name, eu_importer_address, purchase_order_number,
-          chemicals (chemical_name, cas_number, ec_number, tonnage_band)
-        ),
-        clients (
-          id, company_name, email, cc_emails, uuid_number, address, city, state, postal_code, country,
-          client_contacts (email)
-        )
-      `)
+      .select('client_id')
       .eq('id', certificateId)
-      .eq('type', 'TCC')
       .single();
-
-    if (error || !cert) throw new Error('Certificate not found');
-
-    // Get SMTP settings from admin_settings
-    const { data: settings } = await adminSupabase
-      .from('admin_settings')
-      .select('smtp_host, smtp_port, smtp_user, smtp_pass, smtp_from, smtp_cc_default')
-      .eq('id', 1)
-      .single();
-
-    const contactEmails =
-      cert.clients.client_contacts?.map((c: { email: string }) => c.email).filter(Boolean) || [];
-
-    const recipients = buildCertificateRecipients({
-      primaryEmail: cert.clients.email,
-      contactEmails,
-      defaultCcEmails: settings?.smtp_cc_default,
-      senderEmail: settings?.smtp_from,
-    });
-
-    const pdfInput = await buildTccCertificatePdfInputFromStoredCert(adminSupabase, cert as never);
-    const certFile = await resolveTccCertificateDownloadFile(adminSupabase, pdfInput);
-
-    // Send email
-    await sendCertEmail({
-      to: recipients.to,
-      cc: recipients.cc,
-      subject: `TCC Certificate Approved — ${cert.certificate_number}`,
-      certificateNumber: cert.certificate_number,
-      companyName: cert.clients.company_name,
-      chemicalName: cert.tcc_applications?.chemicals?.chemical_name || 'N/A',
-      pdfBuffer: certFile.buffer,
-      pdfFileName: certFile.fileName,
-      attachmentContentType: certFile.contentType,
-      smtpConfig: buildTccSmtpConfig(settings),
-    });
-
-    // Update mail tracking
-    const now = new Date().toISOString();
-    await adminSupabase
-      .from('certificates')
-      .update({
-        mail_sent: true,
-        mail_sent_at: now,
-        mail_sent_by: session.userId,
-        mail_sent_history: [now],
-      })
-      .eq('id', certificateId);
-
-    await adminSupabase.from('activity_logs').insert({
-      client_id: cert.client_id,
-      user_id: session.userId,
-      action: 'CERTIFICATE_EMAIL_SENT',
-      entity_type: 'certificates',
-      entity_id: certificateId,
-      description: `Certificate email sent to ${cert.clients.email}`,
-    });
 
     revalidatePath(`/admin/certificate-preview/${certificateId}`);
     revalidatePath('/admin/approvals');
-    revalidatePath(`/admin/clients/${cert.client_id}`);
-    return { success: true, message: `Certificate email sent to ${cert.clients.email}` };
+    if (cert?.client_id) {
+      revalidatePath(`/admin/clients/${cert.client_id}`);
+    }
+    return {
+      success: true,
+      message: `Certificate email sent to ${result.recipientEmail}`,
+    };
   } catch (err: unknown) {
     const message = err instanceof Error ? err.message : String(err);
     console.error('[SEND CERT EMAIL ERROR]:', err);
@@ -1519,83 +1483,27 @@ export async function resendCertificateEmailAction(certificateId: string) {
   const adminSupabase = createAdminClient();
 
   try {
-    const { data: cert, error } = await adminSupabase
+    const result = await resendTccCertificateEmail(
+      adminSupabase,
+      certificateId,
+      session.userId
+    );
+
+    if (!result.success) {
+      return { success: false, error: result.error };
+    }
+
+    const { data: cert } = await adminSupabase
       .from('certificates')
-      .select(`
-        *,
-        chemicals (chemical_name, cas_number, ec_number, tonnage_band),
-        tcc_applications!certificates_tcc_application_id_fkey (
-          quantity_mt, registration_number, export_date, tracking_id, remarks,
-          eu_importer_company_name, eu_importer_address, purchase_order_number,
-          chemicals (chemical_name, cas_number, ec_number, tonnage_band)
-        ),
-        clients (
-          id, company_name, email, uuid_number, address, city, state, postal_code, country,
-          client_contacts (email)
-        )
-      `)
+      .select('client_id')
       .eq('id', certificateId)
-      .eq('type', 'TCC')
       .single();
-
-    if (error || !cert) throw new Error('Certificate not found');
-    if (!cert.mail_sent) throw new Error('Certificate has not been sent yet. Use Send Mail first.');
-
-    const { data: settings } = await adminSupabase
-      .from('admin_settings')
-      .select('smtp_host, smtp_port, smtp_user, smtp_pass, smtp_from, smtp_cc_default')
-      .eq('id', 1)
-      .single();
-
-    const contactEmails =
-      cert.clients.client_contacts?.map((c: { email: string }) => c.email).filter(Boolean) || [];
-
-    const recipients = buildCertificateRecipients({
-      primaryEmail: cert.clients.email,
-      contactEmails,
-      defaultCcEmails: settings?.smtp_cc_default,
-      senderEmail: settings?.smtp_from,
-    });
-
-    const pdfInput = await buildTccCertificatePdfInputFromStoredCert(adminSupabase, cert as never);
-    const certFile = await resolveTccCertificateDownloadFile(adminSupabase, pdfInput);
-
-    await sendCertEmail({
-      to: recipients.to,
-      cc: recipients.cc,
-      subject: `TCC Certificate (Resent) — ${cert.certificate_number}`,
-      certificateNumber: cert.certificate_number,
-      companyName: cert.clients.company_name,
-      chemicalName: cert.tcc_applications?.chemicals?.chemical_name || 'N/A',
-      pdfBuffer: certFile.buffer,
-      pdfFileName: certFile.fileName,
-      attachmentContentType: certFile.contentType,
-      smtpConfig: buildTccSmtpConfig(settings),
-    });
-
-    const now = new Date().toISOString();
-    await adminSupabase
-      .from('certificates')
-      .update({
-        mail_resend_count: (cert.mail_resend_count || 0) + 1,
-        last_resend_at: now,
-        last_resend_by: session.userId,
-        mail_sent_history: appendMailSentHistory(cert.mail_sent_history, now),
-      })
-      .eq('id', certificateId);
-
-    await adminSupabase.from('activity_logs').insert({
-      client_id: cert.client_id,
-      user_id: session.userId,
-      action: 'CERTIFICATE_EMAIL_RESENT',
-      entity_type: 'certificates',
-      entity_id: certificateId,
-      description: `Certificate email resent (${(cert.mail_resend_count || 0) + 1}x)`,
-    });
 
     revalidatePath(`/admin/certificate-preview/${certificateId}`);
     revalidatePath('/admin/approvals');
-    revalidatePath(`/admin/clients/${cert.client_id}`);
+    if (cert?.client_id) {
+      revalidatePath(`/admin/clients/${cert.client_id}`);
+    }
     return { success: true, message: 'Certificate email resent successfully.' };
   } catch (err: unknown) {
     const message = err instanceof Error ? err.message : String(err);
