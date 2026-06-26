@@ -374,6 +374,9 @@ async function renderHtmlToPdf(browser: Browser, html: string, format: 'reach' |
       );
     });
 
+    // Screen CSS matches preview; print media was causing extra bottom gap in PDF.
+    await page.emulateMediaType('screen');
+
     const pdf = await page.pdf({
       format: 'A4',
       printBackground: true,

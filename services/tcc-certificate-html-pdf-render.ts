@@ -2,7 +2,10 @@ import fs from 'node:fs';
 import path from 'node:path';
 import type { TccCertificateHtmlData } from '@/lib/tcc-certificate-html-data';
 import {
+  REACH_CERT_A4_CSS_VARS,
   REACH_CERT_A4_HEIGHT_PX,
+  REACH_CERT_A4_PADDING_BOTTOM_PX,
+  REACH_CERT_A4_PADDING_PX,
   REACH_CERT_A4_WIDTH_PX,
 } from '@/lib/reach-certificate-a4';
 import { buildReachCertificateEmbeddedFontCss } from '@/lib/reach-certificate-fonts';
@@ -10,7 +13,8 @@ import { buildReachCertificateEmbeddedFontCss } from '@/lib/reach-certificate-fo
 const CERTIFICATE_CSS_PATH = path.join(process.cwd(), 'components', 'tcc-certificate-html.css');
 const A4_CSS_PATH = path.join(process.cwd(), 'components', 'reach-certificate-a4.css');
 
-const PRINT_OVERRIDES = `
+/** Puppeteer PDF — bottom padding 60px (preview screen uses 50px all sides). */
+const PDF_RENDER_OVERRIDES = `
 html, body {
   margin: 0;
   padding: 0;
@@ -48,8 +52,39 @@ html, body {
   font-family: 'Verdana', Geneva, Tahoma, sans-serif !important;
 }
 [data-tcc-cert-root].tcc-cert-page {
-  page-break-after: always;
+  width: ${REACH_CERT_A4_WIDTH_PX}px !important;
+  height: ${REACH_CERT_A4_HEIGHT_PX}px !important;
+  max-width: ${REACH_CERT_A4_WIDTH_PX}px !important;
+  min-height: ${REACH_CERT_A4_HEIGHT_PX}px !important;
+  max-height: ${REACH_CERT_A4_HEIGHT_PX}px !important;
+  padding: ${REACH_CERT_A4_PADDING_PX}px ${REACH_CERT_A4_PADDING_PX}px ${REACH_CERT_A4_PADDING_BOTTOM_PX}px ${REACH_CERT_A4_PADDING_PX}px !important;
   margin: 0 !important;
+  box-sizing: border-box !important;
+  overflow: hidden !important;
+  page-break-after: always;
+}
+[data-tcc-cert-root].tcc-cert-page:last-child {
+  page-break-after: auto;
+  margin-bottom: 0 !important;
+}
+[data-tcc-cert-root] .tcc-cert-frame {
+  height: 100% !important;
+  max-height: 100% !important;
+  box-sizing: border-box !important;
+  display: flex !important;
+  flex-direction: column !important;
+}
+[data-tcc-cert-root] .tcc-cert-body {
+  display: flex !important;
+  flex-direction: column !important;
+  flex: 1 1 auto !important;
+  min-height: 0 !important;
+}
+[data-tcc-cert-root] .tcc-seal-area {
+  flex: 1 1 auto !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
 }
 `;
 
@@ -72,6 +107,9 @@ export async function renderTccCertificateHtmlDocument(
   const markup = renderToStaticMarkup(createElement(TccCertificateHtmlDocument, { data }));
   const css = loadCertificateCss();
   const fontCss = buildReachCertificateEmbeddedFontCss();
+  const pdfRootStyle = Object.entries(REACH_CERT_A4_CSS_VARS)
+    .map(([key, value]) => `${key}:${value}`)
+    .join(';');
 
   return `<!DOCTYPE html>
 <html lang="en">
@@ -80,9 +118,9 @@ export async function renderTccCertificateHtmlDocument(
 <meta name="viewport" content="width=${REACH_CERT_A4_WIDTH_PX}, initial-scale=1" />
 <style>${fontCss}</style>
 <style>${css}</style>
-<style>${PRINT_OVERRIDES}</style>
+<style>${PDF_RENDER_OVERRIDES}</style>
 </head>
-<body data-reach-pdf-ready="true">
+<body data-reach-pdf-ready="true" style="${pdfRootStyle}">
 <div data-reach-cert-print-area>
 ${markup}
 </div>

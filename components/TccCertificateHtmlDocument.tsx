@@ -39,11 +39,13 @@ function TccCertPageShell({
               <img src={data.logoUrl} alt="Pharmegic Healthcare" className="tcc-brand-logo" />
             ) : null}
           </header>
-          {children}
+          <div className="tcc-cert-content">{children}</div>
           {showSeal && data.signatureUrl ? (
-            <div className="tcc-seal-wrap">
-              {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img src={data.signatureUrl} alt="Certificate seal" className="tcc-seal-image" />
+            <div className="tcc-seal-area" aria-label="Certificate seal">
+              <div className="tcc-seal-wrap">
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img src={data.signatureUrl} alt="Certificate seal" className="tcc-seal-image" />
+              </div>
             </div>
           ) : null}
         </div>

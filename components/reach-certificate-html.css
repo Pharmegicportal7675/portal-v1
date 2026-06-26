@@ -498,7 +498,7 @@
     max-width: var(--reach-a4-width-mm, 210mm) !important;
     min-height: var(--reach-a4-height-mm, 297mm) !important;
     margin: 0 !important;
-    padding: var(--reach-a4-padding-mm, 13.23mm) !important;
+    padding: var(--reach-a4-print-padding-mm, 10mm) !important;
     box-shadow: none !important;
     page-break-after: avoid;
     page-break-inside: avoid;
