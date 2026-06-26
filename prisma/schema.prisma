@@ -179,7 +179,7 @@ model clients {
   city                       String?              @db.VarChar(255)
   state                      String?              @db.VarChar(255)
   postal_code                String?              @db.VarChar(64)
-  country                    String?              @default("Turkey") @db.VarChar(255)
+  country                    String?              @default("India") @db.VarChar(255)
   email                      String               @unique(map: "email") @db.VarChar(255)
   phone                      String?              @db.VarChar(64)
   primary_contact_first_name String?              @db.VarChar(255)

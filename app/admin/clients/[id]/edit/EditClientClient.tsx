@@ -61,7 +61,7 @@ export default function EditClientClient({ client, contacts }: EditClientClientP
     address: client.address || '',
     city: client.city || '',
     state: client.state || '',
-    country: client.country || 'Turkey',
+    country: client.country || 'India',
     postal_code: client.postal_code || '',
     status: client.status,
   };

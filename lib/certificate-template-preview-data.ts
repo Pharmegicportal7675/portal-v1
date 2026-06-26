@@ -49,7 +49,7 @@ export function getTccTemplatePreviewSample(): TccCertificateDocxData {
     addressLine2: 'Ahmedabad, Gujarat',
     addressLine3: 'Ahmedabad – 382445, India',
     exporterFullAddress:
-      'Example Pharma Ltd, C-1/394, Phase II, G.I.D.C. Estate, Vatva, Ahmedabad – 382445, India',
+      'C-1/394, Phase II, G.I.D.C. Estate, Vatva, Ahmedabad - 382445, Gujarat, India',
     chemicalName: 'Ethylene Glycol Monoethyl Ether',
     ecNumber: '203-787-0',
     casNumber: '110-80-2',
@@ -60,7 +60,7 @@ export function getTccTemplatePreviewSample(): TccCertificateDocxData {
     euImporterAddr1: 'Industriestrasse 12',
     euImporterAddr2: '60329 Frankfurt',
     euImporterAddr3: 'Germany',
-    euImporterFullAddress: 'Industriestrasse 12 60329 Frankfurt Dist. Germany',
+    euImporterFullAddress: 'Industriestrasse 12 60329 Frankfurt Germany',
     volumeMt: '25.00',
     deliveryChallanNo: 'DC-2026-001',
     exportDate: '15.03.2026',

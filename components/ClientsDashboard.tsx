@@ -123,7 +123,7 @@ export default function ClientsDashboard({ initialClients, chemicals, adminRole 
     address: '',
     city: '',
     state: '',
-    country: 'Turkey',
+    country: 'India',
     postal_code: '',
     status: 'active' as 'active' | 'inactive' | 'pending',
   });
@@ -252,7 +252,7 @@ export default function ClientsDashboard({ initialClients, chemicals, adminRole 
       address: client.address || '',
       city: client.city || '',
       state: client.state || '',
-      country: client.country || 'Turkey',
+      country: client.country || 'India',
       postal_code: client.postal_code || '',
       status: client.status,
     });

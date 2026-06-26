@@ -68,7 +68,7 @@ const defaultProfile: ClientWizardProfile = {
   address: '',
   city: '',
   state: '',
-  country: 'Turkey',
+  country: 'India',
   postal_code: '',
   status: 'active',
   regulatory_registrations: [],
@@ -470,26 +470,26 @@ export default function ClientWizard({
           </div>
           <Input
             label="City"
-            placeholder="Istanbul"
+            placeholder="Ahmedabad"
             value={profile.city}
             onChange={(e) => setProfile({ ...profile, city: e.target.value })}
           />
           <Input
             label="State"
-            placeholder="Marmara"
+            placeholder="Gujarat"
             value={profile.state}
             onChange={(e) => setProfile({ ...profile, state: e.target.value })}
           />
           <Input
             label="Postal Code"
-            placeholder="34000"
+            placeholder="382445"
             value={profile.postal_code}
             onChange={(e) => setProfile({ ...profile, postal_code: e.target.value })}
             required
           />
           <Input
             label="Country"
-            placeholder="Turkey"
+            placeholder="India"
             value={profile.country}
             onChange={(e) => setProfile({ ...profile, country: e.target.value })}
             required

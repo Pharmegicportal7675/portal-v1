@@ -1,5 +1,9 @@
 import { getTccTemplatePreviewSample } from '@/lib/certificate-template-preview-data';
-import { buildReachAddressLines, formatReachCertDate } from '@/lib/reach-certificate-data';
+import {
+  buildReachAddressLines,
+  formatEuReachManufacturerAddressDisplay,
+  formatReachCertDate,
+} from '@/lib/reach-certificate-data';
 import { buildEuImporterFullAddress, splitEuImporterAddress } from '@/lib/tcc-eu-importer';
 
 export type TccPdfClient = {
@@ -87,8 +91,7 @@ const DEFAULT_LOGO = '/pharmegic-logo.png';
 const DEFAULT_SEAL = '/certificate-assets/rc-seal.png';
 
 function buildExporterFullAddress(client: TccPdfClient): string {
-  const address = buildReachAddressLines(client);
-  return [address.line1, address.line2, `Dist. ${address.line3}`].filter(Boolean).join(' ');
+  return formatEuReachManufacturerAddressDisplay(client);
 }
 
 function parseEuImporterFields(remarks?: string | null, registrationNumber?: string | null): {
@@ -206,11 +209,6 @@ export function parseTccFooterLines(footerText?: string | null): string[] {
   return [...TCC_CERTIFICATE_FOOTER_LINES];
 }
 
-function formatManufacturerAddress(line1: string, line2: string, line3: string): string {
-  const parts = [line1, line2, line3 ? `Dist. ${line3}` : ''].filter(Boolean);
-  return parts.join(', ');
-}
-
 export type BuildTccHtmlDataInput = {
   certificateNumber: string;
   client: TccPdfClient;
@@ -250,11 +248,7 @@ export function buildTccHtmlData(
   return {
     ...docx,
     certificateNumber: input.certificateNumber,
-    manufacturerAddress: formatManufacturerAddress(
-      docx.addressLine1,
-      docx.addressLine2,
-      docx.addressLine3
-    ),
+    manufacturerAddress: formatEuReachManufacturerAddressDisplay(input.client),
     exportDateDisplay: formatReachCertDate(issueDateRaw),
     validUntilDateDisplay: formatReachCertDate(input.validUntilDate),
     invoiceNo:
@@ -280,11 +274,13 @@ export function buildTccTemplatePreviewHtmlData(
   return {
     ...sample,
     certificateNumber: 'TCC-2026-PREVIEW',
-    manufacturerAddress: formatManufacturerAddress(
-      sample.addressLine1,
-      sample.addressLine2,
-      sample.addressLine3
-    ),
+    manufacturerAddress: formatEuReachManufacturerAddressDisplay({
+      address: 'C-1/394, Phase II, G.I.D.C. Estate, Vatva',
+      city: 'Ahmedabad',
+      state: 'Gujarat',
+      postal_code: '382445',
+      country: 'India',
+    }),
     exportDateDisplay: sample.exportDate,
     validUntilDateDisplay: sample.validUntilDate,
     invoiceNo: 'PHCL',

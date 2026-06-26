@@ -15,13 +15,9 @@ export function splitEuImporterAddress(address: string): {
   };
 }
 
-/** Match Exporter Information address layout: line1 line2 Dist. line3 */
+/** Single-line EU importer address (street, locality, country). */
 export function buildEuImporterFullAddress(addr1: string, addr2: string, addr3: string): string {
-  const parts = [
-    addr1 !== '—' ? addr1 : '',
-    addr2 !== '—' ? addr2 : '',
-    addr3 !== '—' ? `Dist. ${addr3}` : '',
-  ].filter(Boolean);
+  const parts = [addr1, addr2, addr3].filter((part) => part && part !== '—');
 
   return parts.join(' ') || '—';
 }
