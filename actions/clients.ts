@@ -4,6 +4,7 @@ import { createAdminClient } from '@/lib/db/admin';
 import { getSession } from '@/lib/auth/session';
 import { hashPassword } from '@/lib/auth/password';
 import { formatErrorMessage } from '@/lib/format-error';
+import { findPortalEmailConflict } from '@/lib/portal-email-check';
 import { normalizeDateInput, normalizeOptionalDateInput } from '@/lib/parse-flexible-date';
 import { getTonnageBandMaxQuota, sumApprovedExports, sumApprovedExportsInReachWindow, getRemainingQuotaForReachPeriod, computeAssignableQuota, type TccExportRecord } from '@/lib/quota';
 import {
@@ -113,9 +114,17 @@ export async function changeClientEmailAction(clientId: string, newEmail: string
   try {
     const emailLower = newEmail.toLowerCase();
 
-    // Check uniqueness in clients and users
-    const { data: dupClient } = await adminSupabase.from('clients').select('id').eq('email', emailLower).neq('id', clientId).maybeSingle();
-    if (dupClient) return { success: false, error: 'Email already in use by another client.' };
+    const { data: loginUser } = await adminSupabase
+      .from('users')
+      .select('id')
+      .eq('client_id', clientId)
+      .maybeSingle();
+
+    const emailConflict = await findPortalEmailConflict(adminSupabase, emailLower, {
+      excludeClientId: clientId,
+      excludeUserId: loginUser?.id,
+    });
+    if (emailConflict) return { success: false, error: emailConflict };
 
     // Update clients table
     const { error: cErr } = await adminSupabase.from('clients').update({ email: emailLower }).eq('id', clientId);
@@ -137,8 +146,7 @@ export async function changeClientEmailAction(clientId: string, newEmail: string
     revalidatePath(`/admin/clients/${clientId}`);
     return { success: true, message: 'Client email updated successfully.' };
   } catch (err) {
-    const message = err instanceof Error ? err.message : String(err);
-    return { success: false, error: message };
+    return { success: false, error: formatErrorMessage(err) };
   }
 }
 

@@ -4,6 +4,7 @@ import { createAdminClient } from '@/lib/db/admin';
 import { getSession } from '@/lib/auth/session';
 import { hashPassword } from '@/lib/auth/password';
 import { formatErrorMessage } from '@/lib/format-error';
+import { findPortalEmailConflict, findPortalUuidConflict } from '@/lib/portal-email-check';
 import { clientWizardSchema, clientWizardEditSchema } from '@/lib/validations';
 import { revalidatePath } from 'next/cache';
 
@@ -73,13 +74,13 @@ export async function createClientAction(prevState: unknown, data: unknown) {
 
     const adminSupabase = createAdminClient();
     const { profile, contacts } = parsed.data;
+    const emailLower = profile.email.toLowerCase();
 
-    const { data: existing } = await adminSupabase
-      .from('clients')
-      .select('id')
-      .eq('email', profile.email.toLowerCase())
-      .maybeSingle();
-    if (existing) return { success: false, error: 'A client with this email already exists.' };
+    const emailConflict = await findPortalEmailConflict(adminSupabase, emailLower);
+    if (emailConflict) return { success: false, error: emailConflict };
+
+    const uuidConflict = await findPortalUuidConflict(adminSupabase, profile.uuid_number);
+    if (uuidConflict) return { success: false, error: uuidConflict };
 
     const password_hash = await hashPassword(profile.password);
 
@@ -91,7 +92,7 @@ export async function createClientAction(prevState: unknown, data: unknown) {
         registration_number: null,
         uuid_number: profile.uuid_number.trim(),
         owner_name: profile.owner_name || null,
-        email: profile.email.toLowerCase(),
+        email: emailLower,
         phone: profile.phone || null,
         primary_contact_first_name: profile.primary_contact_first_name,
         primary_contact_last_name: profile.primary_contact_last_name,
@@ -108,12 +109,17 @@ export async function createClientAction(prevState: unknown, data: unknown) {
       .select()
       .single();
 
-    if (clientError || !client) throw clientError || new Error('Failed to create client');
+    if (clientError || !client) {
+      return {
+        success: false,
+        error: formatErrorMessage(clientError || new Error('Failed to create client record.')),
+      };
+    }
 
     const { data: user, error: userError } = await adminSupabase
       .from('users')
       .insert({
-        email: profile.email.toLowerCase(),
+        email: emailLower,
         password_hash,
         login_password: profile.password,
         role: 'CLIENT',
@@ -125,7 +131,10 @@ export async function createClientAction(prevState: unknown, data: unknown) {
 
     if (userError || !user) {
       await adminSupabase.from('clients').delete().eq('id', client.id);
-      throw userError || new Error('Failed to create user login record');
+      return {
+        success: false,
+        error: formatErrorMessage(userError || new Error('Failed to create client login credentials.')),
+      };
     }
 
     if (contacts.length > 0) {
@@ -177,14 +186,23 @@ export async function updateClientWizardAction(clientId: string, data: unknown) 
     const { profile, contacts } = parsed.data;
     const email = profile.email.toLowerCase();
 
-    const { data: emailConflict } = await adminSupabase
-      .from('clients')
-      .select('id')
-      .eq('email', email)
-      .neq('id', clientId)
+    const { data: loginUser } = await adminSupabase
+      .from('users')
+      .select('id, email')
+      .eq('client_id', clientId)
       .maybeSingle();
+
+    const emailConflict = await findPortalEmailConflict(adminSupabase, email, {
+      excludeClientId: clientId,
+      excludeUserId: loginUser?.id,
+    });
     if (emailConflict) {
-      return { success: false, error: 'A client with this email already exists.' };
+      return { success: false, error: emailConflict };
+    }
+
+    const uuidConflict = await findPortalUuidConflict(adminSupabase, profile.uuid_number, clientId);
+    if (uuidConflict) {
+      return { success: false, error: uuidConflict };
     }
 
     const { error: updateError } = await adminSupabase
@@ -193,11 +211,6 @@ export async function updateClientWizardAction(clientId: string, data: unknown) 
       .eq('id', clientId);
     if (updateError) throw updateError;
 
-    const { data: loginUser } = await adminSupabase
-      .from('users')
-      .select('id, email')
-      .eq('client_id', clientId)
-      .maybeSingle();
     if (loginUser && loginUser.email !== email) {
       const { error: userEmailError } = await adminSupabase
         .from('users')

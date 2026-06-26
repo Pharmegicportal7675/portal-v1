@@ -2,9 +2,22 @@
  * Turns database/API errors and other thrown values into a readable string.
  * Plain objects stringify as "[object Object]" — avoid showing that in the UI.
  */
+import { formatFriendlyUniqueConstraintError } from '@/lib/db-errors';
+
 export function formatErrorMessage(err: unknown): string {
-  if (err instanceof Error) return err.message;
-  if (typeof err === 'string') return err;
+  const uniqueMessage = formatFriendlyUniqueConstraintError(err);
+  if (uniqueMessage) return uniqueMessage;
+
+  if (err instanceof Error) {
+    const friendlyFromMessage = formatFriendlyUniqueConstraintError({ message: err.message });
+    if (friendlyFromMessage) return friendlyFromMessage;
+    return err.message;
+  }
+  if (typeof err === 'string') {
+    const friendlyFromString = formatFriendlyUniqueConstraintError({ message: err });
+    if (friendlyFromString) return friendlyFromString;
+    return err;
+  }
   if (err && typeof err === 'object') {
     const record = err as Record<string, unknown>;
     if (typeof record.message === 'string' && record.message.trim()) {
@@ -16,6 +29,10 @@ export function formatErrorMessage(err: unknown): string {
         return 'Your login session is out of date. Please log out, log in again, then retry.';
       }
       const code = typeof record.code === 'string' ? record.code : '';
+      if (code === 'P2002' || msg.toLowerCase().includes('unique constraint failed')) {
+        const friendly = formatFriendlyUniqueConstraintError(record);
+        if (friendly) return friendly;
+      }
       const details = typeof record.details === 'string' ? record.details : '';
       const hint = typeof record.hint === 'string' ? record.hint : '';
       return [msg, code && `(${code})`, details, hint].filter(Boolean).join(' — ');

@@ -3,6 +3,8 @@
 import { createAdminClient } from '@/lib/db/admin';
 import { getSession } from '@/lib/auth/session';
 import { hashPassword } from '@/lib/auth/password';
+import { formatErrorMessage } from '@/lib/format-error';
+import { findPortalEmailConflict } from '@/lib/portal-email-check';
 import { revalidatePath } from 'next/cache';
 
 async function requireSuperAdmin() {
@@ -41,24 +43,20 @@ export async function createMasterAdminAction(email: string, password: string) {
   }
 
   const adminSupabase = createAdminClient();
+  const emailLower = email.toLowerCase();
 
-  const { data: existing } = await adminSupabase
-    .from('users')
-    .select('id')
-    .eq('email', email.toLowerCase())
-    .maybeSingle();
-
-  if (existing) return { success: false, error: 'A user with this email already exists.' };
+  const emailConflict = await findPortalEmailConflict(adminSupabase, emailLower);
+  if (emailConflict) return { success: false, error: emailConflict };
 
   const password_hash = await hashPassword(password);
   const { error } = await adminSupabase.from('users').insert({
-    email: email.toLowerCase(),
+    email: emailLower,
     password_hash,
     role: 'MASTER_ADMIN',
     is_disabled: false,
   });
 
-  if (error) return { success: false, error: error.message };
+  if (error) return { success: false, error: formatErrorMessage(error) };
 
   await adminSupabase.from('audit_logs').insert({
     user_id: session.userId,

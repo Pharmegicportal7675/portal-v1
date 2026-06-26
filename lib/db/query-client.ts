@@ -83,7 +83,15 @@ const FK_HINTS: Record<string, Record<string, { relation: string; alias: string 
 };
 
 function toError(err: unknown): DbError {
-  if (err instanceof Error) return { message: err.message, code: (err as { code?: string }).code };
+  if (err instanceof Error) {
+    const record = err as { code?: string; meta?: { target?: string[] } };
+    const target = Array.isArray(record.meta?.target) ? record.meta.target.join(', ') : undefined;
+    return {
+      message: err.message,
+      code: record.code,
+      details: target,
+    };
+  }
   return { message: 'Unknown database error' };
 }
 
