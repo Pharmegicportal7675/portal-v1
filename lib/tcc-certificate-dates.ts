@@ -48,6 +48,18 @@ export function resolveTccValidUntilIso(options: {
   return getTccCertificateValidUntilIso(options.exportDate, options.issueDate);
 }
 
+/** Date of Issue on the TCC certificate — PO date first, then explicit issue date. */
+export function resolveTccCertificateDateOfIssue(options: {
+  poDate?: string | null;
+  issuedDate?: string | null;
+}): string {
+  const poDate = options.poDate?.trim();
+  if (poDate) return poDate.split('T')[0];
+  const issuedDate = options.issuedDate?.trim();
+  if (issuedDate) return issuedDate.split('T')[0];
+  return new Date().toISOString().split('T')[0];
+}
+
 export function getTccCertificateValidUntilDate(
   exportDate?: string | null,
   issueDate?: string | null

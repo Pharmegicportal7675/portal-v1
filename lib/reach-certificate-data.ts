@@ -41,10 +41,43 @@ export function escapeReachXml(text: string): string {
     .replace(/'/g, '&apos;');
 }
 
+/** Normalize DB / form values to YYYY-MM-DD for certificate formatting. */
+export function normalizeCertDateIso(
+  value: string | Date | null | undefined
+): string | null {
+  if (value == null || value === '') return null;
+
+  if (value instanceof Date) {
+    if (Number.isNaN(value.getTime())) return null;
+    return value.toISOString().split('T')[0];
+  }
+
+  const trimmed = String(value).trim();
+  if (!trimmed) return null;
+
+  if (/^\d{4}-\d{2}-\d{2}/.test(trimmed)) {
+    return trimmed.split('T')[0];
+  }
+
+  const dotted = trimmed.match(/^(\d{2})\.(\d{2})\.(\d{4})$/);
+  if (dotted) {
+    return `${dotted[3]}-${dotted[2]}-${dotted[1]}`;
+  }
+
+  const parsed = new Date(trimmed);
+  if (!Number.isNaN(parsed.getTime())) {
+    return parsed.toISOString().split('T')[0];
+  }
+
+  return null;
+}
+
 /** Format as DD.MM.YYYY (used by TCC certificates). */
-export function formatReachCertDate(dateStr: string): string {
-  const [year, month, day] = dateStr.split('T')[0].split('-').map(Number);
-  if (!year || !month || !day) return dateStr;
+export function formatReachCertDate(dateStr: string | Date | null | undefined): string {
+  const iso = normalizeCertDateIso(dateStr);
+  if (!iso) return typeof dateStr === 'string' ? dateStr : '—';
+  const [year, month, day] = iso.split('-').map(Number);
+  if (!year || !month || !day) return iso;
   return `${String(day).padStart(2, '0')}.${String(month).padStart(2, '0')}.${year}`;
 }
 

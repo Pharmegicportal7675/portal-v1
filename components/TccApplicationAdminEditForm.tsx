@@ -10,7 +10,6 @@ import { ModalErrorBox } from './ui/ModalErrorBox';
 import { toast } from '@/store/toast';
 import type { TccViewApplication } from './TccApplicationViewDialog';
 import { getTccCertificateValidUntilIso } from '@/lib/tcc-certificate-dates';
-import { resolveTccApplicationIssueDate } from '@/lib/tcc-application-certificate';
 
 export type TccAdminEditValues = {
   applicationId: string;
@@ -20,23 +19,11 @@ export type TccAdminEditValues = {
   purchase_order_number: string;
   invoice_number: string;
   quantity_mt: string;
-  issue_date: string;
   valid_until_date: string;
   export_date: string;
   registration_number: string;
   remarks: string;
 };
-
-function resolveCertificateIssuedAt(app: TccViewApplication): string {
-  const fromCert = (() => {
-    const cert = app.certificates;
-    if (!cert) return '';
-    const row = Array.isArray(cert) ? cert[0] : cert;
-    return formatDateInput(row?.issued_at);
-  })();
-  if (fromCert) return fromCert;
-  return formatDateInput(app.certificate_issue_date);
-}
 
 function formatDateInput(value: string | null | undefined) {
   if (!value) return '';
@@ -51,8 +38,8 @@ function resolveCertificateValidUntil(app: TccViewApplication): string {
     return formatDateInput(app.certificate_valid_until_date);
   }
 
-  const issueDate = resolveCertificateIssuedAt(app) || formatDateInput(resolveTccApplicationIssueDate(app));
-  return getTccCertificateValidUntilIso(app.export_date, issueDate || null);
+  const poDate = formatDateInput(app.export_date);
+  return getTccCertificateValidUntilIso(app.export_date, poDate || null);
 }
 
 export function buildTccAdminEditValues(app: TccViewApplication): TccAdminEditValues {
@@ -67,7 +54,6 @@ export function buildTccAdminEditValues(app: TccViewApplication): TccAdminEditVa
     purchase_order_number: app.purchase_order_number?.trim() ?? '',
     invoice_number: app.invoice_number?.trim() ?? '',
     quantity_mt: String(app.quantity_mt ?? ''),
-    issue_date: resolveCertificateIssuedAt(app),
     valid_until_date: resolveCertificateValidUntil(app),
     export_date: formatDateInput(app.export_date),
     registration_number: app.registration_number?.trim() ?? '',
@@ -127,9 +113,6 @@ export function TccApplicationAdminEditForm({
       if (form.certificateId) {
         payload.append('certificate_id', form.certificateId);
       }
-      if (form.issue_date) {
-        payload.append('issue_date', form.issue_date);
-      }
       if (form.valid_until_date) {
         payload.append('valid_until_date', form.valid_until_date);
       }
@@ -144,9 +127,6 @@ export function TccApplicationAdminEditForm({
 
       toast.success(res.message || 'Application updated.');
 
-      const issueDateIso = form.issue_date
-        ? new Date(`${form.issue_date}T12:00:00`).toISOString()
-        : null;
       const expiresAtIso = form.valid_until_date
         ? new Date(`${form.valid_until_date}T12:00:00`).toISOString()
         : null;
@@ -161,9 +141,7 @@ export function TccApplicationAdminEditForm({
         registration_number: form.registration_number.trim(),
         remarks: form.remarks.trim() || null,
         updated_at: new Date().toISOString(),
-        certificate_issue_date: form.issue_date || null,
         certificate_valid_until_date: form.valid_until_date || null,
-        ...(issueDateIso ? { certificateIssuedAt: issueDateIso } : {}),
         ...(expiresAtIso ? { certificateExpiresAt: expiresAtIso } : {}),
       });
     });
@@ -211,18 +189,6 @@ export function TccApplicationAdminEditForm({
           </div>
           <div className="space-y-2 sm:col-span-2">
             <p className="text-[11px] font-bold uppercase tracking-wider text-slate-500">Dates</p>
-          </div>
-          <div className="space-y-2">
-            <FormLabel>Issue date</FormLabel>
-            <DatePicker
-              value={form.issue_date}
-              onChange={(value) => updateField('issue_date', value)}
-            />
-            <p className="text-[10px] text-slate-500 font-medium">
-              {form.certificateId
-                ? 'Updates the issued date on the generated certificate.'
-                : 'Saved on the application and used as the certificate issue date when you approve.'}
-            </p>
           </div>
           <div className="space-y-2">
             <FormLabel>Valid upto</FormLabel>

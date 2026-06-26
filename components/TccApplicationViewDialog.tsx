@@ -17,7 +17,6 @@ import { formatDisplayDate } from '@/lib/date-filter';
 import { getTccApplicationAvailableQuota, resolveTccApplicationCertificateYear, resolveTccApplicationRegistrationNumber, resolveTccApplicationTonnageBand } from '@/lib/tcc-application-quota';
 import {
   resolveTccApplicationCertificateNumber,
-  resolveTccApplicationIssueDate,
 } from '@/lib/tcc-application-certificate';
 import {
   formatTccChangeLogAction,
@@ -112,10 +111,6 @@ function resolveCertificate(app: TccViewApplication): TccViewCertificate | null 
   if (!c) return null;
   if (Array.isArray(c)) return c[0] ?? null;
   return c;
-}
-
-function resolveIssueDate(app: TccViewApplication): string | null {
-  return resolveTccApplicationIssueDate(app);
 }
 
 function resolveCertificateNumber(app: TccViewApplication): string | null {
@@ -415,9 +410,6 @@ export function TccApplicationViewDialog({
                 <span className="font-mono text-xs text-emerald-700">
                   {resolveCertificateNumber(displayApp) || '—'}
                 </span>
-              </DetailItem>
-              <DetailItem label="Issue date">
-                {formatDisplayDate(resolveIssueDate(displayApp))}
               </DetailItem>
               <DetailItem label="Invoice No.">
                 {displayApp.invoice_number?.trim() || '—'}

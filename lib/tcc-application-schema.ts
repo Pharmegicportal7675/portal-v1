@@ -97,8 +97,13 @@ const ADMIN_TCC_APPLICATION_FIELDS = [
   'certificate_valid_until_date',
 ] as const;
 
+/** Present in MySQL but omitted from Prisma select/update until the client is regenerated. */
+export const TCC_APPLICATION_PRISMA_DEFERRED_FIELDS = new Set(['certificate_valid_until_date']);
+
 export async function buildAdminTccApplicationSelect(): Promise<string> {
   await ensureTccApplicationSchema();
   const columns = await getTccApplicationTableColumns();
-  return ADMIN_TCC_APPLICATION_FIELDS.filter((field) => columns.has(field)).join(', ');
+  return ADMIN_TCC_APPLICATION_FIELDS.filter(
+    (field) => columns.has(field) && !TCC_APPLICATION_PRISMA_DEFERRED_FIELDS.has(field)
+  ).join(', ');
 }

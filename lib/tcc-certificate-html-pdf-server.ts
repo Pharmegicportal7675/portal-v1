@@ -105,10 +105,7 @@ export async function loadTccHtmlDataByCertificateId(
   if (error || !cert) return null;
 
   const input = await buildTccCertificatePdfInputFromStoredCert(supabase, cert);
-  return loadTccHtmlDataForInput(supabase, {
-    ...input,
-    issuedDate: cert.issued_at?.split('T')[0] || input.application.export_date || undefined,
-  });
+  return loadTccHtmlDataForInput(supabase, input);
 }
 
 export async function loadTccHtmlDataByApplicationId(

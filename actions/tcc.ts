@@ -20,8 +20,10 @@ import { notifyTccApplicationByEmail } from '@/lib/tcc-application-notification'
 import { getTccCertificateValidUntilDate } from '@/lib/tcc-certificate-dates';
 import { buildAdminTccApplicationSelect, ensureTccApplicationSchema, hasTccApplicationColumn } from '@/lib/tcc-application-schema';
 import {
+  enrichTccApplicationRow,
   isMissingTccSchemaColumnError,
   readTccApplicationValidUntilDate,
+  updateTccApplicationValidUntilDate,
 } from '@/lib/tcc-application-valid-until';
 import { tccSaveErrorMessage } from '@/lib/tcc-save-errors';
 import {
@@ -763,6 +765,11 @@ export async function adminUpdateTccApplicationAction(prevState: unknown, formDa
       return { success: false, error: 'Application not found.' };
     }
 
+    const existingAppRow = await enrichTccApplicationRow(
+      existingApp as Record<string, unknown>,
+      applicationId
+    );
+
     const { data: clientProfile } = await adminSupabase
       .from('clients')
       .select('regulatory_registrations')
@@ -789,7 +796,7 @@ export async function adminUpdateTccApplicationAction(prevState: unknown, formDa
     }
 
     let beforeIssueDate = existingApp.certificate_issue_date;
-    let beforeExpiresAt: string | null = readTccApplicationValidUntilDate(existingApp);
+    let beforeExpiresAt: string | null = readTccApplicationValidUntilDate(existingAppRow);
     if (certId) {
       const { data: certRow } = await adminSupabase
         .from('certificates')
@@ -930,9 +937,6 @@ export async function adminUpdateTccApplicationAction(prevState: unknown, formDa
       registration_number: result.data.registration_number?.trim() || null,
       remarks: result.data.remarks?.trim() || null,
       updated_at: new Date().toISOString(),
-      ...(resolvedValidUntil && canPersistValidUntil
-        ? { certificate_valid_until_date: resolvedValidUntil }
-        : {}),
     };
 
     let updateError: { message: string } | null = null;
@@ -950,21 +954,7 @@ export async function adminUpdateTccApplicationAction(prevState: unknown, formDa
           .eq('id', applicationId);
         updateError = retryError;
       } else {
-        const { certificate_valid_until_date: _omit, ...fallbackUpdate } = applicationUpdate as typeof applicationUpdate & {
-          certificate_valid_until_date?: string;
-        };
-        const { error: fallbackError } = await adminSupabase
-          .from('tcc_applications')
-          .update(fallbackUpdate)
-          .eq('id', applicationId);
-        updateError = fallbackError;
-        if (resolvedValidUntil) {
-          return {
-            success: false,
-            error:
-              'Valid upto date could not be saved. Run prisma/migrations/add-tcc-valid-until-date.sql on the database, then try again.',
-          };
-        }
+        updateError = updateWithValidUntilError;
       }
     } else {
       updateError = updateWithValidUntilError;
@@ -972,7 +962,20 @@ export async function adminUpdateTccApplicationAction(prevState: unknown, formDa
 
     if (updateError) throw updateError;
 
-    if (resolvedValidUntil && !canPersistValidUntil && !certId) {
+    if (resolvedValidUntil && canPersistValidUntil) {
+      try {
+        await updateTccApplicationValidUntilDate(applicationId, resolvedValidUntil);
+      } catch (validUntilError) {
+        if (!certId) {
+          return {
+            success: false,
+            error:
+              'Valid upto date could not be saved. Run prisma/migrations/add-tcc-valid-until-date.sql on the database, then try again.',
+          };
+        }
+        console.error('[tcc] Failed to persist certificate_valid_until_date:', validUntilError);
+      }
+    } else if (resolvedValidUntil && !canPersistValidUntil && !certId) {
       return {
         success: false,
         error:

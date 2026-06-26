@@ -4,7 +4,7 @@ import { CERTIFICATES_BUCKET } from '@/lib/storage';
 import { generateTccCertificateHtmlPdf } from '@/lib/tcc-certificate-html-pdf-server';
 import { findReachCertificateForExportDate, REACH_CERTIFICATE_TYPE } from '@/lib/reach-certificate';
 import { getTccCertificateValidUntilIso, resolveTccValidUntilIso } from '@/lib/tcc-certificate-dates';
-import { readTccApplicationValidUntilDate } from '@/lib/tcc-application-valid-until';
+import { readTccApplicationValidUntilDate, enrichTccApplicationRow } from '@/lib/tcc-application-valid-until';
 import { ensureTccApplicationSchema } from '@/lib/tcc-application-schema';
 
 const REACH_QUOTA_CERT_SELECT =
@@ -238,6 +238,8 @@ export async function buildTccApplicationPreviewInput(
     throw new Error('TCC application not found.');
   }
 
+  const appRow = await enrichTccApplicationRow(app as Record<string, unknown>, applicationId);
+
   const client = Array.isArray(app.clients) ? app.clients[0] : app.clients;
   const chemicalRaw = Array.isArray(app.chemicals) ? app.chemicals[0] : app.chemicals;
 
@@ -269,12 +271,12 @@ export async function buildTccApplicationPreviewInput(
     chemical: chemicalRaw,
   });
 
+  const exportDateRaw = app.export_date ? String(app.export_date).split('T')[0] : null;
   const issueDateRaw = app.certificate_issue_date
     ? String(app.certificate_issue_date).split('T')[0]
     : new Date().toISOString().split('T')[0];
-  const exportDateRaw = app.export_date ? String(app.export_date).split('T')[0] : null;
   const validUntilIso = resolveTccValidUntilIso({
-    validUntilDate: readTccApplicationValidUntilDate(app),
+    validUntilDate: readTccApplicationValidUntilDate(appRow),
     exportDate: exportDateRaw,
     issueDate: issueDateRaw,
   });
@@ -299,7 +301,7 @@ export async function buildTccApplicationPreviewInput(
     registrationNumber:
       reachCert?.registration_number?.trim() || app.registration_number?.trim() || null,
     validUntilDate: validUntilIso,
-    issuedDate: issueDateRaw,
+    issuedDate: exportDateRaw || issueDateRaw,
     deliveryChallanNo: app.tracking_id?.trim() || app.purchase_order_number?.trim() || undefined,
   };
 }

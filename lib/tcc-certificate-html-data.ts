@@ -3,7 +3,9 @@ import {
   buildReachAddressLines,
   formatEuReachManufacturerAddressDisplay,
   formatReachCertDate,
+  normalizeCertDateIso,
 } from '@/lib/reach-certificate-data';
+import { resolveTccCertificateDateOfIssue } from '@/lib/tcc-certificate-dates';
 import { buildEuImporterFullAddress, splitEuImporterAddress } from '@/lib/tcc-eu-importer';
 
 export type TccPdfClient = {
@@ -240,17 +242,19 @@ export function buildTccHtmlData(
     deliveryChallanNo: input.deliveryChallanNo,
   });
 
-  const issueDateRaw =
-    input.issuedDate ||
-    input.application.export_date ||
-    new Date().toISOString().split('T')[0];
+  const issueDateRaw = resolveTccCertificateDateOfIssue({
+    poDate: input.application.export_date,
+    issuedDate: input.issuedDate,
+  });
+  const validUntilRaw = normalizeCertDateIso(input.validUntilDate) ?? input.validUntilDate;
+  const issueDateDisplay = formatReachCertDate(issueDateRaw);
 
   return {
     ...docx,
     certificateNumber: input.certificateNumber,
     manufacturerAddress: formatEuReachManufacturerAddressDisplay(input.client),
-    exportDateDisplay: formatReachCertDate(issueDateRaw),
-    validUntilDateDisplay: formatReachCertDate(input.validUntilDate),
+    exportDateDisplay: issueDateDisplay,
+    validUntilDateDisplay: formatReachCertDate(validUntilRaw),
     invoiceNo:
       input.application.invoice_number?.trim() ||
       input.application.tracking_id?.trim() ||

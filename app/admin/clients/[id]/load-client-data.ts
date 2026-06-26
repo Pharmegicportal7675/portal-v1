@@ -4,6 +4,7 @@ import { getSession } from '@/lib/auth/session';
 import { redirect } from 'next/navigation';
 import { getLatestReachCertForChemical, type ReachCertificateRecord } from '@/lib/reach-certificate';
 import { enrichTccApplicationsWithRcQuota } from '@/services/db';
+import { enrichTccApplicationsWithValidUntil } from '@/lib/tcc-application-valid-until';
 
 export const loadClientProfileData = cache(async function loadClientProfileData(clientId: string) {
   const session = await getSession();
@@ -59,12 +60,14 @@ export const loadClientProfileData = cache(async function loadClientProfileData(
 
   const tccHistory = await enrichTccApplicationsWithRcQuota(
     adminSupabase,
-    (tccHistoryRaw || []).map((row: { chemicals?: unknown; certificates?: unknown; client_chemicals?: unknown }) => ({
-      ...row,
-      chemicals: Array.isArray(row.chemicals) ? row.chemicals[0] : row.chemicals,
-      certificates: Array.isArray(row.certificates) ? row.certificates[0] ?? null : row.certificates,
-      client_chemicals: Array.isArray(row.client_chemicals) ? row.client_chemicals[0] ?? null : row.client_chemicals,
-    }))
+    await enrichTccApplicationsWithValidUntil(
+      (tccHistoryRaw || []).map((row: { chemicals?: unknown; certificates?: unknown; client_chemicals?: unknown }) => ({
+        ...row,
+        chemicals: Array.isArray(row.chemicals) ? row.chemicals[0] : row.chemicals,
+        certificates: Array.isArray(row.certificates) ? row.certificates[0] ?? null : row.certificates,
+        client_chemicals: Array.isArray(row.client_chemicals) ? row.client_chemicals[0] ?? null : row.client_chemicals,
+      }))
+    )
   );
 
   const internalNotes = (internalNotesData || []).map((note: { id: string; note: string; created_at: string; users?: { email?: string } | null }) => ({
