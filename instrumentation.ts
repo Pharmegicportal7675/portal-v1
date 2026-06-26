@@ -1,5 +1,3 @@
-import { ensureTccApplicationSchema } from '@/lib/tcc-application-schema';
-
 export async function register() {
   if (process.env.NEXT_RUNTIME !== 'nodejs') return;
 
@@ -12,16 +10,5 @@ export async function register() {
 
   if (!process.env.DATABASE_URL) {
     console.warn('[portal] DATABASE_URL is not set in hPanel environment variables.');
-  } else {
-    try {
-      const ready = await ensureTccApplicationSchema();
-      if (ready) {
-        console.info('[tcc] Application schema verified.');
-      } else {
-        console.warn('[tcc] Application schema is incomplete. Run: npm run db:ensure-tcc-schema');
-      }
-    } catch (err) {
-      console.warn('[tcc] Application schema check failed:', err);
-    }
   }
 }

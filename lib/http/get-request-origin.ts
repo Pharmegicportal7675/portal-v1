@@ -1,6 +1,7 @@
 import { NextRequest } from 'next/server';
 
-function stripPort(host: string): string {
+function stripPort(host: string | undefined | null): string {
+  if (!host) return '';
   return host.replace(/:\d+$/, '').toLowerCase();
 }
 
