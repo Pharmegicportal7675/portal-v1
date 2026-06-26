@@ -241,7 +241,7 @@ export default function TccApplicationForm({
     }
 
     if (!exportDate) {
-      return 'Expected export shipment date is required.';
+      return 'PO date is required.';
     }
 
     if (isEuReach) {
@@ -554,7 +554,7 @@ export default function TccApplicationForm({
                 )}
 
                 <div className="space-y-2">
-                  <FormLabel required>Expected Export Shipment Date</FormLabel>
+                  <FormLabel required>PO Date</FormLabel>
                   <DatePicker
                     value={exportDate}
                     onChange={handleExportDateChange}
@@ -733,7 +733,7 @@ export default function TccApplicationForm({
                     <div className="p-3 bg-slate-50 text-slate-700 border border-slate-200 rounded-lg text-xs font-semibold flex gap-2 items-start">
                       <Info className="h-4 w-4 mt-0.5 shrink-0" />
                       <div>
-                        <p>Select export shipment date</p>
+                        <p>Select PO date</p>
                         <p className="text-[10px] text-slate-500 mt-0.5 font-medium">
                           Quota is calculated from the CT certificate period that matches your export date.
                           A 2025 export uses 2025 CT quota; a 2026 export uses the 2026 CT certificate.

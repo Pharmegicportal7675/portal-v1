@@ -5,6 +5,7 @@ import { resolveTccPdfChemicalTonnageBand } from '@/lib/tcc-certificate-pdf';
 import type { TccPdfChemical } from '@/lib/tcc-certificate-html-data';
 import { generateUniqueTccCertificateNumber } from '@/lib/tcc-certificate-number';
 import { resolveTccValidUntilIso } from '@/lib/tcc-certificate-dates';
+import { readTccApplicationValidUntilDate } from '@/lib/tcc-application-valid-until';
 import { CERTIFICATES_BUCKET, ensureCertificatesBucket } from '@/lib/storage';
 
 type TccIssuanceApplication = {
@@ -65,10 +66,7 @@ export async function upsertTccCertificateForApplication(
   const exportDate =
     application.export_date != null ? String(application.export_date).split('T')[0] : null;
   const storedValidUntil =
-    validUntilDateIso?.trim() ||
-    (application.certificate_valid_until_date != null
-      ? String(application.certificate_valid_until_date).split('T')[0]
-      : null);
+    validUntilDateIso?.trim() || readTccApplicationValidUntilDate(application);
   const validUntilIso = resolveTccValidUntilIso({
     validUntilDate: storedValidUntil,
     exportDate,

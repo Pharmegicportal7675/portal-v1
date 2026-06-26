@@ -184,8 +184,9 @@ ALTER TABLE tcc_applications
     ADD CONSTRAINT fk_tcc_reach_certificate
     FOREIGN KEY (reach_certificate_id) REFERENCES certificates(id) ON DELETE SET NULL;
 
--- Run once on existing databases that pre-date certificate_valid_until_date:
--- ALTER TABLE tcc_applications ADD COLUMN certificate_valid_until_date DATE NULL AFTER certificate_issue_date;
+-- Run once on existing databases that pre-date newer TCC columns:
+-- npm run db:migrate:tcc-schema
+-- Or apply prisma/migrations/tcc-application-schema.sql in phpMyAdmin.
 
 CREATE TABLE IF NOT EXISTS quota_transactions (
     id CHAR(36) PRIMARY KEY DEFAULT (UUID()),

@@ -4,6 +4,8 @@ import { CERTIFICATES_BUCKET } from '@/lib/storage';
 import { generateTccCertificateHtmlPdf } from '@/lib/tcc-certificate-html-pdf-server';
 import { findReachCertificateForExportDate, REACH_CERTIFICATE_TYPE } from '@/lib/reach-certificate';
 import { getTccCertificateValidUntilIso, resolveTccValidUntilIso } from '@/lib/tcc-certificate-dates';
+import { readTccApplicationValidUntilDate } from '@/lib/tcc-application-valid-until';
+import { ensureTccApplicationSchema } from '@/lib/tcc-application-schema';
 
 const REACH_QUOTA_CERT_SELECT =
   'id, certificate_number, client_id, chemical_id, status, expires_at, issued_at, type, allocated_quantity, tonnage_band, registration_number';
@@ -205,25 +207,13 @@ export async function buildTccApplicationPreviewInput(
   supabase: DbClient,
   applicationId: string
 ): Promise<TccCertPdfInput> {
+  await ensureTccApplicationSchema();
+
   const { data: app, error } = await supabase
     .from('tcc_applications')
     .select(
       `
-      id,
-      client_id,
-      chemical_id,
-      quantity_mt,
-      export_date,
-      tracking_id,
-      registration_number,
-      remarks,
-      certificate_issue_date,
-      certificate_valid_until_date,
-      reach_certificate_id,
-      eu_importer_company_name,
-      eu_importer_address,
-      purchase_order_number,
-      invoice_number,
+      *,
       clients (
         company_name,
         uuid_number,
@@ -284,9 +274,7 @@ export async function buildTccApplicationPreviewInput(
     : new Date().toISOString().split('T')[0];
   const exportDateRaw = app.export_date ? String(app.export_date).split('T')[0] : null;
   const validUntilIso = resolveTccValidUntilIso({
-    validUntilDate: app.certificate_valid_until_date
-      ? String(app.certificate_valid_until_date).split('T')[0]
-      : null,
+    validUntilDate: readTccApplicationValidUntilDate(app),
     exportDate: exportDateRaw,
     issueDate: issueDateRaw,
   });
@@ -311,6 +299,7 @@ export async function buildTccApplicationPreviewInput(
     registrationNumber:
       reachCert?.registration_number?.trim() || app.registration_number?.trim() || null,
     validUntilDate: validUntilIso,
+    issuedDate: issueDateRaw,
     deliveryChallanNo: app.tracking_id?.trim() || app.purchase_order_number?.trim() || undefined,
   };
 }

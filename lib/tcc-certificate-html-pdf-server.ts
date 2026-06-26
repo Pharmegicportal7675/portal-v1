@@ -9,6 +9,7 @@ import {
   buildTccApplicationPreviewInput,
   buildTccCertificatePdfInputFromStoredCert,
 } from '@/lib/tcc-certificate-pdf';
+import { ensureTccApplicationSchema } from '@/lib/tcc-application-schema';
 import { resolvePdfRenderBaseUrl } from '@/lib/reach-pdf-render-url';
 import { renderTccCertificateHtmlDocument } from '@/services/tcc-certificate-html-pdf-render';
 import { generateTccHtmlPdfFromHtml } from '@/services/reach-certificate-puppeteer-pdf';
@@ -114,8 +115,12 @@ export async function loadTccHtmlDataByApplicationId(
   supabase: DbClient,
   applicationId: string
 ): Promise<TccCertificateHtmlData> {
+  await ensureTccApplicationSchema();
   const input = await buildTccApplicationPreviewInput(supabase, applicationId);
-  return loadTccHtmlDataForInput(supabase, input);
+  return loadTccHtmlDataForInput(supabase, {
+    ...input,
+    issuedDate: input.issuedDate || undefined,
+  });
 }
 
 export async function generateTccCertificateHtmlPdf(

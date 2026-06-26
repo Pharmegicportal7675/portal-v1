@@ -22,7 +22,7 @@ const TRACKED_FIELD_LABELS: Record<string, string> = {
   purchase_order_number: 'Purchase order number',
   invoice_number: 'Invoice number',
   quantity_mt: 'Quantity (MT)',
-  export_date: 'Expected export date',
+  export_date: 'PO date',
   certificate_issue_date: 'Issue date',
   certificate_valid_until_date: 'Valid upto',
   registration_number: 'Registration number',

@@ -237,7 +237,7 @@ export function TccApplicationAdminEditForm({
             </p>
           </div>
           <div className="space-y-2">
-            <FormLabel required>Expected export date</FormLabel>
+            <FormLabel required>PO Date</FormLabel>
             <DatePicker
               value={form.export_date}
               onChange={(value) => updateField('export_date', value)}

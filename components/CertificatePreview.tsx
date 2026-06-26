@@ -448,6 +448,7 @@ export default function CertificatePreviewClient({
                 <TccCertificateHtmlPreviewFromApi
                   key={previewVersion}
                   certificateId={cert.id}
+                  cacheBust={previewVersion}
                 />
               )
             ) : (

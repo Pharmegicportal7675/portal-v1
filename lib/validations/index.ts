@@ -100,7 +100,7 @@ export const internalNoteSchema = z.object({
 const tccApplicationCommonSchema = {
   quantity_mt: z.coerce.number().positive({ message: 'Quantity must be greater than 0' }),
   regulatory_framework: regulatoryRegistrationSchema,
-  export_date: z.string().min(1, { message: 'Expected export date is required' }),
+  export_date: z.string().min(1, { message: 'PO date is required' }),
   eu_importer_company_name: z.string().min(1, { message: 'EU importer company name is required' }),
   eu_importer_address: z.string().min(1, { message: 'EU importer address is required' }),
   purchase_order_number: z.string().min(1, { message: 'Purchase order number is required' }),
@@ -132,7 +132,7 @@ export const adminTccApplicationUpdateSchema = z.object({
   invoice_number: z
     .preprocess((val) => (val == null || val === '' ? undefined : String(val)), z.string().optional()),
   quantity_mt: z.coerce.number().positive({ message: 'Quantity must be greater than 0' }),
-  export_date: z.string().min(1, { message: 'Expected export date is required' }),
+  export_date: z.string().min(1, { message: 'PO date is required' }),
   issue_date: z
     .preprocess((val) => (val == null || val === '' ? undefined : String(val)), z.string().optional()),
   valid_until_date: z

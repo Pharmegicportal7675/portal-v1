@@ -433,7 +433,7 @@ export function TccApplicationViewDialog({
                   {resolveTccApplicationRegistrationNumber(displayApp) || '—'}
                 </span>
               </DetailItem>
-              <DetailItem label="Expected export date">
+              <DetailItem label="PO Date">
                 {formatDisplayDate(displayApp.export_date)}
               </DetailItem>
               {displayApp.remarks && (
@@ -629,7 +629,11 @@ export function TccApplicationViewDialog({
                   </div>
                 )}
 
-                <TccCertificateHtmlPreviewFromApi key={previewVersion} certificateId={cert.id} />
+                <TccCertificateHtmlPreviewFromApi
+                  key={previewVersion}
+                  certificateId={cert.id}
+                  cacheBust={previewVersion}
+                />
               </div>
             ) : showDraftPreview ? (
               <div className="rounded-xl border border-slate-200 overflow-hidden bg-slate-50/50">
@@ -643,14 +647,18 @@ export function TccApplicationViewDialog({
                     </p>
                   </div>
                 </div>
-                <TccCertificateHtmlPreviewFromApi key={previewVersion} applicationId={displayApp.id} />
+                <TccCertificateHtmlPreviewFromApi
+                  key={previewVersion}
+                  applicationId={displayApp.id}
+                  cacheBust={previewVersion}
+                />
               </div>
             ) : (
               <div className="rounded-xl border border-dashed border-slate-200 bg-slate-50 p-8 text-center">
                 <FileText className="h-10 w-10 text-slate-300 mx-auto mb-3" />
                 <p className="text-sm font-semibold text-slate-600">Certificate preview unavailable</p>
                 <p className="text-xs text-slate-400 mt-1 max-w-xs mx-auto">
-                  Add an export shipment date to generate a draft certificate preview.
+                  Add a PO date to generate a draft certificate preview.
                 </p>
               </div>
             )}

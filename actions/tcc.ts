@@ -18,6 +18,12 @@ import { revalidatePath } from 'next/cache';
 import { notifyAllAdmins, notifyUser } from '@/lib/notifications';
 import { notifyTccApplicationByEmail } from '@/lib/tcc-application-notification';
 import { getTccCertificateValidUntilDate } from '@/lib/tcc-certificate-dates';
+import { buildAdminTccApplicationSelect, ensureTccApplicationSchema, hasTccApplicationColumn } from '@/lib/tcc-application-schema';
+import {
+  isMissingTccSchemaColumnError,
+  readTccApplicationValidUntilDate,
+} from '@/lib/tcc-application-valid-until';
+import { tccSaveErrorMessage } from '@/lib/tcc-save-errors';
 import {
   computeTccQuotaForExportDate,
   getReachCertAllocatedQuota,
@@ -61,25 +67,6 @@ function resolveEuImporterFields(
     purchase_order_number: data.purchase_order_number.trim(),
     invoice_number: data.invoice_number?.trim() || null,
   };
-}
-
-function tccSaveErrorMessage(err: unknown): string {
-  const message = formatErrorMessage(err);
-  if (
-    message.includes('eu_importer') ||
-    message.includes('purchase_order_number') ||
-    message.includes('invoice_number') ||
-    message.includes('reach_certificate_id') ||
-    message.includes('certificate_issue_date') ||
-    message.includes('certificate_valid_until_date') ||
-    message.includes('tcc_application_notification_emails') ||
-    message.includes('regulatory_registrations') ||
-    message.includes('regulatory_framework') ||
-    message.includes('PGRST204')
-  ) {
-    return 'Database is missing EU Importer columns. Run npm run db:import or apply the latest migration in prisma/database.mysql.sql, then try again.';
-  }
-  return message || 'Failed to save application.';
 }
 
 function parseTccApplicationFormData(formData: FormData) {
@@ -342,6 +329,8 @@ export async function applyForTccAction(prevState: unknown, formData: FormData) 
 
     let createdAppId: string | null = null;
 
+    await ensureTccApplicationSchema();
+
     try {
       const { data: app, error: appError } = await adminSupabase
         .from('tcc_applications')
@@ -533,6 +522,8 @@ export async function updateTccApplicationAction(prevState: unknown, formData: F
 
     const resetStatus = ['changes_required', 'modification_requested', 'rejected'].includes(existing.status);
     const euImporter = resolveEuImporterFields(euData);
+
+    await ensureTccApplicationSchema();
 
     let boUrl = existing.bo_attachment_url;
     let boName = existing.bo_attachment_name;
@@ -759,11 +750,11 @@ export async function adminUpdateTccApplicationAction(prevState: unknown, formDa
   const applicationId = result.data.application_id;
 
   try {
+    await ensureTccApplicationSchema();
+
     const { data: existingApp, error: loadError } = await adminSupabase
       .from('tcc_applications')
-      .select(
-        'id, client_id, chemical_id, client_chemical_id, status, quantity_mt, export_date, eu_importer_company_name, eu_importer_address, purchase_order_number, invoice_number, certificate_issue_date, certificate_valid_until_date, registration_number, remarks'
-      )
+      .select(await buildAdminTccApplicationSelect())
       .eq('id', applicationId)
       .maybeSingle();
 
@@ -798,9 +789,7 @@ export async function adminUpdateTccApplicationAction(prevState: unknown, formDa
     }
 
     let beforeIssueDate = existingApp.certificate_issue_date;
-    let beforeExpiresAt: string | null = existingApp.certificate_valid_until_date
-      ? String(existingApp.certificate_valid_until_date).split('T')[0]
-      : null;
+    let beforeExpiresAt: string | null = readTccApplicationValidUntilDate(existingApp);
     if (certId) {
       const { data: certRow } = await adminSupabase
         .from('certificates')
@@ -927,24 +916,69 @@ export async function adminUpdateTccApplicationAction(prevState: unknown, formDa
         .split('T')[0];
     }
 
-    const { error: updateError } = await adminSupabase
+    await ensureTccApplicationSchema();
+    const canPersistValidUntil = await hasTccApplicationColumn('certificate_valid_until_date');
+
+    const applicationUpdate = {
+      eu_importer_company_name: result.data.eu_importer_company_name.trim(),
+      eu_importer_address: result.data.eu_importer_address.trim(),
+      purchase_order_number: result.data.purchase_order_number.trim(),
+      invoice_number: result.data.invoice_number?.trim() || null,
+      quantity_mt: newQuantity,
+      export_date: result.data.export_date,
+      certificate_issue_date: issueDateValue,
+      registration_number: result.data.registration_number?.trim() || null,
+      remarks: result.data.remarks?.trim() || null,
+      updated_at: new Date().toISOString(),
+      ...(resolvedValidUntil && canPersistValidUntil
+        ? { certificate_valid_until_date: resolvedValidUntil }
+        : {}),
+    };
+
+    let updateError: { message: string } | null = null;
+    const { error: updateWithValidUntilError } = await adminSupabase
       .from('tcc_applications')
-      .update({
-        eu_importer_company_name: result.data.eu_importer_company_name.trim(),
-        eu_importer_address: result.data.eu_importer_address.trim(),
-        purchase_order_number: result.data.purchase_order_number.trim(),
-        invoice_number: result.data.invoice_number?.trim() || null,
-        quantity_mt: newQuantity,
-        export_date: result.data.export_date,
-        certificate_issue_date: issueDateValue,
-        certificate_valid_until_date: resolvedValidUntil,
-        registration_number: result.data.registration_number?.trim() || null,
-        remarks: result.data.remarks?.trim() || null,
-        updated_at: new Date().toISOString(),
-      })
+      .update(applicationUpdate)
       .eq('id', applicationId);
 
+    if (updateWithValidUntilError && isMissingTccSchemaColumnError(updateWithValidUntilError)) {
+      const ensured = await ensureTccApplicationSchema();
+      if (ensured) {
+        const { error: retryError } = await adminSupabase
+          .from('tcc_applications')
+          .update(applicationUpdate)
+          .eq('id', applicationId);
+        updateError = retryError;
+      } else {
+        const { certificate_valid_until_date: _omit, ...fallbackUpdate } = applicationUpdate as typeof applicationUpdate & {
+          certificate_valid_until_date?: string;
+        };
+        const { error: fallbackError } = await adminSupabase
+          .from('tcc_applications')
+          .update(fallbackUpdate)
+          .eq('id', applicationId);
+        updateError = fallbackError;
+        if (resolvedValidUntil) {
+          return {
+            success: false,
+            error:
+              'Valid upto date could not be saved. Run prisma/migrations/add-tcc-valid-until-date.sql on the database, then try again.',
+          };
+        }
+      }
+    } else {
+      updateError = updateWithValidUntilError;
+    }
+
     if (updateError) throw updateError;
+
+    if (resolvedValidUntil && !canPersistValidUntil && !certId) {
+      return {
+        success: false,
+        error:
+          'Valid upto date could not be saved. Redeploy the latest portal build, then try again.',
+      };
+    }
 
     if (existing.status === 'approved' && quantityChanged) {
       await syncQuotaForClientChemical(
@@ -1074,6 +1108,8 @@ export async function processTccAction(
   const adminSupabase = createAdminClient();
 
   try {
+    await ensureTccApplicationSchema();
+
     // 1. Fetch application with relations
     const { data: app, error: fetchError } = await adminSupabase
       .from('tcc_applications')
@@ -1286,9 +1322,7 @@ export async function processTccAction(
           application: app,
           issueDateIso: approvalIssueDateIso,
           registrationNumber: matchedReachCert?.registration_number || null,
-          validUntilDateIso: app.certificate_valid_until_date
-            ? String(app.certificate_valid_until_date).split('T')[0]
-            : null,
+          validUntilDateIso: readTccApplicationValidUntilDate(app),
         }
       );
 

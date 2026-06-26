@@ -11,11 +11,13 @@ import {
 type TccCertificateHtmlPreviewFromApiProps = {
   certificateId?: string;
   applicationId?: string;
+  cacheBust?: string | number;
 };
 
 export default function TccCertificateHtmlPreviewFromApi({
   certificateId,
   applicationId,
+  cacheBust,
 }: TccCertificateHtmlPreviewFromApiProps) {
   const [data, setData] = useState<TccCertificateHtmlData | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -24,9 +26,9 @@ export default function TccCertificateHtmlPreviewFromApi({
   useEffect(() => {
     let cancelled = false;
     const url = certificateId
-      ? buildTccCertificateHtmlDataUrl(certificateId)
+      ? `${buildTccCertificateHtmlDataUrl(certificateId)}${cacheBust != null ? `&v=${encodeURIComponent(String(cacheBust))}` : ''}`
       : applicationId
-        ? buildTccCertificateApplicationHtmlDataUrl(applicationId)
+        ? buildTccCertificateApplicationHtmlDataUrl(applicationId, cacheBust)
         : null;
 
     if (!url) {
@@ -40,9 +42,17 @@ export default function TccCertificateHtmlPreviewFromApi({
       setError(null);
       try {
         const res = await fetch(url, { cache: 'no-store' });
-        const body = (await res.json()) as TccCertificateHtmlData | { error?: string };
+        const raw = await res.text();
+        let body: TccCertificateHtmlData | { error?: string };
+        try {
+          body = raw ? (JSON.parse(raw) as TccCertificateHtmlData | { error?: string }) : {};
+        } catch {
+          throw new Error(
+            raw.trim() || 'Server returned an invalid certificate preview response.'
+          );
+        }
         if (!res.ok) {
-          throw new Error('error' in body ? body.error : 'Failed to load certificate preview.');
+          throw new Error('error' in body && body.error ? body.error : 'Failed to load certificate preview.');
         }
         if (!cancelled) setData(body as TccCertificateHtmlData);
       } catch (err: unknown) {
@@ -58,7 +68,7 @@ export default function TccCertificateHtmlPreviewFromApi({
     return () => {
       cancelled = true;
     };
-  }, [certificateId, applicationId]);
+  }, [certificateId, applicationId, cacheBust]);
 
   if (loading) {
     return (
