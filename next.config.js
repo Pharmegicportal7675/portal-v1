@@ -27,6 +27,11 @@ const nextConfig = {
         destination: '/login',
         permanent: false,
       },
+      {
+        source: '/admin/chemicals',
+        destination: '/admin',
+        permanent: false,
+      },
     ];
   },
   outputFileTracingIncludes: {

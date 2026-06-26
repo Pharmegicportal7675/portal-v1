@@ -14,6 +14,7 @@ import {
   X,
   Shield,
   Settings,
+  History,
 } from 'lucide-react';
 import BrandLogo from '@/components/BrandLogo';
 import { useEffect } from 'react';
@@ -39,19 +40,17 @@ export default function Sidebar({ role, companyName, regulatoryRegistrations = [
     setSidebarOpen(false);
   }, [pathname, setSidebarOpen]);
 
-  const hideChemicalInventory = role === 'MASTER_ADMIN';
-
   const adminLinks = [
     { href: '/admin', label: 'Dashboard', icon: LayoutDashboard },
     { href: '/admin/clients', label: 'Clients', icon: Users },
     { href: '/admin/rc-certificates', label: 'RC Certificate', icon: FileText },
-    { href: '/admin/chemicals', label: 'Substance Inventory', icon: Database },
     { href: '/admin/approvals', label: 'TCC Approvals', icon: CheckSquare },
     { href: '/admin/settings', label: 'Settings', icon: Settings },
-  ].filter((link) => !(hideChemicalInventory && link.href === '/admin/chemicals'));
+  ];
 
   if (role === 'SUPER_ADMIN') {
     const settingsIndex = adminLinks.findIndex((link) => link.href === '/admin/settings');
+    adminLinks.splice(settingsIndex, 0, { href: '/admin/activity-logs', label: 'Activity Log', icon: History });
     adminLinks.splice(settingsIndex, 0, { href: '/admin/super', label: 'Super Admin', icon: Shield });
   }
 
@@ -62,10 +61,10 @@ export default function Sidebar({ role, companyName, regulatoryRegistrations = [
   const clientProfileHiddenHrefs = new Set([
     '/admin',
     '/admin/rc-certificates',
-    '/admin/chemicals',
     '/admin/approvals',
     '/admin/settings',
     '/admin/super',
+    '/admin/activity-logs',
   ]);
 
   const filteredAdminLinks = isClientProfileView
@@ -110,10 +109,7 @@ export default function Sidebar({ role, companyName, regulatoryRegistrations = [
             icon: Award,
             isSub: true,
           },
-        ].filter(
-          (link) =>
-            !(hideChemicalInventory && link.href === `/admin/clients/${clientProfileId}/chemicals`)
-        )
+        ]
       : [];
 
   const dashboardHome = role === 'CLIENT' ? '/client' : '/admin';

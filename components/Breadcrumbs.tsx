@@ -17,6 +17,8 @@ const routeMaps: Record<string, string> = {
   certificates: 'My Certificates',
   'rc-certificates': 'RC Certificates',
   'rc-preview': 'RC Certificate Preview',
+  super: 'Super Admin',
+  'activity-logs': 'Activity Log',
 };
 
 const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
