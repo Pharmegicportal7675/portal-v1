@@ -4,7 +4,7 @@ import { buildClientDateStoragePath } from '@/lib/storage-paths';
 import { resolveTccPdfChemicalTonnageBand } from '@/lib/tcc-certificate-pdf';
 import type { TccPdfChemical } from '@/lib/tcc-certificate-html-data';
 import { generateUniqueTccCertificateNumber } from '@/lib/tcc-certificate-number';
-import { getTccCertificateValidUntilDate, getTccCertificateValidUntilIso } from '@/lib/tcc-certificate-dates';
+import { resolveTccValidUntilIso } from '@/lib/tcc-certificate-dates';
 import { CERTIFICATES_BUCKET, ensureCertificatesBucket } from '@/lib/storage';
 
 type TccIssuanceApplication = {
@@ -56,15 +56,25 @@ export async function upsertTccCertificateForApplication(
     application: TccIssuanceApplication & Record<string, unknown>;
     issueDateIso: string;
     registrationNumber?: string | null;
+    validUntilDateIso?: string | null;
   }
 ): Promise<UpsertTccCertificateResult> {
-  const { application: rawApplication, issueDateIso, registrationNumber } = params;
+  const { application: rawApplication, issueDateIso, registrationNumber, validUntilDateIso } = params;
   const application = normalizeIssuanceApplication(rawApplication);
   const { issueDate, issueDateRaw } = parseIssueDateIso(issueDateIso);
   const exportDate =
     application.export_date != null ? String(application.export_date).split('T')[0] : null;
-  const expiryDate = getTccCertificateValidUntilDate(exportDate, issueDateRaw);
-  const validUntilIso = getTccCertificateValidUntilIso(exportDate, issueDateRaw);
+  const storedValidUntil =
+    validUntilDateIso?.trim() ||
+    (application.certificate_valid_until_date != null
+      ? String(application.certificate_valid_until_date).split('T')[0]
+      : null);
+  const validUntilIso = resolveTccValidUntilIso({
+    validUntilDate: storedValidUntil,
+    exportDate,
+    issueDate: issueDateRaw,
+  });
+  const expiryDate = new Date(`${validUntilIso}T12:00:00`);
 
   const { data: existingCert } = await supabase
     .from('certificates')

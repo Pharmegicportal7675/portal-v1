@@ -3,7 +3,7 @@ import type { TccPdfApplication, TccPdfChemical, TccPdfClient } from '@/lib/tcc-
 import { CERTIFICATES_BUCKET } from '@/lib/storage';
 import { generateTccCertificateHtmlPdf } from '@/lib/tcc-certificate-html-pdf-server';
 import { findReachCertificateForExportDate, REACH_CERTIFICATE_TYPE } from '@/lib/reach-certificate';
-import { getTccCertificateValidUntilIso } from '@/lib/tcc-certificate-dates';
+import { getTccCertificateValidUntilIso, resolveTccValidUntilIso } from '@/lib/tcc-certificate-dates';
 
 const REACH_QUOTA_CERT_SELECT =
   'id, certificate_number, client_id, chemical_id, status, expires_at, issued_at, type, allocated_quantity, tonnage_band, registration_number';
@@ -218,6 +218,7 @@ export async function buildTccApplicationPreviewInput(
       registration_number,
       remarks,
       certificate_issue_date,
+      certificate_valid_until_date,
       reach_certificate_id,
       eu_importer_company_name,
       eu_importer_address,
@@ -282,7 +283,13 @@ export async function buildTccApplicationPreviewInput(
     ? String(app.certificate_issue_date).split('T')[0]
     : new Date().toISOString().split('T')[0];
   const exportDateRaw = app.export_date ? String(app.export_date).split('T')[0] : null;
-  const validUntilIso = getTccCertificateValidUntilIso(exportDateRaw, issueDateRaw);
+  const validUntilIso = resolveTccValidUntilIso({
+    validUntilDate: app.certificate_valid_until_date
+      ? String(app.certificate_valid_until_date).split('T')[0]
+      : null,
+    exportDate: exportDateRaw,
+    issueDate: issueDateRaw,
+  });
 
   const application: TccPdfApplication = {
     quantity_mt: app.quantity_mt,

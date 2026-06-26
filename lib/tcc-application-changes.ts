@@ -24,7 +24,7 @@ const TRACKED_FIELD_LABELS: Record<string, string> = {
   quantity_mt: 'Quantity (MT)',
   export_date: 'Expected export date',
   certificate_issue_date: 'Issue date',
-  certificate_expires_at: 'Valid upto',
+  certificate_valid_until_date: 'Valid upto',
   registration_number: 'Registration number',
   remarks: 'Remarks',
 };
@@ -34,7 +34,7 @@ const TRACKED_FIELDS = Object.keys(TRACKED_FIELD_LABELS);
 function normalizeCompareValue(field: string, value: unknown): string {
   if (value == null || value === '') return '';
   if (field === 'quantity_mt') return Number(value).toFixed(2);
-  if (field === 'certificate_issue_date' || field === 'export_date' || field === 'certificate_expires_at') {
+  if (field === 'certificate_issue_date' || field === 'export_date' || field === 'certificate_valid_until_date') {
     return String(value).split('T')[0];
   }
   return String(value).trim();
@@ -43,7 +43,7 @@ function normalizeCompareValue(field: string, value: unknown): string {
 function formatChangeValue(field: string, value: unknown): string {
   if (value == null || value === '') return '—';
   if (field === 'quantity_mt') return `${value} MT`;
-  if (field === 'certificate_issue_date' || field === 'export_date' || field === 'certificate_expires_at') {
+  if (field === 'certificate_issue_date' || field === 'export_date' || field === 'certificate_valid_until_date') {
     return formatDisplayDate(String(value).split('T')[0]) || '—';
   }
   return String(value).trim() || '—';

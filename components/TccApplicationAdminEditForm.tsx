@@ -47,6 +47,9 @@ function resolveCertificateValidUntil(app: TccViewApplication): string {
   const cert = app.certificates;
   const certRow = cert ? (Array.isArray(cert) ? cert[0] : cert) : null;
   if (certRow?.expires_at) return formatDateInput(certRow.expires_at);
+  if (app.certificate_valid_until_date) {
+    return formatDateInput(app.certificate_valid_until_date);
+  }
 
   const issueDate = resolveCertificateIssuedAt(app) || formatDateInput(resolveTccApplicationIssueDate(app));
   return getTccCertificateValidUntilIso(app.export_date, issueDate || null);
@@ -159,6 +162,7 @@ export function TccApplicationAdminEditForm({
         remarks: form.remarks.trim() || null,
         updated_at: new Date().toISOString(),
         certificate_issue_date: form.issue_date || null,
+        certificate_valid_until_date: form.valid_until_date || null,
         ...(issueDateIso ? { certificateIssuedAt: issueDateIso } : {}),
         ...(expiresAtIso ? { certificateExpiresAt: expiresAtIso } : {}),
       });

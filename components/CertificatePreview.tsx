@@ -137,6 +137,7 @@ function buildViewApplicationFromCert(
       certificate_number: cert.certificate_number,
       file_url: cert.file_url,
       issued_at: cert.issued_at,
+      expires_at: cert.expires_at,
     },
   };
 }

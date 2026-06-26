@@ -133,6 +133,7 @@ CREATE TABLE IF NOT EXISTS tcc_applications (
     invoice_number VARCHAR(255),
     regulatory_framework VARCHAR(255),
     certificate_issue_date DATE,
+    certificate_valid_until_date DATE,
     status ENUM('pending', 'approved', 'rejected', 'changes_required', 'expired') DEFAULT 'pending',
     rejection_reason TEXT,
     approved_by CHAR(36),
@@ -182,6 +183,9 @@ CREATE TABLE IF NOT EXISTS certificates (
 ALTER TABLE tcc_applications
     ADD CONSTRAINT fk_tcc_reach_certificate
     FOREIGN KEY (reach_certificate_id) REFERENCES certificates(id) ON DELETE SET NULL;
+
+-- Run once on existing databases that pre-date certificate_valid_until_date:
+-- ALTER TABLE tcc_applications ADD COLUMN certificate_valid_until_date DATE NULL AFTER certificate_issue_date;
 
 CREATE TABLE IF NOT EXISTS quota_transactions (
     id CHAR(36) PRIMARY KEY DEFAULT (UUID()),

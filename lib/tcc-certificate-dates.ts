@@ -32,6 +32,22 @@ export function getTccCertificateValidUntilIso(
   return `${year}-12-31`;
 }
 
+/** Prefer stored valid-until (application or certificate), else default year-end. */
+export function resolveTccValidUntilIso(options: {
+  validUntilDate?: string | null;
+  exportDate?: string | null;
+  issueDate?: string | null;
+  certExpiresAt?: string | null;
+}): string {
+  if (options.certExpiresAt?.trim()) {
+    return options.certExpiresAt.trim().split('T')[0];
+  }
+  if (options.validUntilDate?.trim()) {
+    return options.validUntilDate.trim().split('T')[0];
+  }
+  return getTccCertificateValidUntilIso(options.exportDate, options.issueDate);
+}
+
 export function getTccCertificateValidUntilDate(
   exportDate?: string | null,
   issueDate?: string | null

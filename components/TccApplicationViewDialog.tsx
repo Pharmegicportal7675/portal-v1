@@ -81,6 +81,7 @@ export interface TccViewApplication {
   created_at: string;
   updated_at: string;
   certificate_issue_date?: string | null;
+  certificate_valid_until_date?: string | null;
   rc_remaining_quota?: number | null;
   rc_period_certificate?: string | null;
   rc_tonnage_band?: string | null;
