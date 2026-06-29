@@ -140,6 +140,7 @@ export default function TccCertificateHtmlDocument({ data }: TccCertificateHtmlD
               <p className="tcc-party-address">{data.exporterFullAddress}</p>
             </div>
           </div>
+          <div className="tcc-party-divider" />
           <div className="tcc-party-box">
             <div className="tcc-party-header">
               <h3 className="tcc-party-title">EU Importer Information</h3>
