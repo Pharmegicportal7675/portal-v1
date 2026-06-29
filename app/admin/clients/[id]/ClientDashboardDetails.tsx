@@ -461,7 +461,15 @@ export default function ClientDashboardDetails({
   // Data Calculations
   // -------------------------------------------------------------
   const activePermissions = clientChemicals.filter(c => c.status === 'active').length;
-  const pendingRenewals = clientChemicals.filter(c => c.status === 'expired' || (c.validity_date && new Date(c.validity_date) < new Date(Date.now() + 30 * 24 * 60 * 60 * 1000))).length;
+  const pendingRenewals = [...new Set(clientChemicals.map(c => c.chemical_id))].filter(id => {
+    const certs = clientChemicals.filter(c => c.chemical_id === id);
+    const hasActive = certs.some(c => c.status === 'active');
+    const hasExpiredOrExpiring = certs.some(c =>
+      c.status === 'expired' ||
+      (c.validity_date && new Date(c.validity_date) < new Date(Date.now() + 30 * 24 * 60 * 60 * 1000))
+    );
+    return !hasActive && hasExpiredOrExpiring;
+  }).length;
 
   const MONTH_LABELS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
   const CHART_COLORS = [
