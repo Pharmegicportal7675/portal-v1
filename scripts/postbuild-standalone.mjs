@@ -69,6 +69,23 @@ copyDir(path.join(root, '.next', 'static'), path.join(standaloneDir, '.next', 's
 copyDir(path.join(root, 'templates'), path.join(standaloneDir, 'templates'));
 copyDir(path.join(root, 'generated'), path.join(standaloneDir, 'generated'));
 
+const certificateCssFiles = [
+  'reach-certificate-html.css',
+  'reach-certificate-a4.css',
+  'tcc-certificate-html.css',
+];
+const standaloneComponentsDir = path.join(standaloneDir, 'components');
+fs.mkdirSync(standaloneComponentsDir, { recursive: true });
+for (const fileName of certificateCssFiles) {
+  const src = path.join(root, 'components', fileName);
+  const dest = path.join(standaloneComponentsDir, fileName);
+  if (fs.existsSync(src)) {
+    fs.copyFileSync(src, dest);
+  } else {
+    console.warn(`[postbuild] Missing certificate CSS: components/${fileName}`);
+  }
+}
+
 const workerScript = path.join(root, 'scripts', 'reach-html-to-pdf.cjs');
 const workerDest = path.join(standaloneDir, 'scripts', 'reach-html-to-pdf.cjs');
 const chromiumHelper = path.join(root, 'scripts', 'bundled-chromium-executable.cjs');

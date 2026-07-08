@@ -1,5 +1,4 @@
 import fs from 'node:fs';
-import path from 'node:path';
 import type { TccCertificateHtmlData } from '@/lib/tcc-certificate-html-data';
 import {
   REACH_CERT_A4_CSS_VARS,
@@ -9,9 +8,7 @@ import {
   REACH_CERT_A4_WIDTH_PX,
 } from '@/lib/reach-certificate-a4';
 import { buildReachCertificateEmbeddedFontCss } from '@/lib/reach-certificate-fonts';
-
-const CERTIFICATE_CSS_PATH = path.join(process.cwd(), 'components', 'tcc-certificate-html.css');
-const A4_CSS_PATH = path.join(process.cwd(), 'components', 'reach-certificate-a4.css');
+import { resolveCertificateCssPath } from '@/lib/certificate-css-paths';
 
 /** Puppeteer PDF — bottom padding 60px (preview screen uses 50px all sides). */
 const PDF_RENDER_OVERRIDES = `
@@ -89,8 +86,11 @@ html, body {
 `;
 
 function loadCertificateCss(): string {
-  const certificateCss = fs.readFileSync(CERTIFICATE_CSS_PATH, 'utf8');
-  const a4Css = fs.readFileSync(A4_CSS_PATH, 'utf8');
+  const certificateCss = fs.readFileSync(
+    resolveCertificateCssPath('tcc-certificate-html.css'),
+    'utf8'
+  );
+  const a4Css = fs.readFileSync(resolveCertificateCssPath('reach-certificate-a4.css'), 'utf8');
   return `${a4Css}\n${certificateCss}`;
 }
 

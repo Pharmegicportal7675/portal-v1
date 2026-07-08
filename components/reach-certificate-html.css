@@ -122,7 +122,7 @@
   background: var(--reach-green-pale) !important;
   border-radius: 10px !important;
   padding: 12px 16px 3px !important;
-  margin: 0 0 20px !important;
+  margin: 0 0 18px !important;
   border: none !important;
 }
 
@@ -176,7 +176,7 @@
 
 [data-reach-cert-root] .reach-section-title {
   display: inline-block;
-  margin: 0 0 20px !important;
+  margin: 0 0 18px !important;
   font-size: 10.5pt !important;
   font-weight: bold !important;
   color: var(--reach-green-dark) !important;
@@ -189,7 +189,7 @@
   display: table !important;
   width: 100% !important;
   border-collapse: collapse !important;
-  margin: 0 0 20px !important;
+  margin: 0 0 18px !important;
   table-layout: fixed;
   border: 1px solid var(--reach-table-border) !important;
   background: #fff !important;
@@ -240,7 +240,7 @@
 [data-reach-cert-root] .reach-reg-number-box {
   display: flex !important;
   align-items: stretch;
-  margin: 0 0 20px !important;
+  margin: 0 0 18px !important;
   border-radius: 6px !important;
   overflow: hidden;
   border: 1px solid var(--reach-green-dark) !important;
@@ -280,7 +280,7 @@
   color: #ffffff !important;
   border-radius: 8px !important;
   padding: 12px 16px !important;
-  margin: 0 0 20px !important;
+  margin: 0 0 18px !important;
   border: 1px solid #000 !important;
 }
 

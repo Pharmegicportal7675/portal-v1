@@ -1,14 +1,11 @@
 import fs from 'node:fs';
-import path from 'node:path';
 import type { ReachCertificateHtmlData } from '@/lib/reach-certificate-html-data';
 import {
   REACH_CERT_A4_HEIGHT_PX,
   REACH_CERT_A4_WIDTH_PX,
 } from '@/lib/reach-certificate-a4';
 import { buildReachCertificateEmbeddedFontCss } from '@/lib/reach-certificate-fonts';
-
-const CERTIFICATE_CSS_PATH = path.join(process.cwd(), 'components', 'reach-certificate-html.css');
-const A4_CSS_PATH = path.join(process.cwd(), 'components', 'reach-certificate-a4.css');
+import { resolveCertificateCssPath } from '@/lib/certificate-css-paths';
 
 const PRINT_OVERRIDES = `
 html, body {
@@ -60,8 +57,11 @@ html, body {
 `;
 
 function loadCertificateCss(): string {
-  const certificateCss = fs.readFileSync(CERTIFICATE_CSS_PATH, 'utf8');
-  const a4Css = fs.readFileSync(A4_CSS_PATH, 'utf8');
+  const certificateCss = fs.readFileSync(
+    resolveCertificateCssPath('reach-certificate-html.css'),
+    'utf8'
+  );
+  const a4Css = fs.readFileSync(resolveCertificateCssPath('reach-certificate-a4.css'), 'utf8');
   return `${a4Css}\n${certificateCss}`;
 }
 

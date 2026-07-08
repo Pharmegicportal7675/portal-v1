@@ -17,26 +17,12 @@ export type ReachCertificateDownloadFile = {
   format: 'pdf';
 };
 
-/** Builds a PDF — prefers stored upload, then HTML/Puppeteer (puppeteer-core + chromium-min). */
+/** Builds a PDF — always renders with current HTML/CSS, then refreshes storage. */
 export async function resolveReachCertificateDownloadFile(
   supabase: DbClient,
   input: ReachCertPdfInput & LoadedReachCertificateInput,
   options?: { fileUrl?: string | null }
 ): Promise<ReachCertificateDownloadFile> {
-  const stored = await loadReachCertificateStoredPdf(
-    supabase,
-    input.certificateNumber,
-    options?.fileUrl
-  );
-  if (stored) {
-    return {
-      buffer: stored.buffer,
-      contentType: PDF_CONTENT_TYPE,
-      fileName: stored.fileName,
-      format: 'pdf',
-    };
-  }
-
   try {
     const pdfBuffer = await generateReachCertificateHtmlPdf(input);
     const clientName = input.client.company_name || 'client';
@@ -54,6 +40,20 @@ export async function resolveReachCertificateDownloadFile(
       format: 'pdf',
     };
   } catch (htmlErr) {
+    const stored = await loadReachCertificateStoredPdf(
+      supabase,
+      input.certificateNumber,
+      options?.fileUrl
+    );
+    if (stored) {
+      return {
+        buffer: stored.buffer,
+        contentType: PDF_CONTENT_TYPE,
+        fileName: stored.fileName,
+        format: 'pdf',
+      };
+    }
+
     const message =
       htmlErr instanceof Error
         ? htmlErr.message
