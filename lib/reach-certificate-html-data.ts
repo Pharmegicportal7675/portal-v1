@@ -19,7 +19,7 @@ export type ReachCertificateHtmlData = ReachCertificateDocxData & {
 };
 
 /** Shown beside the "Registered Substance Details" heading when a substance is flagged as an intermediate. */
-export const INTERMEDIATE_SUBSTANCE_NOTE = 'This substance is registered as intermediate.';
+export const INTERMEDIATE_SUBSTANCE_NOTE = 'This substance is registered as Intermediate.';
 
 export const REACH_CERTIFICATE_FOOTER_LINES = [
   'Pharmegic Healthcare Limited',

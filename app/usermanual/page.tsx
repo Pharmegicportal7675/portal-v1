@@ -1,3 +1,4 @@
+import type { Metadata } from 'next';
 import { Download } from 'lucide-react';
 import { createAdminClient } from '@/lib/db/admin';
 import { getUserManualManifest } from '@/lib/user-manual-storage';
@@ -5,9 +6,27 @@ import BrandLogo from '@/components/BrandLogo';
 import UserManualContent from '@/components/UserManualContent';
 
 export const revalidate = 0;
-export const metadata = {
-  title: 'User Manual — Pharmegic Healthcare',
-  description: 'Step-by-step guide to using the Pharmegic Healthcare compliance portal.',
+
+const MANUAL_TITLE = 'User Manual — Pharmegic Healthcare';
+const MANUAL_DESCRIPTION = 'Step-by-step guide to using the Pharmegic Healthcare compliance portal.';
+
+export const metadata: Metadata = {
+  title: MANUAL_TITLE,
+  description: MANUAL_DESCRIPTION,
+  openGraph: {
+    title: MANUAL_TITLE,
+    description: MANUAL_DESCRIPTION,
+    url: '/usermanual',
+    siteName: 'Pharmegic Healthcare',
+    images: [{ url: '/pharmegic-logo.png', alt: 'Pharmegic Healthcare' }],
+    type: 'article',
+  },
+  twitter: {
+    card: 'summary',
+    title: MANUAL_TITLE,
+    description: MANUAL_DESCRIPTION,
+    images: ['/pharmegic-logo.png'],
+  },
 };
 
 export default async function UserManualPage() {

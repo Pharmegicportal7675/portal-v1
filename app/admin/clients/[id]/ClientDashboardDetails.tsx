@@ -2569,17 +2569,19 @@ export default function ClientDashboardDetails({
                 />
               </div>
             </div>
-            <label className="flex items-center gap-2 cursor-pointer select-none">
-              <input
-                type="checkbox"
-                className="h-4 w-4 rounded border-slate-300 text-primary focus:ring-primary"
-                checked={assignChemData.is_intermediate_substance}
-                onChange={(e) =>
-                  setAssignChemData({ ...assignChemData, is_intermediate_substance: e.target.checked })
-                }
-              />
-              <span className="text-sm font-semibold text-slate-700">Intermediate Substance</span>
-            </label>
+            {assignChemData.target_chemical_id === 'new_substance' && (
+              <label className="flex items-center gap-2 cursor-pointer select-none">
+                <input
+                  type="checkbox"
+                  className="h-4 w-4 rounded border-slate-300 text-primary focus:ring-primary"
+                  checked={assignChemData.is_intermediate_substance}
+                  onChange={(e) =>
+                    setAssignChemData({ ...assignChemData, is_intermediate_substance: e.target.checked })
+                  }
+                />
+                <span className="text-sm font-semibold text-slate-700">Intermediate Substance</span>
+              </label>
+            )}
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div>
                 <FormLabel required className="text-sm normal-case mb-1 block">Issued Date</FormLabel>
