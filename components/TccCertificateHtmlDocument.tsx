@@ -1,6 +1,7 @@
 import type { CSSProperties, ReactNode } from 'react';
 import type { TccCertificateHtmlData } from '@/lib/tcc-certificate-html-data';
 import { TCC_LEGAL_PARAGRAPH_1, TCC_LEGAL_PARAGRAPH_2 } from '@/lib/tcc-certificate-html-data';
+import { INTERMEDIATE_SUBSTANCE_NOTE } from '@/lib/reach-certificate-html-data';
 import { REACH_CERT_A4_CSS_VARS } from '@/lib/reach-certificate-a4';
 
 type TccCertificateHtmlDocumentProps = {
@@ -88,7 +89,12 @@ export default function TccCertificateHtmlDocument({ data }: TccCertificateHtmlD
           </p>
         </div>
 
-        <h2 className="tcc-section-title">Registered Substance Details</h2>
+        <div className="tcc-section-title-row">
+          <h2 className="tcc-section-title">Registered Substance Details</h2>
+          {data.isIntermediateSubstance ? (
+            <span className="tcc-intermediate-note">{INTERMEDIATE_SUBSTANCE_NOTE}</span>
+          ) : null}
+        </div>
 
         <table className="tcc-substance-table">
           <tbody>

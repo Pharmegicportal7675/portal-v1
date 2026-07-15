@@ -205,6 +205,26 @@
   border-bottom: 2px solid var(--reach-green-light) !important;
 }
 
+[data-tcc-cert-root] .tcc-section-title-row {
+  display: flex !important;
+  align-items: baseline !important;
+  justify-content: space-between !important;
+  gap: 16px !important;
+  margin: 0 0 20px !important;
+}
+
+[data-tcc-cert-root] .tcc-section-title-row .tcc-section-title {
+  margin: 0 !important;
+}
+
+[data-tcc-cert-root] .tcc-intermediate-note {
+  color: #c0271e !important;
+  font-size: 9pt !important;
+  font-weight: bold !important;
+  text-align: right !important;
+  line-height: 1.3 !important;
+}
+
 [data-tcc-cert-root] .tcc-substance-table {
   display: table !important;
   width: 100% !important;

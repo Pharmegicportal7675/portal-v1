@@ -46,7 +46,8 @@ export async function loadReachCertificateInputByCertificateId(
         chemical_name,
         cas_number,
         ec_number,
-        tonnage_band
+        tonnage_band,
+        is_intermediate_substance
       )
     `
     )
@@ -100,7 +101,7 @@ export async function loadReachCertificateInputByClientChemical(
         .single(),
       supabase
         .from('chemicals')
-        .select('id, chemical_name, cas_number, ec_number, tonnage_band')
+        .select('id, chemical_name, cas_number, ec_number, tonnage_band, is_intermediate_substance')
         .eq('id', chemicalId)
         .single(),
       supabase

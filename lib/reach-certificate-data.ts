@@ -30,6 +30,7 @@ export type ReachPdfChemical = {
   cas_number: string;
   ec_number?: string | null;
   tonnage_band?: string | null;
+  is_intermediate_substance?: boolean | null;
 };
 
 export function escapeReachXml(text: string): string {

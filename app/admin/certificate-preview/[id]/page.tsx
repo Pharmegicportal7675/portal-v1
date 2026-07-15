@@ -54,7 +54,8 @@ export default async function CertificatePreviewPage({ params }: { params: Promi
         chemical_name,
         cas_number,
         ec_number,
-        tonnage_band
+        tonnage_band,
+        is_intermediate_substance
       ),
       tcc_applications!certificates_tcc_application_id_fkey (
         id,
@@ -74,7 +75,8 @@ export default async function CertificatePreviewPage({ params }: { params: Promi
           chemical_name,
           cas_number,
           ec_number,
-          tonnage_band
+          tonnage_band,
+          is_intermediate_substance
         )
       )
     `)

@@ -23,6 +23,7 @@ export type TccPdfChemical = {
   cas_number: string;
   ec_number?: string | null;
   tonnage_band?: string | null;
+  is_intermediate_substance?: boolean | null;
 };
 
 export type TccPdfApplication = {
@@ -71,6 +72,7 @@ export type TccCertificateHtmlData = TccCertificateDocxData & {
   logoUrl: string | null;
   signatureUrl: string | null;
   footerLines: string[];
+  isIntermediateSubstance: boolean;
 };
 
 export const TCC_CERTIFICATE_FOOTER_LINES = [
@@ -267,6 +269,7 @@ export function buildTccHtmlData(
     logoUrl: options?.logoUrl?.trim() || DEFAULT_LOGO,
     signatureUrl: options?.signatureUrl?.trim() || DEFAULT_SEAL,
     footerLines: parseTccFooterLines(options?.footerText),
+    isIntermediateSubstance: Boolean(input.chemical.is_intermediate_substance),
   };
 }
 
@@ -293,5 +296,6 @@ export function buildTccTemplatePreviewHtmlData(
     logoUrl: options?.logoUrl?.trim() || DEFAULT_LOGO,
     signatureUrl: options?.signatureUrl?.trim() || DEFAULT_SEAL,
     footerLines: parseTccFooterLines(options?.footerText),
+    isIntermediateSubstance: false,
   };
 }

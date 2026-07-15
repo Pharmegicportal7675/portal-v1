@@ -14,6 +14,7 @@
     "db:import": "prisma db execute --file prisma/database.mysql.sql --schema prisma/schema.prisma",
     "db:migrate:tcc-valid-until": "prisma db execute --file prisma/migrations/add-tcc-valid-until-date.sql --schema prisma/schema.prisma",
     "db:migrate:tcc-schema": "prisma db execute --file prisma/migrations/tcc-application-schema.sql --schema prisma/schema.prisma",
+    "db:migrate:intermediate-substance": "prisma db execute --file prisma/migrations/add-intermediate-substance-flag.sql --schema prisma/schema.prisma",
     "db:ensure-tcc-schema": "node scripts/ensure-tcc-schema.mjs",
     "lint": "eslint",
     "import:clients": "node scripts/import-clients-from-excel.js",

@@ -1,5 +1,5 @@
 import type { CSSProperties } from 'react';
-import type { ReachCertificateHtmlData } from '@/lib/reach-certificate-html-data';
+import { INTERMEDIATE_SUBSTANCE_NOTE, type ReachCertificateHtmlData } from '@/lib/reach-certificate-html-data';
 import { REACH_CERT_A4_CSS_VARS } from '@/lib/reach-certificate-a4';
 
 type ReachCertificateHtmlDocumentProps = {
@@ -44,7 +44,12 @@ export default function ReachCertificateHtmlDocument({ data }: ReachCertificateH
             </p>
           </div>
 
-          <h2 className="reach-section-title">Registered Substance Details</h2>
+          <div className="reach-section-title-row">
+            <h2 className="reach-section-title">Registered Substance Details</h2>
+            {data.isIntermediateSubstance ? (
+              <span className="reach-intermediate-note">{INTERMEDIATE_SUBSTANCE_NOTE}</span>
+            ) : null}
+          </div>
 
           <table className="reach-substance-table">
             <tbody>

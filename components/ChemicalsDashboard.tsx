@@ -730,6 +730,7 @@ export default function ChemicalsDashboard({
                 { value: '1-10 tonnes', label: '1-10 tonnes' },
                 { value: '10-100 tonnes', label: '10-100 tonnes' },
                 { value: '100-1000 tonnes', label: '100-1000 tonnes' },
+                { value: '1-1000 tonnes', label: '1-1000 tonnes' },
                 { value: '1000+ tonnes', label: '1000+ tonnes' },
               ]}
             />
@@ -818,6 +819,7 @@ export default function ChemicalsDashboard({
                 { value: '1-10 tonnes', label: '1-10 tonnes' },
                 { value: '10-100 tonnes', label: '10-100 tonnes' },
                 { value: '100-1000 tonnes', label: '100-1000 tonnes' },
+                { value: '1-1000 tonnes', label: '1-1000 tonnes' },
                 { value: '1000+ tonnes', label: '1000+ tonnes' },
               ]}
             />

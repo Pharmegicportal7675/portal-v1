@@ -20,6 +20,7 @@ export type TccPdfChemical = {
   cas_number: string;
   ec_number?: string | null;
   tonnage_band?: string | null;
+  is_intermediate_substance?: boolean | null;
 };
 
 export type TccPdfApplication = {

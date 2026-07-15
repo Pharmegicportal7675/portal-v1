@@ -93,7 +93,7 @@ export default async function ReachCertificatePreviewPage({
       .single(),
     adminSupabase
       .from('chemicals')
-      .select('id, chemical_name, cas_number, ec_number, tonnage_band')
+      .select('id, chemical_name, cas_number, ec_number, tonnage_band, is_intermediate_substance')
       .eq('id', chemicalId)
       .single(),
     adminSupabase
@@ -220,6 +220,7 @@ export default async function ReachCertificatePreviewPage({
         cas_number: chemical.cas_number,
         ec_number: chemical.ec_number,
         tonnage_band: chemical.tonnage_band,
+        is_intermediate_substance: chemical.is_intermediate_substance,
       }}
       cert={resolvedCert}
       defaults={defaults}

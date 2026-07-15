@@ -8,6 +8,7 @@ const TONNAGE_BAND_QUOTA: Record<string, number> = {
   '1-10 tonnes': 10,
   '10-100 tonnes': 100,
   '100-1000 tonnes': 1000,
+  '1-1000 tonnes': 1000,
   '1000+ tonnes': 20000,
 };
 

@@ -227,7 +227,8 @@ export async function buildTccApplicationPreviewInput(
         chemical_name,
         cas_number,
         ec_number,
-        tonnage_band
+        tonnage_band,
+        is_intermediate_substance
       )
     `
     )

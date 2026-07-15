@@ -399,6 +399,7 @@ export async function addNewChemicalToClientAction(clientId: string, data: any) 
           cas_number: casNumber,
           ec_number: ecNumber,
           tonnage_band: data.tonnage_band || null,
+          is_intermediate_substance: Boolean(data.is_intermediate_substance),
         })
         .eq('id', chemicalId);
     } else {
@@ -413,6 +414,7 @@ export async function addNewChemicalToClientAction(clientId: string, data: any) 
           cas_number: casNumber,
           ec_number: ecNumber,
           tonnage_band: data.tonnage_band || null,
+          is_intermediate_substance: Boolean(data.is_intermediate_substance),
           status: 'active',
         })
         .select('id')
@@ -427,6 +429,7 @@ export async function addNewChemicalToClientAction(clientId: string, data: any) 
           chemical_name: data.chemical_name.trim(),
           ec_number: ecNumber,
           tonnage_band: data.tonnage_band || null,
+          is_intermediate_substance: Boolean(data.is_intermediate_substance),
         })
         .eq('id', chemicalId);
     }
@@ -517,6 +520,7 @@ export async function addNewChemicalToClientAction(clientId: string, data: any) 
         chemical_name: data.chemical_name.trim(),
         ec_number: ecNumber,
         tonnage_band: data.tonnage_band || null,
+        is_intermediate_substance: Boolean(data.is_intermediate_substance),
       }).eq('id', chemicalId);
 
       await adminSupabase.from('activity_logs').insert({

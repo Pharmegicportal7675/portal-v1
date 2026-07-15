@@ -64,6 +64,11 @@ const nextConfig = {
     ],
     '/api/tcc-certificate/html-data': [...PDF_FONT_TRACE, ...PRISMA_TRACE],
   },
+  // Runtime-generated certificate files must never be bundled into the build.
+  // Excluding them stops NFT from tracing/copying stale uploads (fixes ENOENT copy errors).
+  outputFileTracingExcludes: {
+    '*': ['./public/uploads/**'],
+  },
 };
 
 module.exports = nextConfig;

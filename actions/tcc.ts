@@ -598,7 +598,8 @@ const TCC_CERTIFICATE_RELATION_SELECT = `
     chemical_name,
     cas_number,
     ec_number,
-    tonnage_band
+    tonnage_band,
+    is_intermediate_substance
   ),
   tcc_applications!certificates_tcc_application_id_fkey (
     quantity_mt,
@@ -613,7 +614,8 @@ const TCC_CERTIFICATE_RELATION_SELECT = `
       chemical_name,
       cas_number,
       ec_number,
-      tonnage_band
+      tonnage_band,
+      is_intermediate_substance
     )
   )
 `;
@@ -1119,7 +1121,7 @@ export async function processTccAction(
       .select(`
         *,
         clients (id, company_name, legal_name, email, phone, primary_contact_first_name, primary_contact_last_name, uuid_number, address, city, state, postal_code, country, regulatory_registrations),
-        chemicals (id, chemical_name, cas_number, ec_number, tonnage_band, available_quantity, exported_quantity)
+        chemicals (id, chemical_name, cas_number, ec_number, tonnage_band, is_intermediate_substance, available_quantity, exported_quantity)
       `)
       .eq('id', applicationId)
       .single();

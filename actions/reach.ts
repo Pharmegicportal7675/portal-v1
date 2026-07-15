@@ -105,7 +105,7 @@ export async function createReachCertificate(input: CreateReachCertificateInput)
       .maybeSingle(),
     adminSupabase
       .from('chemicals')
-      .select('id, chemical_name, cas_number, ec_number, tonnage_band')
+      .select('id, chemical_name, cas_number, ec_number, tonnage_band, is_intermediate_substance')
       .eq('id', chemicalId)
       .single(),
   ]);
@@ -1239,17 +1239,12 @@ export async function deleteReachCertificateAction(certificateId: string, client
     const storageFiles = [`${cert.certificate_number}.pdf`, `${cert.certificate_number}.docx`];
     await adminSupabase.storage.from(CERTIFICATES_BUCKET).remove(storageFiles);
 
-    const { data: deleted, error: deleteError } = await adminSupabase
+    const { error: deleteError } = await adminSupabase
       .from('certificates')
       .delete()
-      .eq('id', certificateId)
-      .select('id')
-      .maybeSingle();
+      .eq('id', certificateId);
 
     if (deleteError) throw deleteError;
-    if (!deleted) {
-      return { success: false, error: 'Failed to delete CT certificate from database.' };
-    }
 
     if (cert.chemical_id) {
       await syncClientChemicalReachFields(adminSupabase, clientId, cert.chemical_id);

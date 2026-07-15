@@ -115,6 +115,7 @@ model chemicals {
   cas_number         String               @unique(map: "cas_number") @db.VarChar(64)
   ec_number          String?              @db.VarChar(64)
   tonnage_band       String?              @db.VarChar(255)
+  is_intermediate_substance Boolean       @default(false)
   available_quantity Decimal              @default(0.00) @db.Decimal(12, 2)
   exported_quantity  Decimal              @default(0.00) @db.Decimal(12, 2)
   validity_date      DateTime?            @db.Date

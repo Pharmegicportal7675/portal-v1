@@ -21,6 +21,7 @@ export type ClientChemLike = {
     cas_number?: string | null;
     ec_number?: string | null;
     tonnage_band?: string | null;
+    is_intermediate_substance?: boolean | null;
   } | null;
   registration_number?: string | null;
   certificate_number?: string | null;

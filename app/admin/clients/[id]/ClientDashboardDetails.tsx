@@ -233,6 +233,7 @@ export default function ClientDashboardDetails({
       cas_number: '',
       ec_number: '',
       tonnage_band: '',
+      is_intermediate_substance: false,
       available_quantity: '',
       registration_number: '',
       certificate_year: String(year),
@@ -693,6 +694,7 @@ export default function ClientDashboardDetails({
       cas_number?: string | null;
       ec_number?: string | null;
       tonnage_band?: string | null;
+      is_intermediate_substance?: boolean | null;
     };
   };
 
@@ -731,6 +733,7 @@ export default function ClientDashboardDetails({
       cas_number: cc.chemicals?.cas_number || '',
       ec_number: cc.chemicals?.ec_number || '',
       tonnage_band: cc.chemicals?.tonnage_band || '',
+      is_intermediate_substance: Boolean(cc.chemicals?.is_intermediate_substance),
       registration_number:
         targetRc?.registration_number?.trim() || cc.registration_number?.trim() || '',
       certificate_year: String(getReachCertificateYear(issuedDate) ?? new Date().getFullYear()),
@@ -846,6 +849,7 @@ export default function ClientDashboardDetails({
       cas_number: cc.chemicals?.cas_number || '',
       ec_number: cc.chemicals?.ec_number || '',
       tonnage_band: cc.chemicals?.tonnage_band || '',
+      is_intermediate_substance: Boolean(cc.chemicals?.is_intermediate_substance),
       available_quantity: '',
       registration_number: cc.registration_number || '',
       certificate_year: String(targetYear),
@@ -878,6 +882,7 @@ export default function ClientDashboardDetails({
       cas_number: row.casNumber !== 'N/A' ? row.casNumber : cc.chemicals?.cas_number || '',
       ec_number: row.ecNumber !== 'N/A' ? row.ecNumber : cc.chemicals?.ec_number || '',
       tonnage_band: band,
+      is_intermediate_substance: Boolean(cc.chemicals?.is_intermediate_substance),
       registration_number: cc.registration_number?.trim() || '',
       certificate_year: String(year),
       issued_date: period.issuedDate,
@@ -1333,15 +1338,16 @@ export default function ClientDashboardDetails({
 
   const handleDeleteRcCertificate = () => {
     if (!rcDeleteTarget) return;
+    const target = rcDeleteTarget;
+    setRcDeleteTarget(null);
+    setRcHistoryTarget(null);
     startTransition(async () => {
       const res =
-        rcDeleteTarget.kind === 'issued'
-          ? await deleteReachCertificateAction(rcDeleteTarget.id, client.id)
-          : await removeChemicalFromClientAction(client.id, rcDeleteTarget.chemicalId);
+        target.kind === 'issued'
+          ? await deleteReachCertificateAction(target.id, client.id)
+          : await removeChemicalFromClientAction(client.id, target.chemicalId);
       if (res.success) {
         toast.success(res.message || 'Removed successfully.');
-        setRcDeleteTarget(null);
-        setRcHistoryTarget(null);
         router.refresh();
       } else {
         toast.error(res.error || 'Failed to remove.');
@@ -1351,12 +1357,13 @@ export default function ClientDashboardDetails({
 
   const handleDeleteTccApplication = () => {
     if (!tccDeleteTarget) return;
+    const target = tccDeleteTarget;
+    setTccDeleteTarget(null);
     startTransition(async () => {
-      const res = await deleteTccApplicationAction(tccDeleteTarget.id);
+      const res = await deleteTccApplicationAction(target.id);
       if (res.success) {
         toast.success(res.message || 'TCC application deleted.');
-        setTccDeleteTarget(null);
-        setSelectedTccAppIds((prev) => prev.filter((id) => id !== tccDeleteTarget.id));
+        setSelectedTccAppIds((prev) => prev.filter((id) => id !== target.id));
         router.refresh();
       } else {
         toast.error(res.error || 'Failed to delete TCC application.');
@@ -2556,11 +2563,23 @@ export default function ClientDashboardDetails({
                     { value: '1-10 tonnes', label: '1-10 tonnes' },
                     { value: '10-100 tonnes', label: '10-100 tonnes' },
                     { value: '100-1000 tonnes', label: '100-1000 tonnes' },
+                    { value: '1-1000 tonnes', label: '1-1000 tonnes' },
                     { value: '1000+ tonnes', label: '1000+ tonnes' }
                   ]}
                 />
               </div>
             </div>
+            <label className="flex items-center gap-2 cursor-pointer select-none">
+              <input
+                type="checkbox"
+                className="h-4 w-4 rounded border-slate-300 text-primary focus:ring-primary"
+                checked={assignChemData.is_intermediate_substance}
+                onChange={(e) =>
+                  setAssignChemData({ ...assignChemData, is_intermediate_substance: e.target.checked })
+                }
+              />
+              <span className="text-sm font-semibold text-slate-700">Intermediate Substance</span>
+            </label>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div>
                 <FormLabel required className="text-sm normal-case mb-1 block">Issued Date</FormLabel>
@@ -2686,6 +2705,7 @@ export default function ClientDashboardDetails({
                     { value: '1-10 tonnes', label: '1-10 tonnes' },
                     { value: '10-100 tonnes', label: '10-100 tonnes' },
                     { value: '100-1000 tonnes', label: '100-1000 tonnes' },
+                    { value: '1-1000 tonnes', label: '1-1000 tonnes' },
                     { value: '1000+ tonnes', label: '1000+ tonnes' }
                   ]}
                 />
@@ -2782,6 +2802,7 @@ export default function ClientDashboardDetails({
                     { value: '1-10 tonnes', label: '1-10 tonnes' },
                     { value: '10-100 tonnes', label: '10-100 tonnes' },
                     { value: '100-1000 tonnes', label: '100-1000 tonnes' },
+                    { value: '1-1000 tonnes', label: '1-1000 tonnes' },
                     { value: '1000+ tonnes', label: '1000+ tonnes' },
                   ]}
                 />

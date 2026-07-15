@@ -53,6 +53,7 @@ type ReachCertificatePreviewClientProps = {
     cas_number: string;
     ec_number: string | null;
     tonnage_band: string | null;
+    is_intermediate_substance?: boolean | null;
   };
   cert: {
     id: string;
@@ -184,6 +185,7 @@ export default function ReachCertificatePreviewClient({
           cas_number: chemical.cas_number,
           ec_number: chemical.ec_number,
           tonnage_band: chemical.tonnage_band,
+          is_intermediate_substance: chemical.is_intermediate_substance,
         },
         {
           registrationNumber: registrationNumber.trim() || '—',
@@ -494,6 +496,7 @@ export default function ReachCertificatePreviewClient({
                   { value: '1-10 tonnes', label: '1-10 tonnes' },
                   { value: '10-100 tonnes', label: '10-100 tonnes' },
                   { value: '100-1000 tonnes', label: '100-1000 tonnes' },
+                  { value: '1-1000 tonnes', label: '1-1000 tonnes' },
                   { value: '1000+ tonnes', label: '1000+ tonnes' },
                 ]}
               />

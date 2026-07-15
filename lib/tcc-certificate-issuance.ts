@@ -178,7 +178,7 @@ export async function reconcileMissingTccCertificates(supabase: DbClient): Promi
       certificate_issue_date,
       certificates!certificates_tcc_application_id_fkey (id),
       clients (id, company_name, legal_name, email, phone, primary_contact_first_name, primary_contact_last_name, uuid_number, address, city, state, postal_code, country),
-      chemicals (id, chemical_name, cas_number, ec_number, tonnage_band, available_quantity, exported_quantity),
+      chemicals (id, chemical_name, cas_number, ec_number, tonnage_band, is_intermediate_substance, available_quantity, exported_quantity),
       reach_certificate_id
     `)
     .eq('status', 'approved');

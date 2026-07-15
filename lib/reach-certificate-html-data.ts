@@ -15,7 +15,11 @@ export type ReachCertificateHtmlData = ReachCertificateDocxData & {
   logoUrl: string | null;
   signatureUrl: string | null;
   footerLines: string[];
+  isIntermediateSubstance: boolean;
 };
+
+/** Shown beside the "Registered Substance Details" heading when a substance is flagged as an intermediate. */
+export const INTERMEDIATE_SUBSTANCE_NOTE = 'This substance is registered as intermediate.';
 
 export const REACH_CERTIFICATE_FOOTER_LINES = [
   'Pharmegic Healthcare Limited',
@@ -66,5 +70,6 @@ export function buildReachHtmlData(
     logoUrl: options.logoUrl?.trim() || DEFAULT_LOGO,
     signatureUrl: options.signatureUrl?.trim() || DEFAULT_SEAL,
     footerLines: parseReachFooterLines(options.footerText),
+    isIntermediateSubstance: Boolean(chemical.is_intermediate_substance),
   };
 }
