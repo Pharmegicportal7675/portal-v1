@@ -34,6 +34,9 @@ export async function GET(request: NextRequest) {
 
     const { searchParams } = new URL(request.url);
     const certificateId = searchParams.get('certificateId');
+    const isAdmin = session.role === 'MASTER_ADMIN' || session.role === 'SUPER_ADMIN';
+    // The stamp-less copy is restricted to admins only.
+    const withoutStamp = searchParams.get('withoutStamp') === '1' && isAdmin;
     const adminSupabase = createAdminClient();
 
     if (certificateId) {
@@ -47,7 +50,6 @@ export async function GET(request: NextRequest) {
         return NextResponse.json({ error: 'CT certificate not found.' }, { status: 404 });
       }
 
-      const isAdmin = session.role === 'MASTER_ADMIN' || session.role === 'SUPER_ADMIN';
       const isOwner = session.role === 'CLIENT' && session.clientId === cert.client_id;
       if (!isAdmin && !isOwner) {
         return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
@@ -60,11 +62,12 @@ export async function GET(request: NextRequest) {
 
       const file = await resolveReachCertificateDownloadFile(adminSupabase, input, {
         fileUrl: cert.file_url,
+        withoutStamp,
       });
       return pdfResponse(file.buffer, file.fileName);
     }
 
-    if (session.role !== 'MASTER_ADMIN' && session.role !== 'SUPER_ADMIN') {
+    if (!isAdmin) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
@@ -102,6 +105,7 @@ export async function GET(request: NextRequest) {
 
     const file = await resolveReachCertificateDownloadFile(adminSupabase, input, {
       fileUrl: existingCert?.file_url,
+      withoutStamp,
     });
     return pdfResponse(file.buffer, file.fileName);
   } catch (err: unknown) {

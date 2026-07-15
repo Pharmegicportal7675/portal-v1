@@ -695,7 +695,7 @@
     padding:
       var(--reach-a4-padding, 50px)
       var(--reach-a4-padding, 50px)
-      var(--reach-a4-padding-bottom, 60px)
+      var(--reach-a4-padding-bottom, 50px)
       var(--reach-a4-padding, 50px) !important;
     box-shadow: none !important;
     overflow: hidden !important;

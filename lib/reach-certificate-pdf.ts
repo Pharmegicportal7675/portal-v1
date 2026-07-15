@@ -21,8 +21,21 @@ export type ReachCertificateDownloadFile = {
 export async function resolveReachCertificateDownloadFile(
   supabase: DbClient,
   input: ReachCertPdfInput & LoadedReachCertificateInput,
-  options?: { fileUrl?: string | null }
+  options?: { fileUrl?: string | null; withoutStamp?: boolean }
 ): Promise<ReachCertificateDownloadFile> {
+  // Without-stamp copies are admin-only, on-demand renders. Never cache them to
+  // storage (that would overwrite the official stamped PDF) and never fall back
+  // to the stored file (which always includes the stamp).
+  if (options?.withoutStamp) {
+    const pdfBuffer = await generateReachCertificateHtmlPdf(input, { withoutStamp: true });
+    return {
+      buffer: pdfBuffer,
+      contentType: PDF_CONTENT_TYPE,
+      fileName: `${input.certificateNumber}-unstamped.pdf`,
+      format: 'pdf',
+    };
+  }
+
   try {
     const pdfBuffer = await generateReachCertificateHtmlPdf(input);
     const clientName = input.client.company_name || 'client';

@@ -449,6 +449,32 @@ async function downloadRcHtmlPreviewPdf(params: {
   return { format: 'pdf', fileName: params.fileName };
 }
 
+/**
+ * Downloads a certificate PDF strictly from the server route (no client-side
+ * fallback). Used for the admin-only "Without Stamp" copy — the client fallback
+ * renders from htmlData which always includes the stamp, so it must be avoided.
+ */
+export async function downloadServerCertificatePdf(params: {
+  pdfUrl: string;
+  fileName: string;
+}): Promise<CertificateDownloadResult> {
+  const res = await fetch(appendCacheBuster(params.pdfUrl), {
+    credentials: 'same-origin',
+    cache: 'no-store',
+  });
+
+  if (!res.ok) {
+    const body = (await res.json().catch(() => null)) as { error?: string } | null;
+    throw new Error(body?.error || `Server PDF generation failed (${res.status}).`);
+  }
+
+  const parsed = await downloadFromPdfResponse(res, params.fileName);
+  if ('kind' in parsed) {
+    throw new Error('Unexpected certificate response from server.');
+  }
+  return parsed;
+}
+
 export async function downloadCertificatePdf(params: {
   pdfUrl: string;
   docxUrl: string;

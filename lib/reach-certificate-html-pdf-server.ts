@@ -110,15 +110,21 @@ export async function loadReachHtmlDataFromPrintToken(
   );
 }
 
+export type ReachPdfRenderOptions = {
+  /** Master/Super admin only: render the certificate without the stamp/seal image. */
+  withoutStamp?: boolean;
+};
+
 export async function loadReachHtmlDataForInput(
   supabase: DbClient,
-  input: LoadedReachCertificateInput | ReachCertPdfInput
+  input: LoadedReachCertificateInput | ReachCertPdfInput,
+  options?: ReachPdfRenderOptions
 ): Promise<ReachCertificateHtmlData> {
   const templateSettings = await getActiveTemplate(supabase);
   const branding = resolveRcBranding(templateSettings);
   const baseUrl = resolvePdfRenderBaseUrl();
 
-  return withAbsoluteAssetUrls(
+  const data = withAbsoluteAssetUrls(
     buildReachHtmlData(input.client, input.chemical, {
       registrationNumber: input.registrationNumber,
       issuedDate: input.issuedDate,
@@ -131,13 +137,20 @@ export async function loadReachHtmlDataForInput(
     }),
     baseUrl
   );
+
+  if (options?.withoutStamp) {
+    return { ...data, signatureUrl: null };
+  }
+
+  return data;
 }
 
 export async function generateReachCertificateHtmlPdf(
-  input: LoadedReachCertificateInput
+  input: LoadedReachCertificateInput,
+  options?: ReachPdfRenderOptions
 ): Promise<Buffer> {
   const { createAdminClient } = await import('@/lib/db/admin');
-  const data = await loadReachHtmlDataForInput(createAdminClient(), input);
+  const data = await loadReachHtmlDataForInput(createAdminClient(), input, options);
   const html = await renderReachCertificateHtmlDocument(data);
   return generateReachHtmlPdfFromHtml(html);
 }

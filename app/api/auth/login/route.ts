@@ -28,13 +28,16 @@ async function readLoginBody(request: NextRequest) {
   };
 }
 
+// 303 (See Other) forces the browser to GET the target after a form POST
+// (Post/Redirect/Get). The default 307 would replay the POST against the
+// destination page and render a "not found" instead of the dashboard.
 function loginFailureRedirect(request: NextRequest, redirectTo: string, message: string) {
   const loginUrl = new URL('/login', getRequestOrigin(request));
   loginUrl.searchParams.set('error', message);
   if (redirectTo) {
     loginUrl.searchParams.set('redirectTo', redirectTo);
   }
-  return NextResponse.redirect(loginUrl);
+  return NextResponse.redirect(loginUrl, { status: 303 });
 }
 
 export async function POST(request: NextRequest) {
@@ -59,7 +62,9 @@ export async function POST(request: NextRequest) {
   const target = resolveLoginRedirect(auth.session.role, redirectTo);
   const token = await signSessionToken(auth.session);
 
-  const response = NextResponse.redirect(new URL(target, getRequestOrigin(request)));
+  const response = NextResponse.redirect(new URL(target, getRequestOrigin(request)), {
+    status: 303,
+  });
   response.cookies.set(SESSION_COOKIE, token, SESSION_COOKIE_OPTIONS);
   return response;
 }

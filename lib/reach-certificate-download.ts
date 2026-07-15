@@ -9,6 +9,7 @@ export function buildReachCertificateHtmlPdfUrl(params: {
   issuedDate?: string;
   validatedDate?: string;
   tonnageBand?: string | null;
+  withoutStamp?: boolean;
 }): string {
   const search = new URLSearchParams();
   if (params.certificateId) search.set('certificateId', params.certificateId);
@@ -20,6 +21,7 @@ export function buildReachCertificateHtmlPdfUrl(params: {
   if (params.tonnageBand !== undefined && params.tonnageBand !== null) {
     search.set('tonnageBand', params.tonnageBand);
   }
+  if (params.withoutStamp) search.set('withoutStamp', '1');
   return `/api/reach-certificate/pdf-html?${search.toString()}`;
 }
 

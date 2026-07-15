@@ -19,21 +19,25 @@ import {
   RefreshCw,
   CheckCircle2,
   PenLine,
+  Stamp,
 } from 'lucide-react';
 import ReachCertificateViewer from '@/components/ReachCertificateViewer';
 import { buildReachHtmlData } from '@/lib/reach-certificate-html-data';
 import {
   buildReachCertificateDocxPreviewUrl,
   buildReachCertificateDocxPreviewUrlByClientChemical,
+  buildReachCertificateHtmlPdfUrl,
   buildReachCertificatePdfDownloadUrl,
   buildReachCertificatePdfDownloadUrlByClientChemical,
 } from '@/lib/reach-certificate-download';
+import { downloadServerCertificatePdf } from '@/lib/download-pdf-from-docx-client';
 import { CertificatePdfDownloadLink } from '@/components/CertificatePdfDownloadLink';
 import { CertificateMailHistoryList } from '@/components/CertificateMailHistoryList';
 import { useLayoutStore } from '@/store/layout';
 type ReachCertificatePreviewClientProps = {
   clientId: string;
   chemicalId: string;
+  userRole: string;
   client: {
     company_name: string;
     email: string;
@@ -104,6 +108,7 @@ async function postReachJson<T>(url: string, body: unknown): Promise<T> {
 export default function ReachCertificatePreviewClient({
   clientId,
   chemicalId,
+  userRole,
   client,
   chemical,
   cert,
@@ -119,6 +124,8 @@ export default function ReachCertificatePreviewClient({
   const [isSending, startSendTransition] = useTransition();
   const [isResending, startResendTransition] = useTransition();
   const [isEditing, setIsEditing] = useState(false);
+  const [isDownloadingNoStamp, setIsDownloadingNoStamp] = useState(false);
+  const isAdmin = userRole === 'MASTER_ADMIN' || userRole === 'SUPER_ADMIN';
   const isPending = !cert;
   const totalSent = cert ? cert.mail_resend_count + (cert.mail_sent ? 1 : 0) : 0;
 
@@ -222,6 +229,33 @@ export default function ReachCertificatePreviewClient({
   const downloadLabel = 'Download PDF';
 
   const backHref = `/admin/clients/${clientId}`;
+
+  const handleDownloadWithoutStamp = async () => {
+    if (isDownloadingNoStamp) return;
+    setIsDownloadingNoStamp(true);
+    try {
+      const pdfUrl = cert
+        ? buildReachCertificateHtmlPdfUrl({ certificateId: cert.id, withoutStamp: true })
+        : buildReachCertificateHtmlPdfUrl({
+            clientId,
+            chemicalId,
+            registrationNumber: registrationNumber.trim() || '—',
+            issuedDate,
+            validatedDate,
+            tonnageBand,
+            withoutStamp: true,
+          });
+      const fileName = cert
+        ? `${cert.certificate_number}-unstamped.pdf`
+        : `CT-preview-${chemicalId.slice(0, 8)}-unstamped.pdf`;
+      await downloadServerCertificatePdf({ pdfUrl, fileName });
+    } catch (err: unknown) {
+      const message = err instanceof Error ? err.message : 'Without-stamp PDF download failed.';
+      toast.error(message);
+    } finally {
+      setIsDownloadingNoStamp(false);
+    }
+  };
 
   const handleUpdate = () => {
     if (!cert) return;
@@ -363,6 +397,20 @@ export default function ReachCertificatePreviewClient({
           >
             <Download className="h-4 w-4" /> {downloadLabel}
           </CertificatePdfDownloadLink>
+
+          {isAdmin && (
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => void handleDownloadWithoutStamp()}
+              isLoading={isDownloadingNoStamp}
+              disabled={isDownloadingNoStamp}
+              className="gap-1.5"
+              title="Download the CT certificate without the stamp"
+            >
+              <Stamp className="h-4 w-4" /> Without Stamp
+            </Button>
+          )}
 
           {!isPending && cert && (
             <Button

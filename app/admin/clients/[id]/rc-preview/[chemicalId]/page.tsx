@@ -204,6 +204,7 @@ export default async function ReachCertificatePreviewPage({
     <ReachCertificatePreviewClient
       clientId={clientId}
       chemicalId={chemicalId}
+      userRole={session.role}
       client={{
         company_name: client.company_name,
         email: client.email,

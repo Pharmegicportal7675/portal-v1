@@ -8,7 +8,8 @@ export const REACH_CERT_A4_HEIGHT_MM = 297;
 
 /** Inner page margin — 50px @ 96dpi ≈ 13.23mm (screen / PDF preview). */
 export const REACH_CERT_A4_PADDING_PX = 50;
-export const REACH_CERT_A4_PADDING_BOTTOM_PX = 60;
+/** Bottom padding matches the other sides so the A4 page is evenly inset. */
+export const REACH_CERT_A4_PADDING_BOTTOM_PX = REACH_CERT_A4_PADDING_PX;
 export const REACH_CERT_A4_PADDING_MM = 13.23;
 
 /**
