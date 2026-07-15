@@ -4,6 +4,8 @@ import { CERTIFICATES_BUCKET } from '@/lib/storage';
 /** File + metadata for the shared "User Manual" download (any format the admin uploads). */
 const USER_MANUAL_DATA_PATH = 'user-manual/data.bin';
 const USER_MANUAL_MANIFEST_PATH = 'user-manual/manifest.json';
+/** Optional external "User Guide" URL that opens in a new tab (online reading). */
+const USER_GUIDE_URL_PATH = 'user-manual/guide-url.json';
 
 const DEFAULT_CONTENT_TYPE = 'application/octet-stream';
 
@@ -101,4 +103,42 @@ export async function removeUserManual(supabase: DbClient): Promise<void> {
   await supabase.storage
     .from(CERTIFICATES_BUCKET)
     .remove([USER_MANUAL_DATA_PATH, USER_MANUAL_MANIFEST_PATH]);
+}
+
+/** Reads the configured external User Guide URL, or null when not set. */
+export async function getUserGuideUrl(supabase: DbClient): Promise<string | null> {
+  const { data, error } = await supabase.storage
+    .from(CERTIFICATES_BUCKET)
+    .download(USER_GUIDE_URL_PATH);
+  if (error || !data) return null;
+
+  try {
+    const raw = (await blobToBuffer(data)).toString('utf8');
+    const parsed = JSON.parse(raw) as { url?: string };
+    const url = parsed.url?.trim();
+    return url || null;
+  } catch {
+    return null;
+  }
+}
+
+/** Stores (or clears) the external User Guide URL. Admin-only at the API layer. */
+export async function setUserGuideUrl(
+  supabase: DbClient,
+  url: string | null
+): Promise<string | null> {
+  const normalized = url?.trim() || '';
+  const payload = JSON.stringify({ url: normalized });
+
+  const result = await supabase.storage
+    .from(CERTIFICATES_BUCKET)
+    .upload(USER_GUIDE_URL_PATH, Buffer.from(payload, 'utf8'), {
+      contentType: 'application/json',
+      upsert: true,
+    });
+  if (result.error) {
+    throw new Error(result.error.message || 'Failed to store user guide URL.');
+  }
+
+  return normalized || null;
 }

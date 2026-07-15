@@ -69,9 +69,10 @@ interface SettingsDashboardProps {
   initialSettings: SettingsData | null;
   initialTemplate: TemplateData | null;
   initialUserManual: UserManualInfo | null;
+  initialUserGuideUrl: string;
 }
 
-export default function SettingsDashboard({ initialSettings, initialTemplate, initialUserManual }: SettingsDashboardProps) {
+export default function SettingsDashboard({ initialSettings, initialTemplate, initialUserManual, initialUserGuideUrl }: SettingsDashboardProps) {
   const router = useRouter();
   const rcDefaults = resolveRcBranding(initialTemplate);
   const tccDefaults = resolveTccBranding(initialTemplate);
@@ -568,7 +569,10 @@ export default function SettingsDashboard({ initialSettings, initialTemplate, in
           )}
 
           {activeTab === 'user-manual' && (
-            <UserManualSettings initialManual={initialUserManual} />
+            <UserManualSettings
+              initialManual={initialUserManual}
+              initialGuideUrl={initialUserGuideUrl}
+            />
           )}
 
           {/* TAB 3: SECURITY & AUTH */}

@@ -14,14 +14,9 @@ function isAdminRole(role: string): boolean {
   return role === 'MASTER_ADMIN' || role === 'SUPER_ADMIN';
 }
 
-/** Download the current user manual — available to any signed-in user. */
+/** Download the current user manual — public, no login required. */
 export async function GET() {
   try {
-    const session = await getSession();
-    if (!session) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-    }
-
     const manual = await getUserManual(createAdminClient());
     if (!manual) {
       return NextResponse.json({ error: 'No user manual has been uploaded yet.' }, { status: 404 });

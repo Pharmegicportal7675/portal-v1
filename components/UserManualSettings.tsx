@@ -3,10 +3,12 @@
 import { useRef, useState } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from './ui/Card';
 import { Button } from './ui/Button';
+import { Input } from './ui/Input';
 import { toast } from '@/store/toast';
-import { BookOpen, Upload, Trash2, Download, FileText } from 'lucide-react';
+import { BookOpen, Upload, Trash2, Download, FileText, Link2, ExternalLink } from 'lucide-react';
 
 const USER_MANUAL_ENDPOINT = '/api/user-manual';
+const USER_GUIDE_URL_ENDPOINT = '/api/user-guide-url';
 
 const ACCEPTED_FORMATS =
   '.pdf,.ppt,.pptx,.doc,.docx,.xls,.xlsx,.txt,.zip,.rtf,.odt,.odp,.ods';
@@ -34,14 +36,43 @@ function formatDate(value: string): string {
 
 export default function UserManualSettings({
   initialManual,
+  initialGuideUrl,
 }: {
   initialManual: UserManualInfo | null;
+  initialGuideUrl: string;
 }) {
   const [manual, setManual] = useState<UserManualInfo | null>(initialManual);
   const [uploading, setUploading] = useState(false);
   const [removing, setRemoving] = useState(false);
   const [downloading, setDownloading] = useState(false);
+  const [guideUrl, setGuideUrl] = useState(initialGuideUrl);
+  const [savingUrl, setSavingUrl] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
+
+  const handleSaveGuideUrl = async () => {
+    if (savingUrl) return;
+    setSavingUrl(true);
+    try {
+      const res = await fetch(USER_GUIDE_URL_ENDPOINT, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'same-origin',
+        body: JSON.stringify({ url: guideUrl.trim() }),
+      });
+      const body = (await res.json().catch(() => null)) as
+        | { success?: boolean; url?: string; error?: string }
+        | null;
+      if (!res.ok || !body?.success) {
+        throw new Error(body?.error || 'Failed to save URL.');
+      }
+      setGuideUrl(body.url ?? '');
+      toast.success(body.url ? 'User guide URL saved.' : 'User guide URL cleared.');
+    } catch (err: unknown) {
+      toast.error(err instanceof Error ? err.message : 'Failed to save URL.');
+    } finally {
+      setSavingUrl(false);
+    }
+  };
 
   const handleUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
@@ -203,6 +234,47 @@ export default function UserManualSettings({
             className="hidden"
             onChange={(event) => void handleUpload(event)}
           />
+        </div>
+
+        <div className="space-y-3 border-t border-slate-100 pt-5">
+          <div className="flex items-center gap-2 text-primary">
+            <Link2 className="h-4 w-4" />
+            <h4 className="text-sm font-bold text-slate-800">User Guide URL</h4>
+          </div>
+          <p className="text-xs text-slate-500">
+            Optional link to an online user guide. A link icon in the sidebar opens it in a new tab.
+            Leave empty to hide the link.
+          </p>
+          <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
+            <div className="flex-1">
+              <Input
+                type="url"
+                inputMode="url"
+                placeholder="https://example.com/user-guide"
+                value={guideUrl}
+                onChange={(e) => setGuideUrl(e.target.value)}
+              />
+            </div>
+            <div className="flex items-center gap-2">
+              {guideUrl.trim() && (
+                <a
+                  href={guideUrl.trim()}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="inline-flex h-10 items-center gap-1.5 rounded-md border border-slate-200 px-3 text-xs font-semibold text-slate-600 hover:bg-slate-50"
+                >
+                  <ExternalLink className="h-4 w-4" /> Open
+                </a>
+              )}
+              <Button
+                onClick={() => void handleSaveGuideUrl()}
+                isLoading={savingUrl}
+                disabled={savingUrl}
+              >
+                Save URL
+              </Button>
+            </div>
+          </div>
         </div>
       </CardContent>
     </Card>
