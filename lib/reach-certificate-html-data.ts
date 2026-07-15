@@ -43,6 +43,21 @@ const DEFAULT_ACCENT = '#145E40';
 const DEFAULT_LOGO = '/pharmegic-logo.png';
 const DEFAULT_SEAL = '/certificate-assets/rc-seal.png';
 
+/**
+ * Resolves a certificate branding image:
+ * - `null` / `undefined` (never configured) → the built-in default image
+ * - empty string (explicitly removed by an admin) → no image (`null`)
+ * - otherwise → the configured image URL / data URI
+ */
+export function resolveBrandingAsset(
+  value: string | null | undefined,
+  fallback: string
+): string | null {
+  if (value == null) return fallback;
+  const trimmed = value.trim();
+  return trimmed.length > 0 ? trimmed : null;
+}
+
 export type BuildReachHtmlDataOptions = {
   registrationNumber: string;
   issuedDate: string;
@@ -67,8 +82,8 @@ export function buildReachHtmlData(
     issuedDateDisplay: formatReachCertDateLong(docx.issuedDate),
     validatedDateDisplay: formatReachCertDateLong(docx.validatedDate),
     accentColor: options.accentColor?.trim() || DEFAULT_ACCENT,
-    logoUrl: options.logoUrl?.trim() || DEFAULT_LOGO,
-    signatureUrl: options.signatureUrl?.trim() || DEFAULT_SEAL,
+    logoUrl: resolveBrandingAsset(options.logoUrl, DEFAULT_LOGO),
+    signatureUrl: resolveBrandingAsset(options.signatureUrl, DEFAULT_SEAL),
     footerLines: parseReachFooterLines(options.footerText),
     isIntermediateSubstance: Boolean(chemical.is_intermediate_substance),
   };

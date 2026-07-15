@@ -28,15 +28,25 @@ function triggerBlobDownload(blob: Blob, fileName: string): void {
 export default function UserManualButton() {
   const [downloading, setDownloading] = useState(false);
   const [guideUrl, setGuideUrl] = useState('');
+  const [hasManual, setHasManual] = useState(false);
 
   useEffect(() => {
     let active = true;
+
     fetch(USER_GUIDE_URL_ENDPOINT, { credentials: 'same-origin', cache: 'no-store' })
       .then((res) => (res.ok ? res.json() : null))
       .then((body: { url?: string } | null) => {
         if (active && body?.url) setGuideUrl(body.url);
       })
       .catch(() => undefined);
+
+    fetch(`${USER_MANUAL_ENDPOINT}?meta=1`, { credentials: 'same-origin', cache: 'no-store' })
+      .then((res) => (res.ok ? res.json() : null))
+      .then((body: { manual?: unknown } | null) => {
+        if (active && body?.manual) setHasManual(true);
+      })
+      .catch(() => undefined);
+
     return () => {
       active = false;
     };
@@ -65,36 +75,39 @@ export default function UserManualButton() {
     }
   };
 
-  const handleOpenGuide = (event: React.MouseEvent) => {
-    if (!guideUrl) {
-      event.preventDefault();
-      toast.info('Online user guide is not available yet.');
-    }
-  };
+  if (!hasManual && !guideUrl) return null;
 
   return (
     <div className="flex items-stretch gap-2">
-      <button
-        type="button"
-        onClick={() => void handleDownload()}
-        disabled={downloading}
-        className="flex flex-1 items-center justify-center gap-1 rounded-lg bg-white/10 px-2 py-2.5 text-sm font-semibold text-primary-foreground transition-colors hover:bg-white/20 disabled:opacity-60"
-      >
-        <BookOpen className="h-4 w-4 shrink-0" />
-        {downloading ? 'Preparing…' : 'Download User Manual'}
-      </button>
+      {hasManual && (
+        <button
+          type="button"
+          onClick={() => void handleDownload()}
+          disabled={downloading}
+          className="flex flex-1 items-center justify-center gap-1 rounded-lg bg-white/10 px-2 py-2.5 text-sm font-semibold text-primary-foreground transition-colors hover:bg-white/20 disabled:opacity-60"
+        >
+          <BookOpen className="h-4 w-4 shrink-0" />
+          {downloading ? 'Preparing…' : 'Download User Manual'}
+        </button>
+      )}
 
-      <a
-        href={guideUrl || '#'}
-        target={guideUrl ? '_blank' : undefined}
-        rel="noopener noreferrer"
-        onClick={handleOpenGuide}
-        title="Open user guide in a new tab"
-        aria-label="Open user guide in a new tab"
-        className="flex shrink-0 items-center justify-center rounded-lg bg-white/10 px-3 text-primary-foreground transition-colors hover:bg-white/20"
-      >
-        <ExternalLink className="h-4 w-4" />
-      </a>
+      {guideUrl && (
+        <a
+          href={guideUrl}
+          target="_blank"
+          rel="noopener noreferrer"
+          title="Open user guide in a new tab"
+          aria-label="Open user guide in a new tab"
+          className={
+            hasManual
+              ? 'flex shrink-0 items-center justify-center rounded-lg bg-white/10 px-3 text-primary-foreground transition-colors hover:bg-white/20'
+              : 'flex flex-1 items-center justify-center gap-2 rounded-lg bg-white/10 px-4 py-2.5 text-sm font-semibold text-primary-foreground transition-colors hover:bg-white/20'
+          }
+        >
+          <ExternalLink className="h-4 w-4 shrink-0" />
+          {!hasManual && <span>User Guide</span>}
+        </a>
+      )}
     </div>
   );
 }

@@ -1,4 +1,5 @@
 import { getTccTemplatePreviewSample } from '@/lib/certificate-template-preview-data';
+import { resolveBrandingAsset } from '@/lib/reach-certificate-html-data';
 import {
   buildReachAddressLines,
   formatEuReachManufacturerAddressDisplay,
@@ -266,8 +267,8 @@ export function buildTccHtmlData(
       input.deliveryChallanNo?.trim() ||
       '—',
     accentColor: options?.accentColor?.trim() || DEFAULT_ACCENT,
-    logoUrl: options?.logoUrl?.trim() || DEFAULT_LOGO,
-    signatureUrl: options?.signatureUrl?.trim() || DEFAULT_SEAL,
+    logoUrl: resolveBrandingAsset(options?.logoUrl, DEFAULT_LOGO),
+    signatureUrl: resolveBrandingAsset(options?.signatureUrl, DEFAULT_SEAL),
     footerLines: parseTccFooterLines(options?.footerText),
     isIntermediateSubstance: Boolean(input.chemical.is_intermediate_substance),
   };
@@ -293,8 +294,8 @@ export function buildTccTemplatePreviewHtmlData(
     invoiceNo: 'PHCL',
     poNo: sample.deliveryChallanNo,
     accentColor: options?.accentColor?.trim() || DEFAULT_ACCENT,
-    logoUrl: options?.logoUrl?.trim() || DEFAULT_LOGO,
-    signatureUrl: options?.signatureUrl?.trim() || DEFAULT_SEAL,
+    logoUrl: resolveBrandingAsset(options?.logoUrl, DEFAULT_LOGO),
+    signatureUrl: resolveBrandingAsset(options?.signatureUrl, DEFAULT_SEAL),
     footerLines: parseTccFooterLines(options?.footerText),
     isIntermediateSubstance: false,
   };

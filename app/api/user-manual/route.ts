@@ -2,7 +2,12 @@ import { NextRequest, NextResponse } from 'next/server';
 import { createAdminClient } from '@/lib/db/admin';
 import { getSession } from '@/lib/auth/session';
 import { formatErrorMessage } from '@/lib/format-error';
-import { getUserManual, removeUserManual, saveUserManual } from '@/lib/user-manual-storage';
+import {
+  getUserManual,
+  getUserManualManifest,
+  removeUserManual,
+  saveUserManual,
+} from '@/lib/user-manual-storage';
 
 export const runtime = 'nodejs';
 export const maxDuration = 120;
@@ -14,9 +19,17 @@ function isAdminRole(role: string): boolean {
   return role === 'MASTER_ADMIN' || role === 'SUPER_ADMIN';
 }
 
-/** Download the current user manual — public, no login required. */
-export async function GET() {
+/** Download the current user manual — public, no login required. `?meta=1` returns availability only. */
+export async function GET(request: NextRequest) {
   try {
+    if (new URL(request.url).searchParams.get('meta') === '1') {
+      const manifest = await getUserManualManifest(createAdminClient());
+      return NextResponse.json(
+        { manual: manifest },
+        { headers: { 'Cache-Control': 'no-store' } }
+      );
+    }
+
     const manual = await getUserManual(createAdminClient());
     if (!manual) {
       return NextResponse.json({ error: 'No user manual has been uploaded yet.' }, { status: 404 });

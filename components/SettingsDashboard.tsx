@@ -65,6 +65,10 @@ interface SettingsData {
 
 interface TemplateData extends TemplateSettingsRecord {}
 
+/** Built-in certificate branding used when no custom image is uploaded. */
+const DEFAULT_CERT_LOGO = '/pharmegic-logo.png';
+const DEFAULT_CERT_SEAL = '/certificate-assets/rc-seal.png';
+
 interface SettingsDashboardProps {
   initialSettings: SettingsData | null;
   initialTemplate: TemplateData | null;
@@ -539,9 +543,13 @@ export default function SettingsDashboard({ initialSettings, initialTemplate, in
               onFooterTextChange={setRcFooterText}
               logo={rcLogo}
               signature={rcSignature}
+              defaultLogo={DEFAULT_CERT_LOGO}
+              defaultSignature={DEFAULT_CERT_SEAL}
               onFileChange={(event, type) => handleFileChange(event, type, 'rc')}
-              onClearLogo={() => setRcLogo(null)}
-              onClearSignature={() => setRcSignature(null)}
+              onRemoveLogo={() => setRcLogo('')}
+              onRemoveSignature={() => setRcSignature('')}
+              onRestoreLogo={() => setRcLogo(null)}
+              onRestoreSignature={() => setRcSignature(null)}
               onSave={handleSaveRcTemplate}
               onReset={handleResetRcTemplate}
               isPending={isRcTemplatePending}
@@ -559,9 +567,13 @@ export default function SettingsDashboard({ initialSettings, initialTemplate, in
               onFooterTextChange={setTccFooterText}
               logo={tccLogo}
               signature={tccSignature}
+              defaultLogo={DEFAULT_CERT_LOGO}
+              defaultSignature={DEFAULT_CERT_SEAL}
               onFileChange={(event, type) => handleFileChange(event, type, 'tcc')}
-              onClearLogo={() => setTccLogo(null)}
-              onClearSignature={() => setTccSignature(null)}
+              onRemoveLogo={() => setTccLogo('')}
+              onRemoveSignature={() => setTccSignature('')}
+              onRestoreLogo={() => setTccLogo(null)}
+              onRestoreSignature={() => setTccSignature(null)}
               onSave={handleSaveTccTemplate}
               onReset={handleResetTccTemplate}
               isPending={isTccTemplatePending}

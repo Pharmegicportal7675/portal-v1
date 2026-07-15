@@ -25,9 +25,17 @@ type CertificateTemplateSettingsPanelProps = {
   onFooterTextChange: (value: string) => void;
   logo: string | null;
   signature: string | null;
+  /** Built-in image used on the certificate when no custom logo is uploaded. */
+  defaultLogo?: string | null;
+  /** Built-in image used on the certificate when no custom signature is uploaded. */
+  defaultSignature?: string | null;
   onFileChange: (event: React.ChangeEvent<HTMLInputElement>, type: 'logo' | 'signature') => void;
-  onClearLogo: () => void;
-  onClearSignature: () => void;
+  /** Remove the image from the certificate (empty string state — no logo/seal is rendered). */
+  onRemoveLogo: () => void;
+  onRemoveSignature: () => void;
+  /** Restore the built-in default image (null state). */
+  onRestoreLogo: () => void;
+  onRestoreSignature: () => void;
   onSave: () => void;
   onReset: () => void;
   isPending: boolean;
@@ -43,13 +51,25 @@ export function CertificateTemplateSettingsPanel({
   onFooterTextChange,
   logo,
   signature,
+  defaultLogo = null,
+  defaultSignature = null,
   onFileChange,
-  onClearLogo,
-  onClearSignature,
+  onRemoveLogo,
+  onRemoveSignature,
+  onRestoreLogo,
+  onRestoreSignature,
   onSave,
   onReset,
   isPending,
 }: CertificateTemplateSettingsPanelProps) {
+  // `null` → use built-in default | '' → explicitly removed | non-empty → custom upload
+  const isCustomLogo = typeof logo === 'string' && logo.length > 0;
+  const isLogoRemoved = logo === '';
+  const activeLogo = isCustomLogo ? logo : defaultLogo;
+
+  const isCustomSignature = typeof signature === 'string' && signature.length > 0;
+  const isSignatureRemoved = signature === '';
+  const activeSignature = isCustomSignature ? signature : defaultSignature;
   const previewDocxUrl = useMemo(() => {
     if (certificateType === 'rc') {
       return '/api/certificate-template/rc-preview';
@@ -134,27 +154,49 @@ export function CertificateTemplateSettingsPanel({
                   <span className="text-[10px] text-slate-400 font-semibold">Max 2MB (PNG/JPG/SVG)</span>
                 </div>
               </div>
-              {logo && (
-                <div className="flex items-center justify-between gap-3 p-3 bg-slate-50 border border-slate-100 rounded-lg">
-                  <div className="min-w-0 flex-1 flex items-center justify-center rounded-md border border-slate-200/80 bg-white px-3 py-2">
-                    {/* eslint-disable-next-line @next/next/no-img-element */}
-                    <img
-                      src={logo}
-                      alt="Header logo preview"
-                      className="max-h-14 w-full max-w-[220px] object-contain object-center"
-                    />
-                  </div>
+              {isLogoRemoved ? (
+                <div className="flex items-center justify-between gap-3 p-3 bg-rose-50/60 border border-dashed border-rose-200 rounded-lg">
+                  <span className="min-w-0 text-xs font-semibold text-rose-500">
+                    Removed — the certificate will show no header logo.
+                  </span>
                   <Button
                     type="button"
                     variant="outline"
                     size="sm"
-                    onClick={onClearLogo}
-                    className="h-7 shrink-0 text-rose-500 border-rose-100 hover:bg-rose-50 px-2 cursor-pointer"
+                    onClick={onRestoreLogo}
+                    className="h-7 shrink-0 px-2 cursor-pointer"
                   >
-                    Clear
+                    Use default
                   </Button>
                 </div>
-              )}
+              ) : activeLogo ? (
+                <div className="flex items-center justify-between gap-3 p-3 bg-slate-50 border border-slate-100 rounded-lg">
+                  <div className="min-w-0 flex-1 flex items-center justify-center rounded-md border border-slate-200/80 bg-white px-3 py-2">
+                    {/* eslint-disable-next-line @next/next/no-img-element */}
+                    <img
+                      src={activeLogo}
+                      alt="Header logo preview"
+                      className="max-h-14 w-full max-w-[220px] object-contain object-center"
+                    />
+                  </div>
+                  <div className="flex shrink-0 items-center gap-2">
+                    {!isCustomLogo && (
+                      <span className="rounded-md bg-slate-100 px-2 py-1 text-[10px] font-bold uppercase tracking-wide text-slate-400">
+                        Default
+                      </span>
+                    )}
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      onClick={onRemoveLogo}
+                      className="h-7 text-rose-500 border-rose-100 hover:bg-rose-50 px-2 cursor-pointer"
+                    >
+                      Remove
+                    </Button>
+                  </div>
+                </div>
+              ) : null}
             </div>
 
             <div className="space-y-2">
@@ -176,27 +218,49 @@ export function CertificateTemplateSettingsPanel({
                   </span>
                 </div>
               </div>
-              {signature && (
-                <div className="flex items-center justify-between gap-3 p-3 bg-slate-50 border border-slate-100 rounded-lg">
-                  <div className="min-w-0 flex-1 flex items-center justify-center rounded-md border border-slate-200/80 bg-white px-3 py-2">
-                    {/* eslint-disable-next-line @next/next/no-img-element */}
-                    <img
-                      src={signature}
-                      alt="Signature preview"
-                      className="max-h-16 w-full max-w-[240px] object-contain object-center"
-                    />
-                  </div>
+              {isSignatureRemoved ? (
+                <div className="flex items-center justify-between gap-3 p-3 bg-rose-50/60 border border-dashed border-rose-200 rounded-lg">
+                  <span className="min-w-0 text-xs font-semibold text-rose-500">
+                    Removed — the certificate will show no signature / seal.
+                  </span>
                   <Button
                     type="button"
                     variant="outline"
                     size="sm"
-                    onClick={onClearSignature}
-                    className="h-7 shrink-0 text-rose-500 border-rose-100 hover:bg-rose-50 px-2 cursor-pointer"
+                    onClick={onRestoreSignature}
+                    className="h-7 shrink-0 px-2 cursor-pointer"
                   >
-                    Clear
+                    Use default
                   </Button>
                 </div>
-              )}
+              ) : activeSignature ? (
+                <div className="flex items-center justify-between gap-3 p-3 bg-slate-50 border border-slate-100 rounded-lg">
+                  <div className="min-w-0 flex-1 flex items-center justify-center rounded-md border border-slate-200/80 bg-white px-3 py-2">
+                    {/* eslint-disable-next-line @next/next/no-img-element */}
+                    <img
+                      src={activeSignature}
+                      alt="Signature preview"
+                      className="max-h-16 w-full max-w-[240px] object-contain object-center"
+                    />
+                  </div>
+                  <div className="flex shrink-0 items-center gap-2">
+                    {!isCustomSignature && (
+                      <span className="rounded-md bg-slate-100 px-2 py-1 text-[10px] font-bold uppercase tracking-wide text-slate-400">
+                        Default
+                      </span>
+                    )}
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      onClick={onRemoveSignature}
+                      className="h-7 text-rose-500 border-rose-100 hover:bg-rose-50 px-2 cursor-pointer"
+                    >
+                      Remove
+                    </Button>
+                  </div>
+                </div>
+              ) : null}
             </div>
 
             <div className="space-y-2">
