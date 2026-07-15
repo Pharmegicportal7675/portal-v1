@@ -17,6 +17,7 @@ import {
   History,
 } from 'lucide-react';
 import BrandLogo from '@/components/BrandLogo';
+import UserManualButton from '@/components/UserManualButton';
 import { useEffect } from 'react';
 import {
   clientHasEuReachRegistration,
@@ -208,7 +209,8 @@ export default function Sidebar({ role, companyName, regulatoryRegistrations = [
         )}
       </nav>
 
-      <div className="p-6 border-t border-primary-hover bg-primary-hover/30">
+      <div className="px-3 py-6 border-t border-primary-hover bg-primary-hover/30 space-y-4">
+        <UserManualButton />
         <div className="text-[11px] text-primary-foreground/50 text-center font-medium">
           Pharmegic Healthcare v1.0.0
         </div>

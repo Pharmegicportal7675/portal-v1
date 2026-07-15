@@ -1,6 +1,7 @@
 import { createAdminClient } from '@/lib/db/admin';
 import { getActiveTemplate } from '@/services/db';
 import { getAdminSettingsAction } from '@/actions/settings';
+import { getUserManualManifest } from '@/lib/user-manual-storage';
 import SettingsDashboard from '@/components/SettingsDashboard';
 
 export const revalidate = 0; // Live settings refresh
@@ -15,10 +16,13 @@ export default async function SettingsPage() {
   const settingsRes = await getAdminSettingsAction();
   const settings = settingsRes.success ? settingsRes.settings : null;
 
+  const userManual = await getUserManualManifest(supabase);
+
   return (
     <SettingsDashboard
       initialSettings={settings}
       initialTemplate={template}
+      initialUserManual={userManual}
     />
   );
 }

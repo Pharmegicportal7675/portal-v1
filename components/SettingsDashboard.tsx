@@ -16,6 +16,7 @@ import {
 } from '@/lib/certificate-smtp-settings';
 import { updateTemplateAction } from '@/actions/templates';
 import { CertificateTemplateSettingsPanel } from '@/components/CertificateTemplateSettingsPanel';
+import UserManualSettings, { type UserManualInfo } from '@/components/UserManualSettings';
 import {
   resolveRcBranding,
   resolveTccBranding,
@@ -36,6 +37,7 @@ import {
   ShieldCheck,
   Bell,
   FileText,
+  BookOpen,
 } from 'lucide-react';
 
 interface SettingsData {
@@ -66,9 +68,10 @@ interface TemplateData extends TemplateSettingsRecord {}
 interface SettingsDashboardProps {
   initialSettings: SettingsData | null;
   initialTemplate: TemplateData | null;
+  initialUserManual: UserManualInfo | null;
 }
 
-export default function SettingsDashboard({ initialSettings, initialTemplate }: SettingsDashboardProps) {
+export default function SettingsDashboard({ initialSettings, initialTemplate, initialUserManual }: SettingsDashboardProps) {
   const router = useRouter();
   const rcDefaults = resolveRcBranding(initialTemplate);
   const tccDefaults = resolveTccBranding(initialTemplate);
@@ -82,7 +85,7 @@ export default function SettingsDashboard({ initialSettings, initialTemplate }: 
   const [isNotificationPending, startNotificationTransition] = useTransition();
 
   const [activeTab, setActiveTab] = useState<
-    'profile' | 'rc-template' | 'tcc-template' | 'security' | 'smtp-tcc' | 'smtp-rc' | 'notification-email'
+    'profile' | 'rc-template' | 'tcc-template' | 'security' | 'smtp-tcc' | 'smtp-rc' | 'notification-email' | 'user-manual'
   >('profile');
 
   // 1. Profile Settings State
@@ -459,6 +462,17 @@ export default function SettingsDashboard({ initialSettings, initialTemplate }: 
             <Bell className="h-4.5 w-4.5" />
             Notification Email
           </button>
+          <button
+            onClick={() => setActiveTab('user-manual')}
+            className={`flex shrink-0 md:shrink items-center gap-2.5 px-4 py-3 rounded-lg text-sm font-bold text-left cursor-pointer transition-all whitespace-nowrap md:whitespace-normal ${
+              activeTab === 'user-manual'
+                ? 'bg-primary text-white'
+                : 'text-slate-600 hover:text-slate-900 hover:bg-slate-50'
+            }`}
+          >
+            <BookOpen className="h-4.5 w-4.5" />
+            User Manual
+          </button>
         </div>
 
         {/* Workspace Panels (Right Content) */}
@@ -551,6 +565,10 @@ export default function SettingsDashboard({ initialSettings, initialTemplate }: 
               onReset={handleResetTccTemplate}
               isPending={isTccTemplatePending}
             />
+          )}
+
+          {activeTab === 'user-manual' && (
+            <UserManualSettings initialManual={initialUserManual} />
           )}
 
           {/* TAB 3: SECURITY & AUTH */}
