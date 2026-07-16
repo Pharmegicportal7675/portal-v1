@@ -24,8 +24,6 @@ export type ParsedClientImportRow = {
   password: string;
   owner_name: string | null;
   phone: string | null;
-  cc_emails: string | null;
-  cc_phones: string | null;
   address: string;
   city: string;
   state: string;
@@ -232,8 +230,6 @@ function rowToClient(
     password: pick(row, headerMap, ['Password', 'Login Password'], defaultPassword),
     owner_name: pick(row, headerMap, ['Owner Name', 'owner_name'], '') || null,
     phone: pick(row, headerMap, ['Phone', 'phone'], '') || null,
-    cc_emails: pick(row, headerMap, ['CC Emails', 'cc_emails'], '') || null,
-    cc_phones: pick(row, headerMap, ['CC Phones', 'cc_phones'], '') || null,
     address: pick(row, headerMap, ['Address', 'address'], '') || '—',
     city: pick(row, headerMap, ['City', 'city'], ''),
     state: pick(row, headerMap, ['State', 'state'], ''),

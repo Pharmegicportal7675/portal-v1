@@ -1,6 +1,5 @@
 'use client';
 
-import { createClientAction, updateClientWizardAction } from '@/actions/client-wizard';
 import { formatErrorMessage } from '@/lib/format-error';
 import { formatMobileNumberInput, getMobileNumberError } from '@/lib/mobile-number';
 import { Button } from './ui/Button';
@@ -33,8 +32,6 @@ export type ClientWizardProfile = {
   password: string;
   owner_name: string;
   phone: string;
-  cc_emails: string;
-  cc_phones: string;
   address: string;
   city: string;
   state: string;
@@ -63,8 +60,6 @@ const defaultProfile: ClientWizardProfile = {
   password: '',
   owner_name: '',
   phone: '',
-  cc_emails: '',
-  cc_phones: '',
   address: '',
   city: '',
   state: '',
@@ -235,9 +230,20 @@ export default function ClientWizard({
     };
 
     startTransition(async () => {
-      const res = isEdit
-        ? await updateClientWizardAction(clientId!, payload)
-        : await createClientAction(null, payload);
+      const response = await fetch('/api/clients/wizard', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'same-origin',
+        body: JSON.stringify({
+          ...(isEdit ? { clientId } : {}),
+          ...payload,
+        }),
+      });
+      const res = (await response.json()) as {
+        success: boolean;
+        message?: string;
+        error?: string;
+      };
 
       if (!res.success) {
         const message =
@@ -390,22 +396,7 @@ export default function ClientWizard({
               </div>
             </div>
           )}
-          <Input
-            label="CC Emails"
-            placeholder="cc1@company.com, cc2@company.com"
-            value={profile.cc_emails}
-            onChange={(e) => setProfile({ ...profile, cc_emails: e.target.value })}
-          />
-          <Input
-            label="CC Phones"
-            placeholder="+91 123 456 7890, +91 987 654 3210"
-            value={profile.cc_phones}
-            onChange={(e) => setProfile({ ...profile, cc_phones: e.target.value })}
-          />
         </div>
-        <p className="mt-3 text-xs text-slate-400">
-          CC emails/phones are copied on certificate emails sent to this client.
-        </p>
       </section>
 
       <section className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm">

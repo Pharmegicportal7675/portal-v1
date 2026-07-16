@@ -1,6 +1,6 @@
 import type { DbClient } from '@/lib/db/types';
 import { hashPassword } from '@/lib/auth/password';
-import { createReachCertificate } from '@/actions/reach';
+import { createReachCertificate } from '@/services/reach-certificate-create';
 import { getTonnageBandMaxQuota } from '@/lib/quota';
 import {
   findReachCertificateYearConflict,
@@ -105,8 +105,6 @@ type ExistingClientRecord = {
   phone: string | null;
   primary_contact_first_name: string | null;
   primary_contact_last_name: string | null;
-  cc_emails: string | null;
-  cc_phones: string | null;
   address: string | null;
   city: string | null;
   state: string | null;
@@ -131,8 +129,6 @@ function buildClientUpdatePayload(
     phone: client.phone,
     primary_contact_first_name: client.primary_contact_first_name,
     primary_contact_last_name: client.primary_contact_last_name,
-    cc_emails: client.cc_emails,
-    cc_phones: client.cc_phones,
     address: client.address,
     city: client.city,
     state: client.state,
@@ -162,8 +158,6 @@ function clientPayloadDiffers(
   if (compare(payload.phone, existing.phone)) return true;
   if (compare(payload.primary_contact_first_name, existing.primary_contact_first_name)) return true;
   if (compare(payload.primary_contact_last_name, existing.primary_contact_last_name)) return true;
-  if (compare(payload.cc_emails, existing.cc_emails)) return true;
-  if (compare(payload.cc_phones, existing.cc_phones)) return true;
   if (compare(payload.address, existing.address)) return true;
   if (compare(payload.city, existing.city)) return true;
   if (compare(payload.state, existing.state)) return true;
@@ -352,8 +346,6 @@ async function importClientRow(
       phone: client.phone,
       primary_contact_first_name: client.primary_contact_first_name,
       primary_contact_last_name: client.primary_contact_last_name,
-      cc_emails: client.cc_emails,
-      cc_phones: client.cc_phones,
       address: client.address,
       city: client.city,
       state: client.state,

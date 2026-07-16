@@ -26,6 +26,7 @@ import {
   REGULATORY_REGISTRATION_OPTIONS,
   type RegulatoryRegistration,
 } from '@/lib/regulatory-registrations';
+import { formatDisplayDate } from '@/lib/date-filter';
 
 import {
   Search,
@@ -72,8 +73,6 @@ interface Client {
   email: string;
   owner_name: string;
   phone: string | null;
-  cc_emails: string | null;
-  cc_phones: string | null;
   address: string | null;
   city: string | null;
   state: string | null;
@@ -116,17 +115,15 @@ export default function ClientsDashboard({ initialClients, chemicals, adminRole 
     company_name: '',
     uuid_number: '',
     email: '',
-    owner_name: '',
-    phone: '',
-    cc_emails: '',
-    cc_phones: '',
-    address: '',
-    city: '',
-    state: '',
-    country: 'India',
-    postal_code: '',
-    status: 'active' as 'active' | 'inactive' | 'pending',
-  });
+  owner_name: '',
+  phone: '',
+  address: '',
+  city: '',
+  state: '',
+  country: 'India',
+  postal_code: '',
+  status: 'active' as 'active' | 'inactive' | 'pending',
+});
   const [editChemicalIds, setEditChemicalIds] = useState<string[]>([]);
   const [loadingEditData, setLoadingEditData] = useState(false);
   const [editError, setEditError] = useState<string | null>(null);
@@ -247,8 +244,6 @@ export default function ClientsDashboard({ initialClients, chemicals, adminRole 
       email: client.email || '',
       owner_name: client.owner_name || '',
       phone: client.phone || '',
-      cc_emails: client.cc_emails || '',
-      cc_phones: client.cc_phones || '',
       address: client.address || '',
       city: client.city || '',
       state: client.state || '',
@@ -559,7 +554,7 @@ export default function ClientsDashboard({ initialClients, chemicals, adminRole 
                     <td className="p-4 text-slate-500 font-medium">
                       <div className="flex items-center gap-1.5 text-xs">
                         <Calendar className="h-3.5 w-3.5 text-slate-400" />
-                        <span>{new Date(client.created_at).toLocaleDateString()}</span>
+                        <span>{formatDisplayDate(client.created_at)}</span>
                       </div>
                     </td>
                     <td className="p-4 text-right">

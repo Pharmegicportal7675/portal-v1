@@ -7,7 +7,6 @@ import {
   changeClientPasswordAction, 
   toggleClientLoginAction, 
   addNewChemicalToClientAction,
-  removeChemicalFromClientAction,
   restoreClientChemicalAction,
   permanentDeleteClientChemicalAction,
   editClientChemicalAction,
@@ -63,18 +62,11 @@ import {
   clientHasEuReachRegistration,
   normalizeRegulatoryRegistrations,
 } from '@/lib/regulatory-registrations';
-import {
-  deleteReachCertificateAction,
-  renewReachCertificateAction,
-  updateReachCertificateAction,
-  sendBulkReachCertificatesEmailAction,
-  issueReachCertificateWithDetailsAction,
-} from '@/actions/reach';
+import { renewReachCertificateAction } from '@/actions/reach';
 import {
   buildReachCertificateDocxPreviewUrl,
   buildReachCertificatePdfDownloadUrl,
 } from '@/lib/reach-certificate-download';
-import { deleteTccApplicationAction } from '@/actions/tcc';
 import {
   buildTccCertificatePdfDownloadUrl,
 } from '@/lib/tcc-certificate-download';
@@ -84,7 +76,6 @@ import { ResponsiveTableScroll } from '@/components/ui/ResponsiveTableScroll';
 import { formatActivityLogDateTime, formatDisplayDate } from '@/lib/date-filter';
 import { buildTccExportColumns } from '@/lib/tcc-export-columns';
 import type { CsvColumn } from '@/lib/export-csv';
-import { processTccAction } from '@/actions/tcc';
 import { canClientEditTccApplication } from '@/lib/tcc-application';
 import type { TccEmailDefaults, TccViewApplication } from '@/components/TccApplicationViewDialog';
 import { toast } from '@/store/toast';
@@ -97,6 +88,20 @@ import {
 } from 'lucide-react';
 import { useLayoutStore } from '@/store/layout';
 import dynamic from 'next/dynamic';
+
+async function postJson<T>(url: string, body: unknown): Promise<T> {
+  const response = await fetch(url, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    credentials: 'same-origin',
+    body: JSON.stringify(body),
+  });
+  try {
+    return (await response.json()) as T;
+  } catch {
+    return { success: false, error: `Request failed (${response.status})` } as T;
+  }
+}
 
 const ApexChart = dynamic(() => import('react-apexcharts'), { ssr: false });
 
@@ -1222,15 +1227,19 @@ export default function ClientDashboardDetails({
       let certMessage: string | undefined;
       if (certToUpdate?.id) {
         const bandMax = getTonnageBandMaxQuota(assignChemData.tonnage_band);
-        const certRes = await updateReachCertificateAction(certToUpdate.id, {
-          registrationNumber: assignChemData.registration_number.trim(),
-          issuedDate: assignChemData.issued_date,
-          validatedDate: assignChemData.validated_date,
-          allocatedQuantity: assignChemData.allocated_quantity
-            ? Number(assignChemData.allocated_quantity)
-            : (bandMax ?? null),
-          tonnageBand: assignChemData.tonnage_band,
-        });
+        const certRes = await postJson<{ success: boolean; message?: string; error?: string }>(
+          '/api/reach/certificates/update',
+          {
+            certificateId: certToUpdate.id,
+            registrationNumber: assignChemData.registration_number.trim(),
+            issuedDate: assignChemData.issued_date,
+            validatedDate: assignChemData.validated_date,
+            allocatedQuantity: assignChemData.allocated_quantity
+              ? Number(assignChemData.allocated_quantity)
+              : (bandMax ?? null),
+            tonnageBand: assignChemData.tonnage_band,
+          }
+        );
         if (!certRes.success) {
           setModalError('assignChem', toErrorMessage(certRes.error, 'Failed to update CT certificate.'));
           return;
@@ -1242,15 +1251,20 @@ export default function ClientDashboardDetails({
         assignChemData.validated_date
       ) {
         const bandMax = getTonnageBandMaxQuota(assignChemData.tonnage_band);
-        const issueRes = await issueReachCertificateWithDetailsAction(client.id, renewChemicalId, {
-          registrationNumber: assignChemData.registration_number.trim(),
-          issuedDate: assignChemData.issued_date,
-          validatedDate: assignChemData.validated_date,
-          tonnageBand: assignChemData.tonnage_band || null,
-          allocatedQuantity: assignChemData.allocated_quantity
-            ? Number(assignChemData.allocated_quantity)
-            : (bandMax ?? 0),
-        });
+        const issueRes = await postJson<{ success: boolean; message?: string; error?: string }>(
+          '/api/reach/certificates/issue-details',
+          {
+            clientId: client.id,
+            chemicalId: renewChemicalId,
+            registrationNumber: assignChemData.registration_number.trim(),
+            issuedDate: assignChemData.issued_date,
+            validatedDate: assignChemData.validated_date,
+            tonnageBand: assignChemData.tonnage_band || null,
+            allocatedQuantity: assignChemData.allocated_quantity
+              ? Number(assignChemData.allocated_quantity)
+              : (bandMax ?? 0),
+          }
+        );
         if (!issueRes.success) {
           setModalError('assignChem', toErrorMessage(issueRes.error, 'Failed to issue CT certificate.'));
           return;
@@ -1267,7 +1281,10 @@ export default function ClientDashboardDetails({
   const handleRemoveChemical = (chemId: string) => {
     if (confirm('Move this substance to trash? You can restore it from the Trash box below.')) {
       startTransition(async () => {
-        const res = await removeChemicalFromClientAction(client.id, chemId);
+        const res = await postJson<{ success: boolean; error?: string }>(
+          '/api/client-chemicals/remove',
+          { clientId: client.id, chemicalId: chemId }
+        );
         if (res.success) { toast.success('Substance moved to trash.'); router.refresh(); }
         else setModalError('substances', toErrorMessage(res.error, 'Failed to remove substance.'));
       });
@@ -1367,7 +1384,10 @@ export default function ClientDashboardDetails({
     }
 
     startTransition(async () => {
-      const res = await sendBulkReachCertificatesEmailAction(client.id, selectedRcCertIds);
+      const res = await postJson<{ success: boolean; message?: string; error?: string }>(
+        '/api/reach/certificates/bulk-email',
+        { clientId: client.id, certificateIds: selectedRcCertIds }
+      );
       if (res.success) {
         toast.success(res.message || 'CT certificates sent successfully.');
         setSelectedRcCertIds([]);
@@ -1386,8 +1406,14 @@ export default function ClientDashboardDetails({
     startTransition(async () => {
       const res =
         target.kind === 'issued'
-          ? await deleteReachCertificateAction(target.id, client.id)
-          : await removeChemicalFromClientAction(client.id, target.chemicalId);
+          ? await postJson<{ success: boolean; message?: string; error?: string }>(
+              '/api/reach/certificates/delete',
+              { certificateId: target.id, clientId: client.id }
+            )
+          : await postJson<{ success: boolean; message?: string; error?: string }>(
+              '/api/client-chemicals/remove',
+              { clientId: client.id, chemicalId: target.chemicalId }
+            );
       if (res.success) {
         toast.success(res.message || 'Removed successfully.');
         router.refresh();
@@ -1402,7 +1428,10 @@ export default function ClientDashboardDetails({
     const target = tccDeleteTarget;
     setTccDeleteTarget(null);
     startTransition(async () => {
-      const res = await deleteTccApplicationAction(target.id);
+      const res = await postJson<{ success: boolean; message?: string; error?: string }>(
+        '/api/tcc/delete',
+        { applicationId: target.id }
+      );
       if (res.success) {
         toast.success(res.message || 'TCC application deleted.');
         setSelectedTccAppIds((prev) => prev.filter((id) => id !== target.id));
@@ -1561,7 +1590,16 @@ export default function ClientDashboardDetails({
     }
 
     startTransition(async () => {
-      const res = await processTccAction(selectedTccApp.id, tccActionType, tccRejectionReason);
+      const res = await postJson<{
+        success: boolean;
+        message?: string;
+        error?: string;
+        certificateId?: string;
+      }>('/api/tcc/process', {
+        applicationId: selectedTccApp.id,
+        status: tccActionType,
+        rejectionReason: tccRejectionReason,
+      });
       if (res.success) {
         setIsTccActionOpen(false);
         if (tccActionType === 'approved' && res.certificateId) {

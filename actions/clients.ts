@@ -505,7 +505,7 @@ export async function addNewChemicalToClientAction(clientId: string, data: any) 
         ? Number(data.available_quantity)
         : (allocatedBandMax ?? 0);
       const rcResult = await (
-        await import('@/actions/reach')
+        await import('@/services/reach-certificate-create')
       ).createReachCertificate({
         clientId,
         chemicalId,
@@ -623,7 +623,7 @@ export async function addNewChemicalToClientAction(clientId: string, data: any) 
       ? Number(data.available_quantity)
       : (bandMaxNew ?? 0);
     const rcResult = await (
-      await import('@/actions/reach')
+      await import('@/services/reach-certificate-create')
     ).createReachCertificate({
       clientId,
       chemicalId,

@@ -38,8 +38,6 @@ type ClientProfileInput = {
   email: string;
   owner_name?: string;
   phone?: string;
-  cc_emails?: string;
-  cc_phones?: string;
   address: string;
   city: string;
   state: string;
@@ -58,8 +56,6 @@ function buildClientUpdateData(profile: ClientProfileInput) {
     email: profile.email.toLowerCase(),
     owner_name: optionalText(profile.owner_name),
     phone: optionalText(profile.phone),
-    cc_emails: optionalText(profile.cc_emails),
-    cc_phones: optionalText(profile.cc_phones),
     address: String(profile.address ?? '').trim(),
     city: String(profile.city ?? '').trim(),
     state: String(profile.state ?? '').trim(),
@@ -105,8 +101,6 @@ export async function createClientAction(prevState: unknown, data: unknown) {
         phone: profile.phone || null,
         primary_contact_first_name: profile.primary_contact_first_name,
         primary_contact_last_name: profile.primary_contact_last_name,
-        cc_emails: profile.cc_emails || null,
-        cc_phones: profile.cc_phones || null,
         address: profile.address.trim(),
         city: profile.city.trim(),
         state: profile.state.trim(),
@@ -294,8 +288,6 @@ export async function updateClientWizardAction(clientId: string, data: unknown) 
         phone: beforeProfile.phone,
         primary_contact_first_name: beforeProfile.primary_contact_first_name,
         primary_contact_last_name: beforeProfile.primary_contact_last_name,
-        cc_emails: beforeProfile.cc_emails,
-        cc_phones: beforeProfile.cc_phones,
         address: beforeProfile.address,
         city: beforeProfile.city,
         state: beforeProfile.state,
@@ -314,8 +306,6 @@ export async function updateClientWizardAction(clientId: string, data: unknown) 
         phone: updatePayload.phone,
         primary_contact_first_name: updatePayload.primary_contact_first_name,
         primary_contact_last_name: updatePayload.primary_contact_last_name,
-        cc_emails: updatePayload.cc_emails,
-        cc_phones: updatePayload.cc_phones,
         address: updatePayload.address,
         city: updatePayload.city,
         state: updatePayload.state,

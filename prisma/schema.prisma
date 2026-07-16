@@ -187,8 +187,6 @@ model clients {
   phone                      String?              @db.VarChar(64)
   primary_contact_first_name String?              @db.VarChar(255)
   primary_contact_last_name  String?              @db.VarChar(255)
-  cc_emails                  String?              @db.Text
-  cc_phones                  String?              @db.Text
   status                     clients_status?      @default(pending)
   regulatory_registrations   String?              @default(dbgenerated("(json_array())")) @db.LongText
   activity_logs              activity_logs[]

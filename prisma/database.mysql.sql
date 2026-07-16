@@ -48,8 +48,6 @@ CREATE TABLE IF NOT EXISTS clients (
     phone VARCHAR(64),
     primary_contact_first_name VARCHAR(255),
     primary_contact_last_name VARCHAR(255),
-    cc_emails TEXT,
-    cc_phones TEXT,
     status ENUM('active', 'inactive', 'pending') DEFAULT 'pending',
     regulatory_registrations JSON DEFAULT (JSON_ARRAY())
 );

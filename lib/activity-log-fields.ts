@@ -102,8 +102,6 @@ export const CLIENT_PROFILE_FIELD_LABELS: Record<string, string> = {
   phone: 'Mobile',
   primary_contact_first_name: 'Primary first name',
   primary_contact_last_name: 'Primary last name',
-  cc_emails: 'CC emails',
-  cc_phones: 'CC phones',
   address: 'Address',
   city: 'City',
   state: 'State',

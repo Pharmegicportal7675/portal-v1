@@ -49,8 +49,6 @@ export const clientProfileSchema = z.object({
   password: z.string().min(6, { message: 'Password must be at least 6 characters' }),
   owner_name: z.string().optional().or(z.literal('')),
   phone: z.string().optional().or(z.literal('')),
-  cc_emails: z.string().optional().or(z.literal('')),
-  cc_phones: z.string().optional().or(z.literal('')),
   address: z.string().min(1, { message: 'Address is required' }),
   city: z.string(),
   state: z.string(),

@@ -3,7 +3,6 @@
 import { useState, useTransition, useEffect, useMemo } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
-import { processTccAction, deleteTccApplicationAction } from '@/actions/tcc';
 import { Card, CardContent } from './ui/Card';
 import { Button } from './ui/Button';
 import { Badge } from './ui/Badge';
@@ -291,7 +290,22 @@ export default function ApprovalsDashboard({ initialApplications, emailDefaults 
     }
 
     startTransition(async () => {
-      const res = await processTccAction(selectedApp.id, actionType, rejectionReason);
+      const response = await fetch('/api/tcc/process', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'same-origin',
+        body: JSON.stringify({
+          applicationId: selectedApp.id,
+          status: actionType,
+          rejectionReason,
+        }),
+      });
+      const res = (await response.json()) as {
+        success: boolean;
+        message?: string;
+        error?: string;
+        certificateId?: string;
+      };
       if (res.success) {
         setIsActionOpen(false);
         if (actionType === 'approved' && res.certificateId) {
@@ -311,7 +325,13 @@ export default function ApprovalsDashboard({ initialApplications, emailDefaults 
   const handleDeleteApplication = () => {
     if (!deleteTarget) return;
     startTransition(async () => {
-      const res = await deleteTccApplicationAction(deleteTarget.id);
+      const response = await fetch('/api/tcc/delete', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'same-origin',
+        body: JSON.stringify({ applicationId: deleteTarget.id }),
+      });
+      const res = (await response.json()) as { success: boolean; message?: string; error?: string };
       if (res.success) {
         toast.success(res.message || 'TCC application deleted.');
         setApplications((current) => current.filter((app) => app.id !== deleteTarget.id));

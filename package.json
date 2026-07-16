@@ -16,6 +16,7 @@
     "db:migrate:tcc-schema": "prisma db execute --file prisma/migrations/tcc-application-schema.sql --schema prisma/schema.prisma",
     "db:migrate:intermediate-substance": "prisma db execute --file prisma/migrations/add-intermediate-substance-flag.sql --schema prisma/schema.prisma",
     "db:migrate:activity-log-location": "prisma db execute --file prisma/migrations/add-activity-log-location.sql --schema prisma/schema.prisma",
+    "db:migrate:drop-client-cc": "prisma db execute --file prisma/migrations/drop-client-cc-fields.sql --schema prisma/schema.prisma",
     "db:ensure-tcc-schema": "node scripts/ensure-tcc-schema.mjs",
     "lint": "eslint",
     "import:clients": "node scripts/import-clients-from-excel.js",

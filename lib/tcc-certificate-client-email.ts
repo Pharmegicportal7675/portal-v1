@@ -17,7 +17,7 @@ const TCC_CERT_EMAIL_SELECT = `
     chemicals (chemical_name, cas_number, ec_number, tonnage_band)
   ),
   clients (
-    id, company_name, email, cc_emails, uuid_number, address, city, state, postal_code, country,
+    id, company_name, email, uuid_number, address, city, state, postal_code, country,
     client_contacts (email)
   )
 `;

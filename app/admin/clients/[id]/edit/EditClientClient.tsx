@@ -15,8 +15,6 @@ interface ClientRecord {
   email: string;
   owner_name: string | null;
   phone: string | null;
-  cc_emails: string | null;
-  cc_phones: string | null;
   address: string | null;
   city: string | null;
   state: string | null;
@@ -56,8 +54,6 @@ export default function EditClientClient({ client, contacts }: EditClientClientP
     email: client.email || '',
     owner_name: client.owner_name || '',
     phone: client.phone || '',
-    cc_emails: client.cc_emails || '',
-    cc_phones: client.cc_phones || '',
     address: client.address || '',
     city: client.city || '',
     state: client.state || '',
