@@ -18,6 +18,7 @@ import {
 import {
   normalizeRegulatoryRegistrations,
 } from '@/lib/regulatory-registrations';
+import { findPortalEmailConflict } from '@/lib/portal-email-check';
 
 export type ClientImportRowResult = {
   company_name: string;
@@ -125,6 +126,7 @@ function buildClientUpdatePayload(
 ): Record<string, unknown> {
   const payload: Record<string, unknown> = {
     company_name: client.company_name,
+    email: client.email.trim().toLowerCase(),
     owner_name: client.owner_name,
     phone: client.phone,
     primary_contact_first_name: client.primary_contact_first_name,
@@ -155,6 +157,7 @@ function clientPayloadDiffers(
   const compare = (next: unknown, current: unknown) => String(next ?? '') !== String(current ?? '');
 
   if (compare(payload.company_name, existing.company_name)) return true;
+  if (compare(payload.email, existing.email)) return true;
   if (compare(payload.owner_name, existing.owner_name)) return true;
   if (compare(payload.phone, existing.phone)) return true;
   if (compare(payload.primary_contact_first_name, existing.primary_contact_first_name)) return true;
@@ -217,10 +220,33 @@ async function updateExistingClient(
     client_id: existing.id,
   };
 
+  const nextEmail = client.email.trim().toLowerCase();
+  const emailChanging = nextEmail !== String(existing.email ?? '').toLowerCase();
+
+  if (emailChanging) {
+    const { data: loginUser } = await adminSupabase
+      .from('users')
+      .select('id')
+      .eq('client_id', existing.id)
+      .maybeSingle();
+
+    const emailConflict = await findPortalEmailConflict(adminSupabase, nextEmail, {
+      excludeClientId: existing.id,
+      excludeUserId: (loginUser as { id?: string } | null)?.id,
+    });
+    if (emailConflict) {
+      return {
+        ...base,
+        status: 'failed',
+        reason: emailConflict,
+      };
+    }
+  }
+
   const payload = buildClientUpdatePayload(client, existing);
   const hasChanges = clientPayloadDiffers(client, existing, payload);
 
-  if (!hasChanges) {
+  if (!hasChanges && !(client.password.length >= 6)) {
     return {
       ...base,
       status: 'skipped',
@@ -236,24 +262,38 @@ async function updateExistingClient(
     };
   }
 
-  const { error } = await adminSupabase.from('clients').update(payload).eq('id', existing.id);
-  if (error) {
-    return {
-      ...base,
-      status: 'failed',
-      reason: error.message,
-    };
+  if (hasChanges) {
+    const { error } = await adminSupabase.from('clients').update(payload).eq('id', existing.id);
+    if (error) {
+      return {
+        ...base,
+        status: 'failed',
+        reason: error.message,
+      };
+    }
   }
 
+  const userUpdates: Record<string, unknown> = {};
+  if (emailChanging) {
+    userUpdates.email = nextEmail;
+  }
   if (client.password.length >= 6) {
-    const password_hash = await hashPassword(client.password);
-    await adminSupabase
+    userUpdates.password_hash = await hashPassword(client.password);
+    userUpdates.login_password = client.password;
+  }
+
+  if (Object.keys(userUpdates).length > 0) {
+    const { error: userError } = await adminSupabase
       .from('users')
-      .update({
-        password_hash,
-        login_password: client.password,
-      })
+      .update(userUpdates)
       .eq('client_id', existing.id);
+    if (userError) {
+      return {
+        ...base,
+        status: 'failed',
+        reason: userError.message,
+      };
+    }
   }
 
   return {

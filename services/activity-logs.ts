@@ -7,6 +7,8 @@ export type ActivityLogRecord = {
   entity_id: string | null;
   description: string | null;
   metadata: unknown;
+  ip_address: string | null;
+  location: string | null;
   created_at: string;
   client_id: string | null;
   user_id: string | null;
@@ -30,14 +32,36 @@ export async function getAllActivityLogs(
 ): Promise<ActivityLogRecord[]> {
   const limit = options?.limit ?? 1000;
 
-  const { data, error } = await supabase
+  const withLocation = await supabase
     .from('activity_logs')
     .select(
-      'id, action, entity_type, entity_id, description, metadata, created_at, client_id, user_id, clients ( company_name ), users ( email, role )'
+      'id, action, entity_type, entity_id, description, metadata, ip_address, location, created_at, client_id, user_id, clients ( company_name ), users ( email, role )'
     )
     .order('created_at', { ascending: false })
     .limit(limit);
 
-  if (error) throw error;
-  return (data || []).map((row: ActivityLogRecord) => normalizeActivityLogRow(row));
+  if (!withLocation.error) {
+    return (withLocation.data || []).map((row: ActivityLogRecord) => normalizeActivityLogRow(row));
+  }
+
+  // Fallback if migration not applied yet on this DB.
+  if (/unknown column|does not exist|ip_address|location/i.test(withLocation.error.message || '')) {
+    const { data, error } = await supabase
+      .from('activity_logs')
+      .select(
+        'id, action, entity_type, entity_id, description, metadata, created_at, client_id, user_id, clients ( company_name ), users ( email, role )'
+      )
+      .order('created_at', { ascending: false })
+      .limit(limit);
+    if (error) throw error;
+    return (data || []).map((row: ActivityLogRecord) =>
+      normalizeActivityLogRow({
+        ...row,
+        ip_address: null,
+        location: null,
+      })
+    );
+  }
+
+  throw withLocation.error;
 }

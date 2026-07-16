@@ -46,6 +46,7 @@ interface Chemical {
   available_quantity: number;
   exported_quantity: number;
   status: 'active' | 'inactive';
+  is_intermediate_substance?: boolean | null;
   created_at: string;
   company_names?: string[];
   /** Sum of client_chemicals.available_quantity (live remaining) */
@@ -129,6 +130,7 @@ export default function ChemicalsDashboard({
     validity_date: '',
     available_quantity: '0',
     status: 'active' as 'active' | 'inactive',
+    is_intermediate_substance: false,
   });
   const [formError, setFormError] = useState<string | null>(null);
 
@@ -224,6 +226,7 @@ export default function ChemicalsDashboard({
       validity_date: new Date().toISOString().split('T')[0],
       available_quantity: '0',
       status: 'active',
+      is_intermediate_substance: false,
     });
     setIsCreateOpen(true);
   };
@@ -241,6 +244,7 @@ export default function ChemicalsDashboard({
       payload.append('validity_date', formData.validity_date);
       payload.append('available_quantity', formData.available_quantity);
       payload.append('status', formData.status);
+      payload.append('is_intermediate_substance', formData.is_intermediate_substance ? 'true' : 'false');
 
       const res = await createChemicalAction(null, payload);
       if (res.success) {
@@ -265,6 +269,7 @@ export default function ChemicalsDashboard({
       validity_date: chem.validity_date ? new Date(chem.validity_date).toISOString().split('T')[0] : '',
       available_quantity: String(chem.available_quantity),
       status: chem.status,
+      is_intermediate_substance: Boolean(chem.is_intermediate_substance),
     });
     setIsEditOpen(true);
   };
@@ -289,6 +294,7 @@ export default function ChemicalsDashboard({
         validity_date: formData.validity_date,
         available_quantity: Number(formData.available_quantity),
         status: formData.status,
+        is_intermediate_substance: formData.is_intermediate_substance,
       });
 
       if (res.success) {
@@ -760,6 +766,17 @@ export default function ChemicalsDashboard({
               ]}
             />
           </div>
+          <label className="flex items-center gap-2 cursor-pointer select-none">
+            <input
+              type="checkbox"
+              className="h-4 w-4 rounded border-slate-300 text-primary focus:ring-primary"
+              checked={formData.is_intermediate_substance}
+              onChange={(e) =>
+                setFormData({ ...formData, is_intermediate_substance: e.target.checked })
+              }
+            />
+            <span className="text-sm font-semibold text-slate-700">Intermediate Substance</span>
+          </label>
 
           {formError && (
             <div className="p-4 bg-rose-50 border border-rose-200 text-rose-800 rounded-lg text-sm font-semibold flex items-start gap-2.5 w-full my-4">
@@ -849,6 +866,17 @@ export default function ChemicalsDashboard({
               ]}
             />
           </div>
+          <label className="flex items-center gap-2 cursor-pointer select-none">
+            <input
+              type="checkbox"
+              className="h-4 w-4 rounded border-slate-300 text-primary focus:ring-primary"
+              checked={formData.is_intermediate_substance}
+              onChange={(e) =>
+                setFormData({ ...formData, is_intermediate_substance: e.target.checked })
+              }
+            />
+            <span className="text-sm font-semibold text-slate-700">Intermediate Substance</span>
+          </label>
 
           {formError && (
             <div className="p-4 bg-rose-50 border border-rose-200 text-rose-800 rounded-lg text-sm font-semibold flex items-start gap-2.5 w-full my-4">

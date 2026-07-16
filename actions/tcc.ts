@@ -22,6 +22,7 @@ import {
   updateTccApplicationValidUntilDate,
 } from '@/lib/tcc-application-valid-until';
 import { tccSaveErrorMessage } from '@/lib/tcc-save-errors';
+import { writeActivityLog } from '@/lib/activity-log';
 import {
   computeTccQuotaForExportDate,
   getReachCertAllocatedQuota,
@@ -369,6 +370,22 @@ export async function applyForTccAction(prevState: unknown, formData: FormData) 
         },
       });
 
+      await writeActivityLog(adminSupabase, {
+        client_id: clientId,
+        user_id: session.userId,
+        action: 'CREATE_TCC_APPLICATION',
+        entity_type: 'tcc_applications',
+        entity_id: app.id,
+        description: `TCC application submitted: ${euData.quantity_mt} MT of ${chemical.chemical_name} (${framework})`,
+        metadata: {
+          quantity_mt: euData.quantity_mt,
+          chemical_name: chemical.chemical_name,
+          cas_number: chemical.cas_number,
+          regulatory_framework: framework,
+          export_date: euData.export_date,
+        },
+      });
+
       const companyLabel = client.company_name || 'A client';
       await notifyAllAdmins(
         adminSupabase,
@@ -406,6 +423,7 @@ export async function applyForTccAction(prevState: unknown, formData: FormData) 
       revalidatePath('/client/apply');
       revalidatePath('/admin', 'layout');
       revalidatePath('/admin/approvals');
+      revalidatePath('/admin/activity-logs');
       return {
         success: true,
         message: 'TCC Application submitted. Status: Pending Review.',
@@ -567,10 +585,26 @@ export async function updateTccApplicationAction(prevState: unknown, formData: F
       metadata: { quantity: euData.quantity_mt },
     });
 
+    await writeActivityLog(adminSupabase, {
+      client_id: existing.client_id,
+      user_id: session.userId,
+      action: 'UPDATE_TCC_APPLICATION',
+      entity_type: 'tcc_applications',
+      entity_id: applicationId,
+      description: `TCC application updated: ${euData.quantity_mt} MT${resetStatus ? ' (status reset to pending)' : ''}`,
+      metadata: {
+        quantity_mt: euData.quantity_mt,
+        chemical_id: euData.chemical_id,
+        export_date: euData.export_date,
+        status_reset: resetStatus,
+      },
+    });
+
     revalidatePath('/client');
     revalidatePath('/client/apply');
     revalidatePath('/admin', 'layout');
     revalidatePath('/admin/approvals');
+    revalidatePath('/admin/activity-logs');
     return { success: true, message: 'TCC application updated successfully.' };
   } catch (err: unknown) {
     return { success: false, error: tccSaveErrorMessage(err) };

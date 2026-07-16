@@ -19,6 +19,13 @@ import {
 } from '@/lib/client-storage-cleanup';
 import { normalizeCasNumber } from '@/lib/client-directory-import';
 import { findChemicalIdByNormalizedCas } from '@/services/client-directory-import';
+import { randomUUID } from 'crypto';
+import {
+  buildActivityFieldChanges,
+  CONTACT_FIELD_LABELS,
+  formatActivityFieldChangesDescription,
+  writeActivityLog,
+} from '@/lib/activity-log';
 
 // ============================================================================
 // HELPER: Verify admin session
@@ -226,7 +233,7 @@ export async function deleteClientAction(clientId: string) {
   try {
     const { data: client, error: fetchError } = await adminSupabase
       .from('clients')
-      .select('id, company_name')
+      .select('id, company_name, email')
       .eq('id', clientId)
       .maybeSingle();
 
@@ -244,10 +251,26 @@ export async function deleteClientAction(clientId: string) {
     const { error: clientError } = await adminSupabase.from('clients').delete().eq('id', clientId);
     if (clientError) throw clientError;
 
+    // Log after delete with null client_id — client-scoped logs cascade-delete with the client.
+    await writeActivityLog(adminSupabase, {
+      client_id: null,
+      user_id: session.userId,
+      action: 'CLIENT_DELETED',
+      entity_type: 'clients',
+      entity_id: clientId,
+      description: `Client permanently deleted: ${client.company_name} (${client.email})`,
+      metadata: {
+        company_name: client.company_name,
+        email: client.email,
+        deleted_client_id: clientId,
+      },
+    });
+
     revalidatePath('/admin/clients');
     revalidatePath('/admin/chemicals');
     revalidatePath('/admin/rc-certificates');
     revalidatePath('/admin/approvals');
+    revalidatePath('/admin/activity-logs');
     revalidatePath(`/admin/clients/${clientId}`);
     return {
       success: true,
@@ -278,7 +301,7 @@ export async function deleteSelectedClientsAction(clientIds: string[]) {
     try {
       const { data: client, error: fetchError } = await adminSupabase
         .from('clients')
-        .select('id, company_name')
+        .select('id, company_name, email')
         .eq('id', clientId)
         .maybeSingle();
 
@@ -298,6 +321,20 @@ export async function deleteSelectedClientsAction(clientIds: string[]) {
       if (clientError) throw clientError;
 
       deletedCompanies.push(client.company_name);
+      await writeActivityLog(adminSupabase, {
+        client_id: null,
+        user_id: session.userId,
+        action: 'CLIENT_DELETED',
+        entity_type: 'clients',
+        entity_id: clientId,
+        description: `Client permanently deleted (bulk): ${client.company_name} (${client.email})`,
+        metadata: {
+          company_name: client.company_name,
+          email: client.email,
+          deleted_client_id: clientId,
+          bulk: true,
+        },
+      });
     } catch (err) {
       const message = err instanceof Error ? err.message : String(err);
       failed.push(`${clientId}: ${message}`);
@@ -308,6 +345,7 @@ export async function deleteSelectedClientsAction(clientIds: string[]) {
   revalidatePath('/admin/chemicals');
   revalidatePath('/admin/rc-certificates');
   revalidatePath('/admin/approvals');
+  revalidatePath('/admin/activity-logs');
 
   if (failed.length > 0) {
     return {
@@ -865,17 +903,205 @@ export async function editClientChemicalAction(clientId: string, chemicalId: str
 // ============================================================================
 // SECONDARY CONTACTS CRUD
 // ============================================================================
+function normalizeContactPayload(contact: {
+  first_name: string;
+  last_name: string;
+  email: string;
+  phone?: string | null;
+  role?: string | null;
+}) {
+  const first_name = contact.first_name.trim();
+  const last_name = contact.last_name.trim();
+  const email = contact.email.trim().toLowerCase();
+  const phone = contact.phone?.trim() || null;
+  const role = contact.role?.trim() || null;
+
+  if (!first_name || !last_name || !email) {
+    return { error: 'First name, last name, and email are required.' as const };
+  }
+
+  return { data: { first_name, last_name, email, phone, role } };
+}
+
 export async function addContactAction(clientId: string, contact: { first_name: string; last_name: string; email: string; phone?: string; role?: string }) {
   const session = await requireAdmin();
   if (!session) return { success: false, error: 'Unauthorized.' };
 
+  const normalized = normalizeContactPayload(contact);
+  if ('error' in normalized) return { success: false, error: normalized.error };
+
   const adminSupabase = createAdminClient();
   try {
-    const { error } = await adminSupabase.from('client_contacts').insert({ client_id: clientId, ...contact });
+    const row = {
+      id: randomUUID(),
+      client_id: clientId,
+      first_name: normalized.data.first_name,
+      last_name: normalized.data.last_name,
+      email: normalized.data.email,
+      phone: normalized.data.phone,
+      role: normalized.data.role,
+    };
+
+    const { data, error } = await adminSupabase.from('client_contacts').insert(row).select('*').single();
     if (error) throw error;
+    if (!data) throw new Error('Contact insert returned no row.');
+
+    // Confirm phone/role actually persisted (guards against silent column drops).
+    const saved = data as {
+      id: string;
+      first_name: string;
+      last_name: string;
+      email: string;
+      phone: string | null;
+      role: string | null;
+    };
+    if ((row.phone || null) !== (saved.phone || null) || (row.role || null) !== (saved.role || null)) {
+      throw new Error('Contact was created but phone/role did not persist. Please try again.');
+    }
+
+    await writeActivityLog(adminSupabase, {
+      client_id: clientId,
+      user_id: session.userId,
+      action: 'CONTACT_ADDED',
+      entity_type: 'client_contacts',
+      entity_id: saved.id,
+      description: [
+        `Secondary contact added: ${saved.first_name} ${saved.last_name}`,
+        `Email: ${saved.email}`,
+        saved.phone ? `Mobile: ${saved.phone}` : null,
+        saved.role ? `Role: ${saved.role}` : null,
+      ]
+        .filter(Boolean)
+        .join(' · '),
+      metadata: {
+        contact: {
+          first_name: saved.first_name,
+          last_name: saved.last_name,
+          email: saved.email,
+          phone: saved.phone,
+          role: saved.role,
+        },
+      },
+    });
+
     revalidatePath(`/admin/clients/${clientId}`);
-    return { success: true, message: 'Contact added.' };
+    revalidatePath(`/admin/clients/${clientId}/edit`);
+    revalidatePath('/admin/activity-logs');
+    return { success: true, message: 'Contact added.', contact: saved };
   } catch (err) {
+    console.error('[addContactAction]', err);
+    const message = err instanceof Error ? err.message : String(err);
+    return { success: false, error: message };
+  }
+}
+
+export async function updateContactAction(
+  contactId: string,
+  clientId: string,
+  contact: { first_name: string; last_name: string; email: string; phone?: string; role?: string }
+) {
+  const session = await requireAdmin();
+  if (!session) return { success: false, error: 'Unauthorized.' };
+
+  const normalized = normalizeContactPayload(contact);
+  if ('error' in normalized) return { success: false, error: normalized.error };
+
+  const adminSupabase = createAdminClient();
+  try {
+    const { data: beforeRaw, error: beforeError } = await adminSupabase
+      .from('client_contacts')
+      .select('*')
+      .eq('id', contactId)
+      .single();
+    if (beforeError) throw beforeError;
+    if (!beforeRaw) return { success: false, error: 'Contact not found.' };
+
+    const before = beforeRaw as {
+      id: string;
+      client_id: string;
+      first_name: string;
+      last_name: string;
+      email: string;
+      phone: string | null;
+      role: string | null;
+    };
+    if (before.client_id !== clientId) {
+      return { success: false, error: 'Contact does not belong to this client.' };
+    }
+
+    const { error } = await adminSupabase
+      .from('client_contacts')
+      .update({
+        first_name: normalized.data.first_name,
+        last_name: normalized.data.last_name,
+        email: normalized.data.email,
+        phone: normalized.data.phone,
+        role: normalized.data.role,
+      })
+      .eq('id', contactId);
+    if (error) throw error;
+
+    const { data: saved, error: readError } = await adminSupabase
+      .from('client_contacts')
+      .select('*')
+      .eq('id', contactId)
+      .single();
+    if (readError) throw readError;
+    if (!saved) throw new Error('Contact not found after update.');
+
+    const row = saved as {
+      id: string;
+      client_id: string;
+      first_name: string;
+      last_name: string;
+      email: string;
+      phone: string | null;
+      role: string | null;
+    };
+    if (row.client_id !== clientId) {
+      throw new Error('Contact does not belong to this client.');
+    }
+    if ((normalized.data.phone || null) !== (row.phone || null) || (normalized.data.role || null) !== (row.role || null)) {
+      throw new Error('Contact was updated but phone/role did not persist. Please try again.');
+    }
+
+    const changes = buildActivityFieldChanges(
+      {
+        first_name: before.first_name,
+        last_name: before.last_name,
+        email: before.email,
+        phone: before.phone,
+        role: before.role,
+      },
+      {
+        first_name: row.first_name,
+        last_name: row.last_name,
+        email: row.email,
+        phone: row.phone,
+        role: row.role,
+      },
+      CONTACT_FIELD_LABELS
+    );
+
+    await writeActivityLog(adminSupabase, {
+      client_id: clientId,
+      user_id: session.userId,
+      action: 'CONTACT_UPDATED',
+      entity_type: 'client_contacts',
+      entity_id: contactId,
+      description: formatActivityFieldChangesDescription(
+        changes,
+        `Secondary contact updated: ${row.first_name} ${row.last_name}`
+      ),
+      metadata: { changes, contact_name: `${row.first_name} ${row.last_name}` },
+    });
+
+    revalidatePath(`/admin/clients/${clientId}`);
+    revalidatePath(`/admin/clients/${clientId}/edit`);
+    revalidatePath('/admin/activity-logs');
+    return { success: true, message: 'Contact updated.', contact: row };
+  } catch (err) {
+    console.error('[updateContactAction]', err);
     const message = err instanceof Error ? err.message : String(err);
     return { success: false, error: message };
   }
@@ -887,9 +1113,60 @@ export async function deleteContactAction(contactId: string, clientId: string) {
 
   const adminSupabase = createAdminClient();
   try {
+    const { data: existing, error: readError } = await adminSupabase
+      .from('client_contacts')
+      .select('*')
+      .eq('id', contactId)
+      .maybeSingle();
+    if (readError) throw readError;
+
+    const contact = existing as {
+      id: string;
+      client_id: string;
+      first_name: string;
+      last_name: string;
+      email: string;
+      phone: string | null;
+      role: string | null;
+    } | null;
+
+    if (contact && contact.client_id !== clientId) {
+      return { success: false, error: 'Contact does not belong to this client.' };
+    }
+
     const { error } = await adminSupabase.from('client_contacts').delete().eq('id', contactId);
     if (error) throw error;
+
+    if (contact) {
+      await writeActivityLog(adminSupabase, {
+        client_id: clientId,
+        user_id: session.userId,
+        action: 'CONTACT_DELETED',
+        entity_type: 'client_contacts',
+        entity_id: contactId,
+        description: [
+          `Secondary contact removed: ${contact.first_name} ${contact.last_name}`,
+          `Email: ${contact.email}`,
+          contact.phone ? `Mobile: ${contact.phone}` : null,
+          contact.role ? `Role: ${contact.role}` : null,
+        ]
+          .filter(Boolean)
+          .join(' · '),
+        metadata: {
+          contact: {
+            first_name: contact.first_name,
+            last_name: contact.last_name,
+            email: contact.email,
+            phone: contact.phone,
+            role: contact.role,
+          },
+        },
+      });
+    }
+
     revalidatePath(`/admin/clients/${clientId}`);
+    revalidatePath(`/admin/clients/${clientId}/edit`);
+    revalidatePath('/admin/activity-logs');
     return { success: true, message: 'Contact removed.' };
   } catch (err) {
     const message = err instanceof Error ? err.message : String(err);
@@ -915,7 +1192,21 @@ export async function addInternalNoteAction(clientId: string, note: string) {
       note: parsed.data.note,
     });
     if (error) throw error;
+
+    const preview =
+      parsed.data.note.length > 120 ? `${parsed.data.note.slice(0, 120)}…` : parsed.data.note;
+    await writeActivityLog(adminSupabase, {
+      client_id: clientId,
+      user_id: session.userId,
+      action: 'INTERNAL_NOTE_ADDED',
+      entity_type: 'internal_notes',
+      entity_id: clientId,
+      description: `Internal note added: ${preview}`,
+      metadata: { note_preview: preview },
+    });
+
     revalidatePath(`/admin/clients/${clientId}`);
+    revalidatePath('/admin/activity-logs');
     return { success: true, message: 'Note added.' };
   } catch (err) {
     const message = err instanceof Error ? err.message : String(err);
@@ -929,9 +1220,29 @@ export async function deleteInternalNoteAction(noteId: string, clientId: string)
 
   const adminSupabase = createAdminClient();
   try {
+    const { data: existing } = await adminSupabase
+      .from('internal_notes')
+      .select('id, note')
+      .eq('id', noteId)
+      .maybeSingle();
+
     const { error } = await adminSupabase.from('internal_notes').delete().eq('id', noteId);
     if (error) throw error;
+
+    const noteText = (existing as { note?: string } | null)?.note || '';
+    const preview = noteText.length > 120 ? `${noteText.slice(0, 120)}…` : noteText || '—';
+    await writeActivityLog(adminSupabase, {
+      client_id: clientId,
+      user_id: session.userId,
+      action: 'INTERNAL_NOTE_DELETED',
+      entity_type: 'internal_notes',
+      entity_id: noteId,
+      description: `Internal note deleted: ${preview}`,
+      metadata: { note_preview: preview },
+    });
+
     revalidatePath(`/admin/clients/${clientId}`);
+    revalidatePath('/admin/activity-logs');
     return { success: true, message: 'Note deleted.' };
   } catch (err) {
     const message = err instanceof Error ? err.message : String(err);

@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { createAdminClient } from '@/lib/db/admin';
 import { getSession } from '@/lib/auth/session';
 import { formatErrorMessage } from '@/lib/format-error';
+import { writeActivityLog } from '@/lib/activity-log';
 import { getUserGuideUrl, setUserGuideUrl } from '@/lib/user-manual-storage';
 
 export const runtime = 'nodejs';
@@ -58,7 +59,25 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const saved = await setUserGuideUrl(createAdminClient(), normalized);
+    const adminSupabase = createAdminClient();
+    const previous = await getUserGuideUrl(adminSupabase);
+    const saved = await setUserGuideUrl(adminSupabase, normalized);
+    const cleared = !saved;
+
+    await writeActivityLog(adminSupabase, {
+      user_id: session.userId,
+      action: 'USER_GUIDE_URL_UPDATED',
+      entity_type: 'user_guide',
+      description: cleared
+        ? 'User Guide URL cleared'
+        : `User Guide URL ${previous ? 'updated' : 'set'}: ${saved}`,
+      metadata: {
+        previous_url: previous || '',
+        new_url: saved || '',
+        cleared,
+      },
+    });
+
     return NextResponse.json({ success: true, url: saved ?? '' });
   } catch (err: unknown) {
     console.error('[user-guide-url POST]', err);

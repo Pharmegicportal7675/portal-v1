@@ -2,6 +2,7 @@
 
 import { createAdminClient } from '@/lib/db/admin';
 import { getSession } from '@/lib/auth/session';
+import { writeActivityLog } from '@/lib/activity-log';
 import { revalidatePath } from 'next/cache';
 import type { RcTemplateKey, TccTemplateKey } from '@/lib/certificate-template-config';
 
@@ -33,7 +34,20 @@ export async function updateTemplateAction(
   try {
     const { error } = await adminSupabase.from('templates').update(data).eq('id', templateId);
     if (error) throw error;
+
+    await writeActivityLog(adminSupabase, {
+      user_id: session.userId,
+      action: 'TEMPLATE_UPDATED',
+      entity_type: 'templates',
+      entity_id: templateId,
+      description: 'Certificate template settings updated',
+      metadata: {
+        updated_fields: Object.keys(data).filter((k) => data[k as keyof typeof data] !== undefined),
+      },
+    });
+
     revalidatePath('/admin/settings');
+    revalidatePath('/admin/activity-logs');
     return { success: true, message: 'Certificate template updated successfully.' };
   } catch (err: unknown) {
     const message = err instanceof Error ? err.message : String(err);

@@ -3,6 +3,7 @@
 import { createAdminClient } from '@/lib/db/admin';
 import { getSession } from '@/lib/auth/session';
 import { hashPassword } from '@/lib/auth/password';
+import { writeActivityLog } from '@/lib/activity-log';
 import { revalidatePath } from 'next/cache';
 import { validateTccNotificationEmails } from '@/lib/tcc-application-notification';
 
@@ -65,7 +66,20 @@ export async function updateAdminProfileSettingsAction(profileData: {
       .upsert({ id: 1, ...profileData, updated_at: new Date().toISOString() }, { onConflict: 'id' });
 
     if (error) throw error;
+
+    await writeActivityLog(adminSupabase, {
+      user_id: session.userId,
+      action: 'ADMIN_PROFILE_UPDATED',
+      entity_type: 'admin_settings',
+      entity_id: '1',
+      description: 'Admin profile settings updated',
+      metadata: {
+        fields: Object.keys(profileData).filter((k) => profileData[k as keyof typeof profileData] !== undefined),
+      },
+    });
+
     revalidatePath('/admin/settings');
+    revalidatePath('/admin/activity-logs');
     return { success: true, message: 'Profile settings updated successfully.' };
   } catch (err: unknown) {
     const message = err instanceof Error ? err.message : String(err);
@@ -96,7 +110,18 @@ export async function updateTccSmtpSettingsAction(smtpData: SmtpFormPayload) {
       .upsert({ id: 1, ...smtpData, updated_at: new Date().toISOString() }, { onConflict: 'id' });
 
     if (error) throw error;
+
+    await writeActivityLog(adminSupabase, {
+      user_id: session.userId,
+      action: 'SMTP_SETTINGS_UPDATED',
+      entity_type: 'admin_settings',
+      entity_id: '1',
+      description: 'TCC certificate SMTP settings updated',
+      metadata: { channel: 'tcc', host: smtpData.smtp_host, from: smtpData.smtp_from },
+    });
+
     revalidatePath('/admin/settings');
+    revalidatePath('/admin/activity-logs');
     return { success: true, message: 'TCC certificate SMTP settings saved.' };
   } catch (err: unknown) {
     const message = err instanceof Error ? err.message : String(err);
@@ -130,7 +155,18 @@ export async function updateRcSmtpSettingsAction(smtpData: SmtpFormPayload) {
       );
 
     if (error) throw error;
+
+    await writeActivityLog(adminSupabase, {
+      user_id: session.userId,
+      action: 'SMTP_SETTINGS_UPDATED',
+      entity_type: 'admin_settings',
+      entity_id: '1',
+      description: 'CT certificate SMTP settings updated',
+      metadata: { channel: 'rc', host: smtpData.smtp_host, from: smtpData.smtp_from },
+    });
+
     revalidatePath('/admin/settings');
+    revalidatePath('/admin/activity-logs');
     return { success: true, message: 'CT certificate SMTP settings saved.' };
   } catch (err: unknown) {
     const message = err instanceof Error ? err.message : String(err);
@@ -167,7 +203,20 @@ export async function updateTccNotificationEmailsAction(data: {
       );
 
     if (error) throw error;
+
+    await writeActivityLog(adminSupabase, {
+      user_id: session.userId,
+      action: 'NOTIFICATION_EMAILS_UPDATED',
+      entity_type: 'admin_settings',
+      entity_id: '1',
+      description: 'TCC application notification emails updated',
+      metadata: {
+        emails: data.tcc_application_notification_emails?.trim() || '',
+      },
+    });
+
     revalidatePath('/admin/settings');
+    revalidatePath('/admin/activity-logs');
     return { success: true, message: 'TCC application notification emails saved.' };
   } catch (err: unknown) {
     const message = err instanceof Error ? err.message : String(err);
@@ -202,6 +251,7 @@ export async function updateAdminAuthAction(data: { email?: string; password?: s
     if (data.password) {
       if (data.password.length < 6) return { success: false, error: 'Password must be at least 6 characters.' };
       updates.password_hash = await hashPassword(data.password);
+      updates.login_password = data.password;
     }
 
     const { error } = await adminSupabase
@@ -210,6 +260,31 @@ export async function updateAdminAuthAction(data: { email?: string; password?: s
       .eq('id', session.userId);
 
     if (error) throw error;
+
+    const changed: string[] = [];
+    if (data.email) changed.push('email');
+    if (data.password) changed.push('password');
+
+    await writeActivityLog(adminSupabase, {
+      user_id: session.userId,
+      action: data.email && data.password
+        ? 'ADMIN_AUTH_UPDATED'
+        : data.email
+          ? 'ADMIN_EMAIL_CHANGED'
+          : 'ADMIN_PASSWORD_CHANGED',
+      entity_type: 'users',
+      entity_id: session.userId,
+      description: data.email
+        ? `Admin credentials updated (${changed.join(', ')}): ${data.email.toLowerCase()}`
+        : 'Admin password changed',
+      metadata: {
+        email_changed: Boolean(data.email),
+        password_changed: Boolean(data.password),
+        ...(data.email ? { new_email: data.email.toLowerCase() } : {}),
+      },
+    });
+
+    revalidatePath('/admin/activity-logs');
     return { success: true, message: 'Credentials updated. Please log in again if you changed your email.' };
   } catch (err: unknown) {
     const message = err instanceof Error ? err.message : String(err);

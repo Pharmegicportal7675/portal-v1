@@ -7,6 +7,15 @@ import { formatErrorMessage } from '@/lib/format-error';
 import { findPortalEmailConflict, findPortalUuidConflict } from '@/lib/portal-email-check';
 import { clientWizardSchema, clientWizardEditSchema } from '@/lib/validations';
 import { revalidatePath } from 'next/cache';
+import { randomUUID } from 'crypto';
+import {
+  buildActivityFieldChanges,
+  CLIENT_PROFILE_FIELD_LABELS,
+  CONTACT_FIELD_LABELS,
+  formatActivityFieldChangesDescription,
+  writeActivityLog,
+} from '@/lib/activity-log';
+import { normalizeRegulatoryRegistrations } from '@/lib/regulatory-registrations';
 
 async function requireAdmin() {
   const session = await getSession();
@@ -139,28 +148,43 @@ export async function createClientAction(prevState: unknown, data: unknown) {
 
     if (contacts.length > 0) {
       const contactRows = contacts.map((c) => ({
+        id: randomUUID(),
         client_id: client.id,
-        first_name: c.first_name,
-        last_name: c.last_name,
-        email: c.email,
-        phone: c.phone || null,
-        role: c.role || null,
+        first_name: c.first_name.trim(),
+        last_name: c.last_name.trim(),
+        email: c.email.trim().toLowerCase(),
+        phone: optionalText(c.phone),
+        role: optionalText(c.role),
       }));
       const { error: contactError } = await adminSupabase.from('client_contacts').insert(contactRows);
       if (contactError) throw contactError;
     }
 
-    const { error: logError } = await adminSupabase.from('activity_logs').insert({
+    const contactSummary =
+      contacts.length > 0
+        ? ` · ${contacts.length} secondary contact${contacts.length === 1 ? '' : 's'} added`
+        : '';
+
+    await writeActivityLog(adminSupabase, {
       client_id: client.id,
       user_id: session.userId,
       action: 'CLIENT_CREATED',
       entity_type: 'clients',
       entity_id: client.id,
-      description: `Client ${client.company_name} created by admin`,
+      description: `Client ${client.company_name} created by admin${contactSummary}`,
+      metadata: {
+        contacts: contacts.map((c) => ({
+          first_name: c.first_name,
+          last_name: c.last_name,
+          email: c.email,
+          phone: c.phone || null,
+          role: c.role || null,
+        })),
+      },
     });
-    if (logError) throw logError;
 
     revalidatePath('/admin/clients');
+    revalidatePath('/admin/activity-logs');
     return {
       success: true,
       message: 'Client created and login credentials set successfully.',
@@ -186,11 +210,19 @@ export async function updateClientWizardAction(clientId: string, data: unknown) 
     const { profile, contacts } = parsed.data;
     const email = profile.email.toLowerCase();
 
-    const { data: loginUser } = await adminSupabase
-      .from('users')
-      .select('id, email')
-      .eq('client_id', clientId)
-      .maybeSingle();
+    const [{ data: beforeClient }, { data: beforeContactsRaw }, { data: loginUser }] = await Promise.all([
+      adminSupabase.from('clients').select('*').eq('id', clientId).single(),
+      adminSupabase
+        .from('client_contacts')
+        .select('first_name, last_name, email, phone, role')
+        .eq('client_id', clientId)
+        .order('created_at', { ascending: true }),
+      adminSupabase.from('users').select('id, email').eq('client_id', clientId).maybeSingle(),
+    ]);
+
+    if (!beforeClient) {
+      return { success: false, error: 'Client not found.' };
+    }
 
     const emailConflict = await findPortalEmailConflict(adminSupabase, email, {
       excludeClientId: clientId,
@@ -205,9 +237,10 @@ export async function updateClientWizardAction(clientId: string, data: unknown) 
       return { success: false, error: uuidConflict };
     }
 
+    const updatePayload = buildClientUpdateData(profile);
     const { error: updateError } = await adminSupabase
       .from('clients')
-      .update(buildClientUpdateData(profile))
+      .update(updatePayload)
       .eq('id', clientId);
     if (updateError) throw updateError;
 
@@ -219,38 +252,140 @@ export async function updateClientWizardAction(clientId: string, data: unknown) 
       if (userEmailError) throw userEmailError;
     }
 
+    const beforeContacts = (beforeContactsRaw || []) as Array<{
+      first_name: string;
+      last_name: string;
+      email: string;
+      phone: string | null;
+      role: string | null;
+    }>;
+
     const { error: deleteContactsError } = await adminSupabase
       .from('client_contacts')
       .delete()
       .eq('client_id', clientId);
     if (deleteContactsError) throw deleteContactsError;
 
-    if (contacts.length > 0) {
-      const contactRows = contacts.map((contact) => ({
+    const nextContacts = contacts.map((contact) => ({
+      first_name: contact.first_name.trim(),
+      last_name: contact.last_name.trim(),
+      email: contact.email.trim().toLowerCase(),
+      phone: optionalText(contact.phone),
+      role: optionalText(contact.role),
+    }));
+
+    if (nextContacts.length > 0) {
+      const contactRows = nextContacts.map((contact) => ({
+        id: randomUUID(),
         client_id: clientId,
-        first_name: contact.first_name,
-        last_name: contact.last_name,
-        email: contact.email,
-        phone: contact.phone || null,
-        role: contact.role || null,
+        ...contact,
       }));
       const { error: contactError } = await adminSupabase.from('client_contacts').insert(contactRows);
       if (contactError) throw contactError;
     }
 
-    const { error: logError } = await adminSupabase.from('activity_logs').insert({
+    const beforeProfile = beforeClient as Record<string, unknown>;
+    const profileChanges = buildActivityFieldChanges(
+      {
+        company_name: beforeProfile.company_name,
+        uuid_number: beforeProfile.uuid_number,
+        owner_name: beforeProfile.owner_name,
+        email: beforeProfile.email,
+        phone: beforeProfile.phone,
+        primary_contact_first_name: beforeProfile.primary_contact_first_name,
+        primary_contact_last_name: beforeProfile.primary_contact_last_name,
+        cc_emails: beforeProfile.cc_emails,
+        cc_phones: beforeProfile.cc_phones,
+        address: beforeProfile.address,
+        city: beforeProfile.city,
+        state: beforeProfile.state,
+        country: beforeProfile.country,
+        postal_code: beforeProfile.postal_code,
+        status: beforeProfile.status,
+        regulatory_registrations: normalizeRegulatoryRegistrations(
+          beforeProfile.regulatory_registrations
+        ),
+      },
+      {
+        company_name: updatePayload.company_name,
+        uuid_number: updatePayload.uuid_number,
+        owner_name: updatePayload.owner_name,
+        email: updatePayload.email,
+        phone: updatePayload.phone,
+        primary_contact_first_name: updatePayload.primary_contact_first_name,
+        primary_contact_last_name: updatePayload.primary_contact_last_name,
+        cc_emails: updatePayload.cc_emails,
+        cc_phones: updatePayload.cc_phones,
+        address: updatePayload.address,
+        city: updatePayload.city,
+        state: updatePayload.state,
+        country: updatePayload.country,
+        postal_code: updatePayload.postal_code,
+        status: updatePayload.status,
+        regulatory_registrations: updatePayload.regulatory_registrations,
+      },
+      CLIENT_PROFILE_FIELD_LABELS
+    );
+
+    const contactNotes: string[] = [];
+    const beforeByEmail = new Map(
+      beforeContacts.map((c) => [c.email.trim().toLowerCase(), c] as const)
+    );
+    const afterByEmail = new Map(nextContacts.map((c) => [c.email, c] as const));
+
+    for (const [emailKey, afterContact] of afterByEmail) {
+      const beforeContact = beforeByEmail.get(emailKey);
+      if (!beforeContact) {
+        contactNotes.push(
+          `Added secondary contact ${afterContact.first_name} ${afterContact.last_name} (${afterContact.email})`
+        );
+        continue;
+      }
+      const contactChanges = buildActivityFieldChanges(
+        beforeContact as unknown as Record<string, unknown>,
+        afterContact as unknown as Record<string, unknown>,
+        CONTACT_FIELD_LABELS
+      );
+      if (contactChanges.length > 0) {
+        contactNotes.push(
+          `Updated ${afterContact.first_name} ${afterContact.last_name}: ${formatActivityFieldChangesDescription(contactChanges, 'details changed')}`
+        );
+      }
+    }
+
+    for (const [emailKey, beforeContact] of beforeByEmail) {
+      if (!afterByEmail.has(emailKey)) {
+        contactNotes.push(
+          `Removed secondary contact ${beforeContact.first_name} ${beforeContact.last_name} (${beforeContact.email})`
+        );
+      }
+    }
+
+    const descriptionParts = [
+      ...profileChanges.map((c) => `${c.label}: ${c.from} → ${c.to}`),
+      ...contactNotes,
+    ];
+
+    await writeActivityLog(adminSupabase, {
       client_id: clientId,
       user_id: session.userId,
       action: 'CLIENT_UPDATED',
       entity_type: 'clients',
       entity_id: clientId,
-      description: 'Client profile and contacts updated by admin',
+      description:
+        descriptionParts.length > 0
+          ? descriptionParts.join('; ')
+          : 'Client profile and contacts updated by admin',
+      metadata: {
+        changes: profileChanges,
+        contact_notes: contactNotes,
+      },
     });
-    if (logError) throw logError;
 
     revalidatePath(`/admin/clients/${clientId}`);
     revalidatePath(`/admin/clients/${clientId}/edit`);
     revalidatePath('/admin/clients');
+    revalidatePath('/admin/activity-logs');
     return { success: true, message: 'Client profile updated successfully.' };
   } catch (err) {
     console.error('[CLIENT UPDATE ERROR]:', err);

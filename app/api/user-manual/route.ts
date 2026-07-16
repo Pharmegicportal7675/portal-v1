@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { createAdminClient } from '@/lib/db/admin';
 import { getSession } from '@/lib/auth/session';
 import { formatErrorMessage } from '@/lib/format-error';
+import { writeActivityLog } from '@/lib/activity-log';
 import {
   getUserManual,
   getUserManualManifest,
@@ -74,10 +75,24 @@ export async function POST(request: NextRequest) {
     }
 
     const buffer = Buffer.from(await file.arrayBuffer());
-    const manifest = await saveUserManual(createAdminClient(), {
+    const adminSupabase = createAdminClient();
+    const fileName = file.name || 'user-manual';
+    const manifest = await saveUserManual(adminSupabase, {
       buffer,
-      fileName: file.name || 'user-manual',
+      fileName,
       contentType: file.type || 'application/octet-stream',
+    });
+
+    await writeActivityLog(adminSupabase, {
+      user_id: session.userId,
+      action: 'USER_MANUAL_UPLOADED',
+      entity_type: 'user_manual',
+      description: `User manual uploaded: ${fileName}`,
+      metadata: {
+        file_name: fileName,
+        content_type: file.type || 'application/octet-stream',
+        size_bytes: file.size,
+      },
     });
 
     return NextResponse.json({ success: true, manual: manifest });
@@ -98,7 +113,22 @@ export async function DELETE() {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    await removeUserManual(createAdminClient());
+    const adminSupabase = createAdminClient();
+    const existing = await getUserManualManifest(adminSupabase);
+    await removeUserManual(adminSupabase);
+
+    await writeActivityLog(adminSupabase, {
+      user_id: session.userId,
+      action: 'USER_MANUAL_DELETED',
+      entity_type: 'user_manual',
+      description: existing?.fileName
+        ? `User manual removed: ${existing.fileName}`
+        : 'User manual removed',
+      metadata: existing
+        ? { file_name: existing.fileName, content_type: existing.contentType }
+        : {},
+    });
+
     return NextResponse.json({ success: true });
   } catch (err: unknown) {
     console.error('[user-manual DELETE]', err);

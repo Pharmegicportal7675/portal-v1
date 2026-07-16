@@ -4,6 +4,7 @@ import { revalidatePath } from 'next/cache';
 import { createAdminClient } from '@/lib/db/admin';
 import { getSession } from '@/lib/auth/session';
 import { formatErrorMessage } from '@/lib/format-error';
+import { writeActivityLog } from '@/lib/activity-log';
 import {
   CLIENT_IMPORT_DEFAULT_PASSWORD,
   parseSpreadsheetBuffer,
@@ -110,8 +111,25 @@ export async function importClientsDirectoryAction(input: {
         summary.createdSubstances > 0 ||
         summary.updatedSubstances > 0)
     ) {
+      await writeActivityLog(adminSupabase, {
+        user_id: session.userId,
+        action: 'CLIENTS_IMPORTED',
+        entity_type: 'clients',
+        description: `Excel import: ${summary.createdClients} created, ${summary.updatedClients} updated, ${summary.updatedContacts} contacts, ${summary.createdSubstances + summary.updatedSubstances} substances`,
+        metadata: {
+          filename: input.filename,
+          created_clients: summary.createdClients,
+          updated_clients: summary.updatedClients,
+          updated_contacts: summary.updatedContacts,
+          created_substances: summary.createdSubstances,
+          updated_substances: summary.updatedSubstances,
+          skipped_rows: parsed.skippedRows?.length ?? 0,
+        },
+      });
+
       revalidatePath('/admin/clients');
       revalidatePath('/admin/rc-certificates');
+      revalidatePath('/admin/activity-logs');
     }
 
     return {

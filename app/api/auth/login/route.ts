@@ -5,6 +5,9 @@ import { SESSION_COOKIE_OPTIONS } from '@/lib/auth/cookie-options';
 import { resolveLoginRedirect } from '@/lib/auth/resolve-login-redirect';
 import { getRequestOrigin } from '@/lib/http/get-request-origin';
 import { signSessionToken } from '@/lib/auth/sign-session';
+import { createAdminClient } from '@/lib/db/admin';
+import { writeActivityLog } from '@/lib/activity-log';
+import { prisma } from '@/lib/prisma';
 
 export const runtime = 'nodejs';
 
@@ -40,6 +43,36 @@ function loginFailureRedirect(request: NextRequest, redirectTo: string, message:
   return NextResponse.redirect(loginUrl, { status: 303 });
 }
 
+async function logLoginFailure(email: string, reason: string) {
+  try {
+    const normalized = email.trim().toLowerCase();
+    const user = normalized
+      ? await prisma.users.findFirst({
+          where: { email: normalized },
+          select: { id: true, client_id: true, email: true, role: true },
+        })
+      : null;
+
+    await writeActivityLog(createAdminClient(), {
+      client_id: user?.client_id ?? null,
+      user_id: user?.id ?? null,
+      action: 'USER_LOGIN_FAILED',
+      entity_type: 'users',
+      entity_id: user?.id ?? null,
+      description: user
+        ? `Failed login attempt for ${user.email} (${user.role.replace(/_/g, ' ')}) — ${reason}`
+        : `Failed login attempt for ${normalized || 'unknown email'} — ${reason}`,
+      metadata: {
+        email: normalized || null,
+        reason,
+        role: user?.role ?? null,
+      },
+    });
+  } catch (err) {
+    console.error('[auth] Failed to write login-failure activity log', err);
+  }
+}
+
 export async function POST(request: NextRequest) {
   let email = '';
   let password = '';
@@ -51,12 +84,31 @@ export async function POST(request: NextRequest) {
     password = body.password;
     redirectTo = body.redirectTo;
   } catch {
+    await logLoginFailure('', 'Invalid request body');
     return loginFailureRedirect(request, '', 'InvalidCredentials');
   }
 
   const auth = await authenticateUser(email, password);
   if (!auth.ok) {
+    await logLoginFailure(email, auth.error || 'Invalid credentials');
     return loginFailureRedirect(request, redirectTo, 'InvalidCredentials');
+  }
+
+  try {
+    await writeActivityLog(createAdminClient(), {
+      client_id: auth.session.clientId ?? null,
+      user_id: auth.session.userId,
+      action: 'USER_LOGIN',
+      entity_type: 'users',
+      entity_id: auth.session.userId,
+      description: `${auth.session.email} logged in (${auth.session.role.replace(/_/g, ' ')})`,
+      metadata: {
+        email: auth.session.email,
+        role: auth.session.role,
+      },
+    });
+  } catch (err) {
+    console.error('[auth] Failed to write login activity log', err);
   }
 
   const target = resolveLoginRedirect(auth.session.role, redirectTo);

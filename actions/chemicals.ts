@@ -4,6 +4,7 @@ import { createAdminClient } from '@/lib/db/admin';
 import { getSession } from '@/lib/auth/session';
 import { chemicalSchema } from '@/lib/validations';
 import { normalizeDateInput } from '@/lib/parse-flexible-date';
+import { writeActivityLog } from '@/lib/activity-log';
 import { revalidatePath } from 'next/cache';
 
 async function requireAdmin() {
@@ -24,6 +25,7 @@ export async function createChemicalAction(prevState: unknown, formData: FormDat
     validity_date: formData.get('validity_date') as string,
     available_quantity: formData.get('available_quantity') as string,
     status: (formData.get('status') as string) || 'active',
+    is_intermediate_substance: formData.get('is_intermediate_substance') === 'true',
   };
 
   const parsed = chemicalSchema.safeParse(data);
@@ -34,13 +36,32 @@ export async function createChemicalAction(prevState: unknown, formData: FormDat
 
   const adminSupabase = createAdminClient();
   try {
-    const { error } = await adminSupabase.from('chemicals').insert({
-      ...parsed.data,
-      validity_date: validity.iso,
-      exported_quantity: 0,
-    });
+    const { data: created, error } = await adminSupabase
+      .from('chemicals')
+      .insert({
+        ...parsed.data,
+        validity_date: validity.iso,
+        exported_quantity: 0,
+      })
+      .select('id, chemical_name, cas_number')
+      .single();
     if (error) throw error;
+
+    await writeActivityLog(adminSupabase, {
+      user_id: session.userId,
+      action: 'GLOBAL_CHEMICAL_CREATED',
+      entity_type: 'chemicals',
+      entity_id: (created as { id?: string } | null)?.id ?? null,
+      description: `Global substance created: ${parsed.data.chemical_name} (CAS ${parsed.data.cas_number})`,
+      metadata: {
+        chemical_name: parsed.data.chemical_name,
+        cas_number: parsed.data.cas_number,
+        tonnage_band: parsed.data.tonnage_band,
+      },
+    });
+
     revalidatePath('/admin/chemicals');
+    revalidatePath('/admin/activity-logs');
     return { success: true, message: 'Substance added successfully.' };
   } catch (err: unknown) {
     const e = err as { code?: string; message?: string };
@@ -67,9 +88,35 @@ export async function updateChemicalAction(id: string, data: unknown) {
 
   const adminSupabase = createAdminClient();
   try {
+    const { data: before } = await adminSupabase
+      .from('chemicals')
+      .select('chemical_name, cas_number')
+      .eq('id', id)
+      .maybeSingle();
+
     const { error } = await adminSupabase.from('chemicals').update(updateData).eq('id', id);
     if (error) throw error;
+
+    const name =
+      (updateData.chemical_name as string | undefined) ||
+      (before as { chemical_name?: string } | null)?.chemical_name ||
+      id;
+    const cas =
+      (updateData.cas_number as string | undefined) ||
+      (before as { cas_number?: string } | null)?.cas_number ||
+      '';
+
+    await writeActivityLog(adminSupabase, {
+      user_id: session.userId,
+      action: 'GLOBAL_CHEMICAL_UPDATED',
+      entity_type: 'chemicals',
+      entity_id: id,
+      description: `Global substance updated: ${name}${cas ? ` (CAS ${cas})` : ''}`,
+      metadata: { chemical_name: name, cas_number: cas, updated_fields: Object.keys(updateData) },
+    });
+
     revalidatePath('/admin/chemicals');
+    revalidatePath('/admin/activity-logs');
     return { success: true, message: 'Substance updated successfully.' };
   } catch (err: unknown) {
     const message = err instanceof Error ? err.message : String(err);
@@ -83,6 +130,12 @@ export async function trashChemicalAction(id: string) {
 
   const adminSupabase = createAdminClient();
   try {
+    const { data: before } = await adminSupabase
+      .from('chemicals')
+      .select('chemical_name, cas_number')
+      .eq('id', id)
+      .maybeSingle();
+
     const { error } = await adminSupabase
       .from('chemicals')
       .update({ status: 'trashed' })
@@ -98,7 +151,19 @@ export async function trashChemicalAction(id: string) {
       }
       throw error;
     }
+
+    const chem = before as { chemical_name?: string; cas_number?: string } | null;
+    await writeActivityLog(adminSupabase, {
+      user_id: session.userId,
+      action: 'GLOBAL_CHEMICAL_TRASHED',
+      entity_type: 'chemicals',
+      entity_id: id,
+      description: `Global substance moved to trash: ${chem?.chemical_name || id}${chem?.cas_number ? ` (CAS ${chem.cas_number})` : ''}`,
+      metadata: { chemical_name: chem?.chemical_name, cas_number: chem?.cas_number },
+    });
+
     revalidatePath('/admin/chemicals');
+    revalidatePath('/admin/activity-logs');
     return { success: true, message: 'Substance moved to trash.' };
   } catch (err: unknown) {
     const e = err as { code?: string; message?: string };
@@ -120,6 +185,12 @@ export async function restoreChemicalAction(id: string) {
 
   const adminSupabase = createAdminClient();
   try {
+    const { data: before } = await adminSupabase
+      .from('chemicals')
+      .select('chemical_name, cas_number')
+      .eq('id', id)
+      .maybeSingle();
+
     const { error } = await adminSupabase
       .from('chemicals')
       .update({ status: 'active' })
@@ -127,7 +198,19 @@ export async function restoreChemicalAction(id: string) {
       .eq('status', 'trashed');
 
     if (error) throw error;
+
+    const chem = before as { chemical_name?: string; cas_number?: string } | null;
+    await writeActivityLog(adminSupabase, {
+      user_id: session.userId,
+      action: 'GLOBAL_CHEMICAL_RESTORED',
+      entity_type: 'chemicals',
+      entity_id: id,
+      description: `Global substance restored: ${chem?.chemical_name || id}${chem?.cas_number ? ` (CAS ${chem.cas_number})` : ''}`,
+      metadata: { chemical_name: chem?.chemical_name, cas_number: chem?.cas_number },
+    });
+
     revalidatePath('/admin/chemicals');
+    revalidatePath('/admin/activity-logs');
     return { success: true, message: 'Substance restored from trash.' };
   } catch (err: unknown) {
     const message = err instanceof Error ? err.message : String(err);
@@ -141,10 +224,28 @@ export async function permanentDeleteChemicalAction(id: string) {
 
   const adminSupabase = createAdminClient();
   try {
+    const { data: before } = await adminSupabase
+      .from('chemicals')
+      .select('chemical_name, cas_number')
+      .eq('id', id)
+      .maybeSingle();
+
     const { error } = await adminSupabase.from('chemicals').delete().eq('id', id);
     if (error) throw error;
+
+    const chem = before as { chemical_name?: string; cas_number?: string } | null;
+    await writeActivityLog(adminSupabase, {
+      user_id: session.userId,
+      action: 'GLOBAL_CHEMICAL_PERMANENTLY_DELETED',
+      entity_type: 'chemicals',
+      entity_id: id,
+      description: `Global substance permanently deleted: ${chem?.chemical_name || id}${chem?.cas_number ? ` (CAS ${chem.cas_number})` : ''}`,
+      metadata: { chemical_name: chem?.chemical_name, cas_number: chem?.cas_number },
+    });
+
     revalidatePath('/admin/chemicals');
     revalidatePath('/admin/clients');
+    revalidatePath('/admin/activity-logs');
     return { success: true, message: 'Substance permanently deleted.' };
   } catch (err: unknown) {
     const message = err instanceof Error ? err.message : String(err);

@@ -56,3 +56,22 @@ export function formatDisplayDateTime(dateStr: string | null | undefined): strin
     return '—';
   }
 }
+
+/** Activity Log "When" — date + time in India Standard Time. */
+export function formatActivityLogDateTime(dateStr: string | null | undefined): string {
+  if (!dateStr) return '—';
+  try {
+    return new Date(dateStr).toLocaleString('en-GB', {
+      day: '2-digit',
+      month: 'short',
+      year: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit',
+      second: '2-digit',
+      hour12: true,
+      timeZone: 'Asia/Kolkata',
+    });
+  } catch {
+    return '—';
+  }
+}

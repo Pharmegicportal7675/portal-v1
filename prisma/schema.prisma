@@ -18,6 +18,8 @@ model activity_logs {
   entity_id   String?  @db.VarChar(255)
   description String?  @db.Text
   metadata    String?  @db.LongText
+  ip_address  String?  @db.VarChar(45)
+  location    String?  @db.VarChar(255)
   created_at  DateTime @default(now()) @db.DateTime(0)
   clients     clients? @relation(fields: [client_id], references: [id], onDelete: Cascade, onUpdate: Restrict, map: "fk_activity_client")
   users       users?   @relation(fields: [user_id], references: [id], onUpdate: Restrict, map: "fk_activity_user")

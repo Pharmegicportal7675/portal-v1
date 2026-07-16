@@ -510,6 +510,7 @@ class QueryBuilder {
         const rows = (Array.isArray(this.payload) ? this.payload : [this.payload]).map((row) =>
           prepareRowForWrite(row as Record<string, unknown>)
         );
+
         if (rows.length === 1) {
           const created = await delegate.create({ data: rows[0] });
           const data = serializeRow(created as Record<string, unknown>);

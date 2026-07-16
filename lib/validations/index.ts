@@ -26,6 +26,7 @@ export const chemicalSchema = z.object({
   validity_date: z.string().min(1, { message: 'Validity date is required' }),
   available_quantity: z.coerce.number().min(0, { message: 'Quantity must be non-negative' }),
   status: z.enum(['active', 'inactive']).default('active'),
+  is_intermediate_substance: z.boolean().optional().default(false),
 });
 
 // ============================================================================

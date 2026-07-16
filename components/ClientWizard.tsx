@@ -169,13 +169,46 @@ export default function ClientWizard({
     }
 
     setContactError(null);
-    setContacts([...contacts, tempContact]);
+    setContacts([...contacts, { ...tempContact }]);
     setTempContact({ first_name: '', last_name: '', email: '', phone: '', role: '' });
     toast.success('Secondary contact added to list.');
   };
 
   const removeContact = (index: number) => {
     setContacts(contacts.filter((_, i) => i !== index));
+  };
+
+  /** If the user filled contact fields but forgot to click "Add Contact", include them on submit. */
+  const flushPendingContact = (): ClientWizardContact[] | null => {
+    const hasPending =
+      Boolean(tempContact.first_name.trim()) ||
+      Boolean(tempContact.last_name.trim()) ||
+      Boolean(tempContact.email.trim()) ||
+      Boolean(tempContact.phone.trim()) ||
+      Boolean(tempContact.role.trim());
+
+    if (!hasPending) return contacts;
+
+    if (!tempContact.first_name.trim() || !tempContact.last_name.trim() || !tempContact.email.trim()) {
+      setContactError('Finish the secondary contact (first name, last name, email) or clear those fields before saving.');
+      return null;
+    }
+
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(tempContact.email)) {
+      setContactError('Invalid contact email format.');
+      return null;
+    }
+
+    if (tempContact.phone && getMobileNumberError(tempContact.phone)) {
+      setContactError('Enter a valid mobile number (e.g. +91 123 456 7890).');
+      return null;
+    }
+
+    setContactError(null);
+    const next = [...contacts, { ...tempContact }];
+    setContacts(next);
+    setTempContact({ first_name: '', last_name: '', email: '', phone: '', role: '' });
+    return next;
   };
 
   const handleSubmit = async () => {
@@ -190,9 +223,15 @@ export default function ClientWizard({
       return;
     }
 
+    const contactsToSave = flushPendingContact();
+    if (contactsToSave === null) {
+      setError('Secondary contact details are incomplete. Add the contact or clear the fields.');
+      return;
+    }
+
     const payload = {
       profile: { ...profile, regulatory_registrations: regulatoryRegistrations },
-      contacts,
+      contacts: contactsToSave,
     };
 
     startTransition(async () => {
@@ -351,7 +390,22 @@ export default function ClientWizard({
               </div>
             </div>
           )}
+          <Input
+            label="CC Emails"
+            placeholder="cc1@company.com, cc2@company.com"
+            value={profile.cc_emails}
+            onChange={(e) => setProfile({ ...profile, cc_emails: e.target.value })}
+          />
+          <Input
+            label="CC Phones"
+            placeholder="+91 123 456 7890, +91 987 654 3210"
+            value={profile.cc_phones}
+            onChange={(e) => setProfile({ ...profile, cc_phones: e.target.value })}
+          />
         </div>
+        <p className="mt-3 text-xs text-slate-400">
+          CC emails/phones are copied on certificate emails sent to this client.
+        </p>
       </section>
 
       <section className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm">

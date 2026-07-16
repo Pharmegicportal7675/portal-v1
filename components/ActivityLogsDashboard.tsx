@@ -6,10 +6,11 @@ import { Card } from '@/components/ui/Card';
 import { TableColumnFilter } from '@/components/ui/TableColumnFilter';
 import { TableDateRangeFilter, type DateRangeValue } from '@/components/ui/TableDateRangeFilter';
 import { ResponsiveTableScroll } from '@/components/ui/ResponsiveTableScroll';
-import { formatDisplayDate, matchesDateRange } from '@/lib/date-filter';
+import { formatActivityLogDateTime, matchesDateRange } from '@/lib/date-filter';
 import { formatActivityLogAction, formatActivityLogRole } from '@/lib/activity-log-labels';
+import { parseActivityFieldChanges } from '@/lib/activity-log-fields';
 import type { ActivityLogRecord } from '@/services/activity-logs';
-import { History } from 'lucide-react';
+import { History, MapPin } from 'lucide-react';
 
 interface ActivityLogsDashboardProps {
   initialLogs: ActivityLogRecord[];
@@ -33,11 +34,21 @@ function resolveClientLabel(log: ActivityLogRecord): string {
   return log.clients?.company_name?.trim() || '—';
 }
 
+function resolvePlaceLabel(log: ActivityLogRecord): string {
+  const place = log.location?.trim();
+  const ip = log.ip_address?.trim();
+  if (place && ip) return `${place} · ${ip}`;
+  if (place) return place;
+  if (ip) return ip;
+  return '—';
+}
+
 export default function ActivityLogsDashboard({ initialLogs }: ActivityLogsDashboardProps) {
   const [columnFilters, setColumnFilters] = useState({
     action: 'all',
     user: '',
     client: '',
+    place: '',
     details: '',
     date: { ...EMPTY_DATE_RANGE },
   });
@@ -58,6 +69,7 @@ export default function ActivityLogsDashboard({ initialLogs }: ActivityLogsDashb
       const userLabel = resolveUserLabel(log);
       const roleLabel = formatActivityLogRole(log.users?.role);
       const clientLabel = resolveClientLabel(log);
+      const placeLabel = resolvePlaceLabel(log);
       const details = [log.description, log.entity_type, log.entity_id].filter(Boolean).join(' ');
 
       if (columnFilters.action !== 'all' && columnFilters.action && log.action !== columnFilters.action) {
@@ -65,6 +77,7 @@ export default function ActivityLogsDashboard({ initialLogs }: ActivityLogsDashb
       }
       if (!matchesText(`${userLabel} ${roleLabel}`, columnFilters.user)) return false;
       if (!matchesText(clientLabel, columnFilters.client)) return false;
+      if (!matchesText(placeLabel, columnFilters.place)) return false;
       if (!matchesText(details, columnFilters.details)) return false;
       if (!matchesDateRange(log.created_at, columnFilters.date.from, columnFilters.date.to)) return false;
       return true;
@@ -79,7 +92,7 @@ export default function ActivityLogsDashboard({ initialLogs }: ActivityLogsDashb
           Activity Log
         </h1>
         <p className="text-sm text-slate-500 font-medium mt-1">
-          Full audit trail of actions across the portal — who did what and when.
+          Full audit trail — who did what, when, and from where (approximate location from IP).
         </p>
       </div>
 
@@ -91,7 +104,7 @@ export default function ActivityLogsDashboard({ initialLogs }: ActivityLogsDashb
           <table className="w-full text-sm text-left">
             <thead className="bg-slate-50/50 text-slate-500 font-bold text-[11px] uppercase tracking-wider border-b border-slate-200">
               <tr>
-                <th className="px-4 py-3 min-w-[140px]">
+                <th className="px-4 py-3 min-w-[160px]">
                   <span className="block mb-1.5">When</span>
                   <TableDateRangeFilter
                     value={columnFilters.date}
@@ -124,6 +137,14 @@ export default function ActivityLogsDashboard({ initialLogs }: ActivityLogsDashb
                     placeholder="Filter client..."
                   />
                 </th>
+                <th className="px-4 py-3 min-w-[180px]">
+                  <span className="block mb-1.5">Place</span>
+                  <TableColumnFilter
+                    value={columnFilters.place}
+                    onChange={(place) => setColumnFilters((prev) => ({ ...prev, place }))}
+                    placeholder="Filter place / IP..."
+                  />
+                </th>
                 <th className="px-4 py-3 min-w-[240px]">
                   <span className="block mb-1.5">Details</span>
                   <TableColumnFilter
@@ -137,7 +158,7 @@ export default function ActivityLogsDashboard({ initialLogs }: ActivityLogsDashb
             <tbody className="divide-y divide-slate-100">
               {filteredLogs.length === 0 ? (
                 <tr>
-                  <td colSpan={5} className="px-4 py-10 text-center text-sm text-slate-400 font-medium">
+                  <td colSpan={6} className="px-4 py-10 text-center text-sm text-slate-400 font-medium">
                     No activity matches your filters.
                   </td>
                 </tr>
@@ -145,7 +166,10 @@ export default function ActivityLogsDashboard({ initialLogs }: ActivityLogsDashb
                 filteredLogs.map((log) => (
                   <tr key={log.id} className="hover:bg-slate-50/60 transition-colors">
                     <td className="px-4 py-3 text-xs text-slate-500 whitespace-nowrap" suppressHydrationWarning>
-                      {formatDisplayDate(log.created_at)}
+                      <span className="font-medium text-slate-700">
+                        {formatActivityLogDateTime(log.created_at)}
+                      </span>
+                      <span className="block text-[10px] text-slate-400 mt-0.5">IST</span>
                     </td>
                     <td className="px-4 py-3">
                       <p className="font-semibold text-slate-800 text-xs">
@@ -174,7 +198,60 @@ export default function ActivityLogsDashboard({ initialLogs }: ActivityLogsDashb
                       )}
                     </td>
                     <td className="px-4 py-3 text-xs text-slate-600">
-                      {log.description?.trim() || '—'}
+                      {log.location || log.ip_address ? (
+                        <div className="flex items-start gap-1.5">
+                          <MapPin className="h-3.5 w-3.5 text-slate-400 shrink-0 mt-0.5" />
+                          <div>
+                            {log.location?.trim() ? (
+                              <p className="font-medium text-slate-700">{log.location.trim()}</p>
+                            ) : null}
+                            {log.ip_address?.trim() ? (
+                              <p className="text-[10px] text-slate-400 font-mono mt-0.5">
+                                {log.ip_address.trim()}
+                              </p>
+                            ) : null}
+                          </div>
+                        </div>
+                      ) : (
+                        <span className="text-slate-400">—</span>
+                      )}
+                    </td>
+                    <td className="px-4 py-3 text-xs text-slate-600">
+                      {(() => {
+                        const changes = parseActivityFieldChanges(log.metadata);
+                        const notes =
+                          log.metadata &&
+                          typeof log.metadata === 'object' &&
+                          Array.isArray((log.metadata as { contact_notes?: unknown }).contact_notes)
+                            ? ((log.metadata as { contact_notes: string[] }).contact_notes || [])
+                            : [];
+                        return (
+                          <div className="space-y-1">
+                            <p className="font-medium text-slate-700 whitespace-pre-wrap">
+                              {log.description?.trim() || '—'}
+                            </p>
+                            {changes.length > 0 && (
+                              <ul className="mt-1 space-y-0.5 text-[11px] text-slate-500">
+                                {changes.map((change, index) => (
+                                  <li key={`${log.id}-change-${index}`}>
+                                    <span className="font-semibold text-slate-600">{change.label}:</span>{' '}
+                                    <span className="text-slate-400">{change.from}</span>
+                                    <span className="mx-1 text-slate-300">→</span>
+                                    <span className="text-slate-700">{change.to}</span>
+                                  </li>
+                                ))}
+                              </ul>
+                            )}
+                            {notes.length > 0 && (
+                              <ul className="mt-1 space-y-0.5 text-[11px] text-slate-500">
+                                {notes.map((note, index) => (
+                                  <li key={`${log.id}-note-${index}`}>{note}</li>
+                                ))}
+                              </ul>
+                            )}
+                          </div>
+                        );
+                      })()}
                     </td>
                   </tr>
                 ))

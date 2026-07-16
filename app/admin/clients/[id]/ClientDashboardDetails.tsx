@@ -12,6 +12,7 @@ import {
   permanentDeleteClientChemicalAction,
   editClientChemicalAction,
   addContactAction, 
+  updateContactAction,
   deleteContactAction, 
   addInternalNoteAction, 
   deleteInternalNoteAction,
@@ -28,6 +29,9 @@ import { Dialog } from '@/components/ui/Dialog';
 import { ModalErrorBox } from '@/components/ui/ModalErrorBox';
 import { FormLabel } from '@/components/ui/FormLabel';
 import { formatErrorMessage } from '@/lib/format-error';
+import { formatMobileNumberInput } from '@/lib/mobile-number';
+import { formatActivityLogAction } from '@/lib/activity-log-labels';
+import { parseActivityFieldChanges } from '@/lib/activity-log-fields';
 import { resolveQuotaConsumption, sumApprovedExports, sumApprovedExportsInReachWindow, getRemainingQuota, getTonnageBandMaxQuota, getReachCertAllocatedQuota, resolveDisplayedTonnageBand } from '@/lib/quota';
 import { computeTccApplicationRcQuota } from '@/lib/tcc-application-quota';
 import {
@@ -77,7 +81,7 @@ import {
 import { CertificatePdfDownloadLink } from '@/components/CertificatePdfDownloadLink';
 import { TableDataExport } from '@/components/TableDataExport';
 import { ResponsiveTableScroll } from '@/components/ui/ResponsiveTableScroll';
-import { formatDisplayDate } from '@/lib/date-filter';
+import { formatActivityLogDateTime, formatDisplayDate } from '@/lib/date-filter';
 import { buildTccExportColumns } from '@/lib/tcc-export-columns';
 import type { CsvColumn } from '@/lib/export-csv';
 import { processTccAction } from '@/actions/tcc';
@@ -299,9 +303,45 @@ export default function ClientDashboardDetails({
   });
 
   const [isContactModalOpen, setContactModalOpen] = useState(false);
+  const [editingContactId, setEditingContactId] = useState<string | null>(null);
   const [contactData, setContactData] = useState({
     first_name: '', last_name: '', email: '', phone: '', role: ''
   });
+  const emptyContactData = { first_name: '', last_name: '', email: '', phone: '', role: '' };
+
+  const openAddContactModal = () => {
+    setEditingContactId(null);
+    setContactData(emptyContactData);
+    setModalError('contact', null);
+    setContactModalOpen(true);
+  };
+
+  const openEditContactModal = (contact: {
+    id: string;
+    first_name?: string | null;
+    last_name?: string | null;
+    email?: string | null;
+    phone?: string | null;
+    role?: string | null;
+  }) => {
+    setEditingContactId(contact.id);
+    setContactData({
+      first_name: contact.first_name || '',
+      last_name: contact.last_name || '',
+      email: contact.email || '',
+      phone: contact.phone || '',
+      role: contact.role || '',
+    });
+    setModalError('contact', null);
+    setContactModalOpen(true);
+  };
+
+  const closeContactModal = () => {
+    setContactModalOpen(false);
+    setEditingContactId(null);
+    setContactData(emptyContactData);
+    setModalError('contact', null);
+  };
   const [isNoteModalOpen, setNoteModalOpen] = useState(false);
   const [noteContent, setNoteContent] = useState('');
   const [isDeleteClientOpen, setDeleteClientOpen] = useState(false);
@@ -1264,20 +1304,22 @@ export default function ClientDashboardDetails({
       }
     });
   };
-  const handleAddContact = () => {
+  const handleSaveContact = () => {
     if (!contactData.first_name.trim() || !contactData.last_name.trim() || !contactData.email.trim()) {
       setModalError('contact', 'First name, last name, and email are required.');
       return;
     }
     setModalError('contact', null);
     startTransition(async () => {
-      const res = await addContactAction(client.id, contactData);
+      const res = editingContactId
+        ? await updateContactAction(editingContactId, client.id, contactData)
+        : await addContactAction(client.id, contactData);
       if (res.success) {
-        toast.success('Contact added.');
-        setContactModalOpen(false);
+        toast.success(editingContactId ? 'Contact updated.' : 'Contact added.');
+        closeContactModal();
         router.refresh();
       } else {
-        setModalError('contact', toErrorMessage(res.error, 'Failed to add contact.'));
+        setModalError('contact', toErrorMessage(res.error, editingContactId ? 'Failed to update contact.' : 'Failed to add contact.'));
       }
     });
   };
@@ -2318,18 +2360,52 @@ export default function ClientDashboardDetails({
             <Card className="border-slate-100 shadow-xs lg:col-span-2">
               <CardHeader className="pb-3 border-b border-slate-100 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
                 <CardTitle className="text-base text-slate-800">Secondary Contacts</CardTitle>
-                <Button size="sm" onClick={() => { setModalError('contact', null); setContactModalOpen(true); }}><Plus className="h-4 w-4 mr-1.5" /> Add Contact</Button>
+                <Button size="sm" onClick={openAddContactModal}><Plus className="h-4 w-4 mr-1.5" /> Add Contact</Button>
               </CardHeader>
               <CardContent className="p-0">
                 <div className="max-h-[250px] overflow-x-auto overflow-y-auto">
-                  <table className="w-full text-xs sm:text-sm min-w-[520px]">
+                  <table className="w-full text-xs sm:text-sm min-w-[620px]">
                     <tbody className="divide-y divide-slate-100">
                       {contacts.map(c => (
                         <tr key={c.id}>
-                          <td className="p-4 font-semibold text-slate-800">{c.first_name} {c.last_name}</td>
+                          <td className="p-4">
+                            <div className="font-semibold text-slate-800">{c.first_name} {c.last_name}</div>
+                            {c.role?.trim() ? (
+                              <div className="mt-0.5 text-[11px] font-medium text-slate-400">{c.role}</div>
+                            ) : null}
+                          </td>
                           <td className="p-4 text-slate-500">{c.email}</td>
+                          <td className="p-4 text-slate-500">
+                            {c.phone?.trim() ? (
+                              <span className="inline-flex items-center gap-1.5">
+                                <Phone className="h-3.5 w-3.5 shrink-0 text-slate-400" />
+                                {c.phone}
+                              </span>
+                            ) : (
+                              <span className="text-slate-300">—</span>
+                            )}
+                          </td>
                           <td className="p-4 text-right">
-                            <Button variant="ghost" size="sm" className="text-rose-500" onClick={() => handleDeleteContact(c.id)}><Trash2 className="h-4 w-4" /></Button>
+                            <div className="inline-flex items-center gap-1">
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                className="text-slate-500"
+                                title="Edit contact"
+                                onClick={() => openEditContactModal(c)}
+                              >
+                                <PenLine className="h-4 w-4" />
+                              </Button>
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                className="text-rose-500"
+                                title="Delete contact"
+                                onClick={() => handleDeleteContact(c.id)}
+                              >
+                                <Trash2 className="h-4 w-4" />
+                              </Button>
+                            </div>
                           </td>
                         </tr>
                       ))}
@@ -2368,16 +2444,40 @@ export default function ClientDashboardDetails({
               </CardHeader>
               <CardContent className="pt-4 max-h-[300px] overflow-y-auto">
                 <div className="space-y-4">
-                  {activityLogs.map((log) => (
-                    <div key={log.id} className="flex gap-3">
-                      <div className="mt-1 h-2 w-2 rounded-full bg-teal-500 shrink-0"></div>
-                      <div>
-                        <p className="text-sm font-semibold text-slate-800">{log.action}</p>
-                        <p className="text-xs text-slate-500">{log.description}</p>
-                        <p className="text-[10px] text-slate-400 mt-0.5" suppressHydrationWarning>{new Date(log.created_at).toLocaleString()}</p>
+                  {activityLogs.map((log) => {
+                    const changes = parseActivityFieldChanges(log.metadata);
+                    return (
+                      <div key={log.id} className="flex gap-3">
+                        <div className="mt-1 h-2 w-2 rounded-full bg-teal-500 shrink-0"></div>
+                        <div className="min-w-0">
+                          <p className="text-sm font-semibold text-slate-800">
+                            {formatActivityLogAction(log.action)}
+                          </p>
+                          <p className="text-xs text-slate-500 whitespace-pre-wrap">{log.description}</p>
+                          {changes.length > 0 && (
+                            <ul className="mt-1 space-y-0.5 text-[11px] text-slate-500">
+                              {changes.map((change: { label: string; from: string; to: string }, index: number) => (
+                                <li key={`${log.id}-c-${index}`}>
+                                  <span className="font-semibold text-slate-600">{change.label}:</span>{' '}
+                                  {change.from} → {change.to}
+                                </li>
+                              ))}
+                            </ul>
+                          )}
+                          <p className="text-[10px] text-slate-400 mt-0.5" suppressHydrationWarning>
+                            {formatActivityLogDateTime(log.created_at)} IST
+                            {(log.location || log.ip_address) && (
+                              <>
+                                {' · '}
+                                {log.location || log.ip_address}
+                                {log.location && log.ip_address ? ` (${log.ip_address})` : ''}
+                              </>
+                            )}
+                          </p>
+                        </div>
                       </div>
-                    </div>
-                  ))}
+                    );
+                  })}
                   {activityLogs.length === 0 && <div className="text-sm text-slate-400 text-center py-4">No activity.</div>}
                 </div>
               </CardContent>
@@ -2836,22 +2936,61 @@ export default function ClientDashboardDetails({
         </div>
       </Dialog>
 
-      {/* Add Contact Modal */}
-      <Dialog isOpen={isContactModalOpen} onClose={() => { setContactModalOpen(false); setModalError('contact', null); }} title="Add Secondary Contact">
+      {/* Add / Edit Contact Modal */}
+      <Dialog
+        isOpen={isContactModalOpen}
+        onClose={closeContactModal}
+        title={editingContactId ? 'Edit Secondary Contact' : 'Add Secondary Contact'}
+      >
         <div className="p-2 space-y-4">
           <div className="space-y-4">
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-              <Input placeholder="First Name" value={contactData.first_name} onChange={e => setContactData({ ...contactData, first_name: e.target.value })} />
-              <Input placeholder="Last Name" value={contactData.last_name} onChange={e => setContactData({ ...contactData, last_name: e.target.value })} />
+              <Input
+                label="First Name"
+                placeholder="First Name"
+                value={contactData.first_name}
+                onChange={(e) => setContactData({ ...contactData, first_name: e.target.value })}
+                required
+              />
+              <Input
+                label="Last Name"
+                placeholder="Last Name"
+                value={contactData.last_name}
+                onChange={(e) => setContactData({ ...contactData, last_name: e.target.value })}
+                required
+              />
             </div>
-            <Input placeholder="Email Address" type="email" value={contactData.email} onChange={e => setContactData({ ...contactData, email: e.target.value })} />
-            <Input placeholder="Phone Number" value={contactData.phone} onChange={e => setContactData({ ...contactData, phone: e.target.value })} />
-            <Input placeholder="Role / Position" value={contactData.role} onChange={e => setContactData({ ...contactData, role: e.target.value })} />
+            <Input
+              label="Email Address"
+              placeholder="Email Address"
+              type="email"
+              value={contactData.email}
+              onChange={(e) => setContactData({ ...contactData, email: e.target.value })}
+              required
+            />
+            <Input
+              label="Mobile Number"
+              placeholder="+91 123 456 7890"
+              value={contactData.phone}
+              onChange={(e) =>
+                setContactData({ ...contactData, phone: formatMobileNumberInput(e.target.value) })
+              }
+              inputMode="tel"
+              autoComplete="tel"
+            />
+            <Input
+              label="Role / Position"
+              placeholder="Role / Position"
+              value={contactData.role}
+              onChange={(e) => setContactData({ ...contactData, role: e.target.value })}
+            />
           </div>
           <ModalErrorBox message={modalErrors.contact} />
           <div className="flex justify-end gap-3 mt-6">
-            <Button variant="outline" onClick={() => { setContactModalOpen(false); setModalError('contact', null); }}>Cancel</Button>
-            <Button onClick={handleAddContact} isLoading={isPending}>Add Contact</Button>
+            <Button variant="outline" onClick={closeContactModal}>Cancel</Button>
+            <Button onClick={handleSaveContact} isLoading={isPending}>
+              {editingContactId ? 'Save Contact' : 'Add Contact'}
+            </Button>
           </div>
         </div>
       </Dialog>
