@@ -23,6 +23,7 @@ import {
   buildTccCertificatePdfDownloadUrl,
 } from '@/lib/tcc-certificate-download';
 import { CertificatePdfDownloadLink } from '@/components/CertificatePdfDownloadLink';
+import { buildPoAttachmentApiUrl } from '@/lib/tcc-po-attachment-url';
 import { TableDataExport } from '@/components/TableDataExport';
 import { ResponsiveTableScroll } from './ui/ResponsiveTableScroll';
 import type { TccEmailDefaults } from '@/components/TccApplicationViewDialog';
@@ -721,7 +722,7 @@ export default function ApprovalsDashboard({ initialApplications, emailDefaults 
                 </div>
                 {selectedApp?.bo_attachment_url && (
                   <a
-                    href={selectedApp.bo_attachment_url}
+                    href={buildPoAttachmentApiUrl(selectedApp.id)}
                     target="_blank"
                     rel="noopener noreferrer"
                     className="inline-flex items-center gap-1.5 text-xs font-bold text-primary hover:underline"

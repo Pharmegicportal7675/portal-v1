@@ -14,8 +14,14 @@ async function ensureDir(): Promise<void> {
 }
 
 function publicUrl(fileName: string): string {
-  const base = (process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000').replace(/\/$/, '');
-  return `${base}/uploads/certificates/${fileName}`;
+  const encoded = fileName
+    .replace(/\\/g, '/')
+    .split('/')
+    .filter(Boolean)
+    .map((segment) => encodeURIComponent(segment))
+    .join('/');
+  // Relative URL so previews work on whatever host the portal is opened from.
+  return `/uploads/certificates/${encoded}`;
 }
 
 export function createLocalStorage() {

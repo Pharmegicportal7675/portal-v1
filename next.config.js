@@ -45,6 +45,7 @@ const nextConfig = {
     '/api/tcc/application': PRISMA_TRACE,
     '/api/tcc/process': [...PRISMA_TRACE, ...CHROMIUM_TRACE, ...PUPPETEER_TRACE, ...PDF_FONT_TRACE],
     '/api/tcc/delete': PRISMA_TRACE,
+    '/api/tcc/po-attachment': PRISMA_TRACE,
     '/api/clients/wizard': PRISMA_TRACE,
     '/api/reach/certificates/bulk-email': PRISMA_TRACE,
     '/api/reach/certificates/delete': PRISMA_TRACE,

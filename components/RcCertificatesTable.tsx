@@ -6,6 +6,7 @@ import { Card } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
 import { Badge } from '@/components/ui/Badge';
 import { TableColumnFilter } from '@/components/ui/TableColumnFilter';
+import { TableCheckboxFilter } from '@/components/ui/TableCheckboxFilter';
 import { TableDateRangeFilter, type DateRangeValue } from '@/components/ui/TableDateRangeFilter';
 import { TableDataExport } from '@/components/TableDataExport';
 import { ResponsiveTableScroll } from '@/components/ui/ResponsiveTableScroll';
@@ -106,6 +107,7 @@ const INITIAL_FILTERS = {
   certificate: '',
   registration: '',
   substance: '',
+  years: [] as string[],
   status: 'all',
   issuedDate: { ...EMPTY_DATE_RANGE },
   validatedDate: { ...EMPTY_DATE_RANGE },
@@ -205,6 +207,8 @@ export default function RcCertificatesTable({
   const showCheckboxColumn = !hideCheckboxColumn && Boolean(onSelectedIdsChange);
 
   const filteredCertificates = useMemo(() => {
+    const selectedYears = new Set(columnFilters.years);
+
     return certificates.filter((cert) => {
       const clientName = cert.clients?.company_name || '';
       if (!hideCompanyColumn && !matchesText(clientName, columnFilters.company)) return false;
@@ -216,8 +220,14 @@ export default function RcCertificatesTable({
         chem?.chemical_name || '',
         chem?.cas_number || '',
         chem?.ec_number || '',
+        cert.registration_number || '',
       ].join(' ');
       if (!matchesText(substanceHaystack, columnFilters.substance)) return false;
+
+      if (selectedYears.size > 0) {
+        const year = getReachCertificateYear(cert.issued_at);
+        if (year == null || !selectedYears.has(String(year))) return false;
+      }
 
       if (columnFilters.status !== 'all') {
         const certStatus = isActiveReachCertificate(cert as any)
@@ -249,6 +259,17 @@ export default function RcCertificatesTable({
       return true;
     });
   }, [certificates, columnFilters, hideCompanyColumn]);
+
+  const yearFilterOptions = useMemo(() => {
+    const years = new Set<number>();
+    for (const cert of certificates) {
+      const year = getReachCertificateYear(cert.issued_at);
+      if (year != null) years.add(year);
+    }
+    return [...years]
+      .sort((a, b) => b - a)
+      .map((year) => ({ value: String(year), label: String(year) }));
+  }, [certificates]);
 
   const selectableCertIds = useMemo(
     () => filteredCertificates.map((cert) => cert.id).filter(Boolean),
@@ -289,6 +310,7 @@ export default function RcCertificatesTable({
     if (columnFilters.certificate.trim()) count++;
     if (columnFilters.registration.trim()) count++;
     if (columnFilters.substance.trim()) count++;
+    if (columnFilters.years.length > 0) count++;
     if (columnFilters.status !== 'all') count++;
     if (columnFilters.issuedDate.from || columnFilters.issuedDate.to) count++;
     if (columnFilters.validatedDate.from || columnFilters.validatedDate.to) count++;
@@ -308,6 +330,7 @@ export default function RcCertificatesTable({
       certificate: '',
       registration: '',
       substance: '',
+      years: [],
       status: 'all',
       issuedDate: { ...EMPTY_DATE_RANGE },
       validatedDate: { ...EMPTY_DATE_RANGE },
@@ -362,8 +385,17 @@ export default function RcCertificatesTable({
       }
     }
 
-    // Add any client chemicals that don't have any certificates in the filteredCertificates list
+    // Add client chemicals that have no certificate yet — but respect active column filters.
+    // Previously these rows were always appended, so Substance search looked broken.
     if (clientChemicals) {
+      const hasCertOnlyFilters =
+        columnFilters.status !== 'all' ||
+        columnFilters.years.length > 0 ||
+        Boolean(columnFilters.certificate.trim()) ||
+        Boolean(columnFilters.registration.trim()) ||
+        Boolean(columnFilters.issuedDate.from || columnFilters.issuedDate.to) ||
+        Boolean(columnFilters.validatedDate.from || columnFilters.validatedDate.to);
+
       const clientCompanyNames = new Map<string, string>();
       for (const cert of filteredCertificates) {
         if (cert.clients?.company_name) {
@@ -382,26 +414,39 @@ export default function RcCertificatesTable({
         const clientId = cc.client_id;
         const groupKey = `${clientId}_${chemId}`;
 
-        if (!groupMap.has(groupKey)) {
-          const chem = cc.chemicals;
-          const companyName =
-            cc.clients?.company_name || clientCompanyNames.get(clientId) || '—';
-          const group = {
-            key: groupKey,
-            clientId,
-            companyName: companyName,
-            clientEmail: cc.clients?.email || '',
-            chemicalId: chemId,
-            chemicalName: chem?.chemical_name || 'Unknown Substance',
-            casNumber: chem?.cas_number || 'N/A',
-            ecNumber: chem?.ec_number || 'N/A',
-            registrationNumber: cc.registration_number?.trim() || 'N/A',
-            tonnageBand: resolveDisplayedTonnageBand(null, chem?.tonnage_band),
-            certs: [],
-          };
-          groupMap.set(groupKey, group);
-          groups.push(group);
-        }
+        if (groupMap.has(groupKey)) continue;
+
+        // Pending (no-cert) rows cannot satisfy certificate number / status / date filters
+        if (hasCertOnlyFilters) continue;
+
+        const chem = cc.chemicals;
+        const companyName =
+          cc.clients?.company_name || clientCompanyNames.get(clientId) || '—';
+        if (!hideCompanyColumn && !matchesText(companyName, columnFilters.company)) continue;
+
+        const substanceHaystack = [
+          chem?.chemical_name || '',
+          chem?.cas_number || '',
+          chem?.ec_number || '',
+          cc.registration_number || '',
+        ].join(' ');
+        if (!matchesText(substanceHaystack, columnFilters.substance)) continue;
+
+        const group = {
+          key: groupKey,
+          clientId,
+          companyName: companyName,
+          clientEmail: cc.clients?.email || '',
+          chemicalId: chemId,
+          chemicalName: chem?.chemical_name || 'Unknown Substance',
+          casNumber: chem?.cas_number || 'N/A',
+          ecNumber: chem?.ec_number || 'N/A',
+          registrationNumber: cc.registration_number?.trim() || 'N/A',
+          tonnageBand: resolveDisplayedTonnageBand(null, chem?.tonnage_band),
+          certs: [],
+        };
+        groupMap.set(groupKey, group);
+        groups.push(group);
       }
     }
 
@@ -414,7 +459,7 @@ export default function RcCertificatesTable({
     }
 
     return groups;
-  }, [filteredCertificates, clientChemicals]);
+  }, [filteredCertificates, clientChemicals, columnFilters, hideCompanyColumn]);
 
   const exportColumns = useMemo(() => {
     const cols: CsvColumn<RcCertificateTableRecord>[] = [
@@ -522,12 +567,20 @@ export default function RcCertificatesTable({
                     <TableColumnFilter
                       value={columnFilters.substance}
                       onChange={(value) => updateColumnFilter('substance', value)}
-                      placeholder="Name / CAS…"
+                      placeholder="Name / CAS / EC / Reg…"
                     />
                   )}
                 </th>
-                <th className="px-4 py-3 min-w-[80px]">
+                <th className="px-4 py-3 min-w-[100px]">
                   <span className="text-[11px] font-bold text-slate-500 uppercase tracking-wider">Year</span>
+                  {!hideFilters && (
+                    <TableCheckboxFilter
+                      values={columnFilters.years}
+                      onChange={(value) => updateColumnFilter('years', value)}
+                      options={yearFilterOptions}
+                      placeholder="All years"
+                    />
+                  )}
                 </th>
                 <th className="px-4 py-3 min-w-[160px]">
                   <span className="text-[11px] font-bold text-slate-500 uppercase tracking-wider">Validity Period</span>

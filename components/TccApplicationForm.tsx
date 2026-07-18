@@ -11,6 +11,7 @@ import { Input } from './ui/Input';
 import { DatePicker } from './ui/DatePicker';
 import { Select } from './ui/Select';
 import { toast } from '@/store/toast';
+import { buildPoAttachmentApiUrl } from '@/lib/tcc-po-attachment-url';
 import {
   FileText,
   AlertCircle,
@@ -622,7 +623,11 @@ export default function TccApplicationForm({
                     <p className="text-[11px] text-slate-500 font-medium">
                       Current file:{' '}
                       <a
-                        href={editApplication?.bo_attachment_url ?? '#'}
+                        href={
+                          editApplication?.id
+                            ? buildPoAttachmentApiUrl(editApplication.id)
+                            : editApplication?.bo_attachment_url ?? '#'
+                        }
                         target="_blank"
                         rel="noopener noreferrer"
                         className="text-teal-700 hover:underline"

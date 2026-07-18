@@ -70,6 +70,7 @@ import {
 import {
   buildTccCertificatePdfDownloadUrl,
 } from '@/lib/tcc-certificate-download';
+import { buildPoAttachmentApiUrl } from '@/lib/tcc-po-attachment-url';
 import { CertificatePdfDownloadLink } from '@/components/CertificatePdfDownloadLink';
 import { TableDataExport } from '@/components/TableDataExport';
 import { ResponsiveTableScroll } from '@/components/ui/ResponsiveTableScroll';
@@ -2290,7 +2291,7 @@ export default function ClientDashboardDetails({
                       <td className="px-6 py-4 text-center">
                         <div className="flex justify-center gap-2 items-center">
                           {app.bo_attachment_url && (
-                            <a href={app.bo_attachment_url} target="_blank" rel="noopener noreferrer" title="View PO attachment">
+                            <a href={buildPoAttachmentApiUrl(app.id)} target="_blank" rel="noopener noreferrer" title="View PO attachment">
                               <Button variant="ghost" size="sm" className="h-8 w-8 p-0 text-slate-600">
                                 <FileText className="h-4 w-4" />
                               </Button>
@@ -3112,7 +3113,7 @@ export default function ClientDashboardDetails({
                 </div>
                 {selectedTccApp?.bo_attachment_url && (
                   <a
-                    href={selectedTccApp.bo_attachment_url}
+                    href={buildPoAttachmentApiUrl(selectedTccApp.id)}
                     target="_blank"
                     rel="noopener noreferrer"
                     className="inline-flex items-center gap-1.5 text-xs font-bold text-primary hover:underline"

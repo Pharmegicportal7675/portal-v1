@@ -47,6 +47,7 @@ import {
 import { CertificatePdfDownloadLink } from '@/components/CertificatePdfDownloadLink';
 import { toast } from '@/store/toast';
 import { isEuReachFramework } from '@/lib/regulatory-registrations';
+import { buildPoAttachmentApiUrl } from '@/lib/tcc-po-attachment-url';
 
 export interface TccViewCertificate {
   id: string;
@@ -130,12 +131,14 @@ function DetailItem({ label, children }: { label: string; children: React.ReactN
   );
 }
 
-function isPdfUrl(url: string) {
-  return /\.pdf($|\?)/i.test(url) || url.includes('application/pdf');
+function isPdfUrl(url: string, fileName?: string | null) {
+  const haystack = `${url} ${fileName || ''}`;
+  return /\.pdf($|\?|\s)/i.test(haystack) || url.includes('application/pdf');
 }
 
-function isImageUrl(url: string) {
-  return /\.(png|jpe?g|gif|webp)($|\?)/i.test(url);
+function isImageUrl(url: string, fileName?: string | null) {
+  const haystack = `${url} ${fileName || ''}`;
+  return /\.(png|jpe?g|gif|webp)($|\?|\s)/i.test(haystack);
 }
 
 function canReviewActions(status: string) {
@@ -274,7 +277,12 @@ export function TccApplicationViewDialog({
   const availableQuota = getTccApplicationAvailableQuota(displayApp);
   const showActions =
     allowReview && canReviewActions(displayApp.status) && !isEditing && isEuReachFramework(displayApp.regulatory_framework);
-  const boUrl = displayApp.bo_attachment_url;
+  const boUrl = displayApp.bo_attachment_url
+    ? displayApp.id
+      ? buildPoAttachmentApiUrl(displayApp.id)
+      : displayApp.bo_attachment_url
+    : null;
+  const boFileName = displayApp.bo_attachment_name;
   const showDraftPreview = Boolean(displayApp.export_date || displayApp.id);
   const totalSent = mailState.mail_resend_count + (mailState.mail_sent ? 1 : 0);
 
@@ -514,14 +522,14 @@ export function TccApplicationViewDialog({
               </div>
               {boUrl ? (
                 <div className="p-2 bg-white min-h-[200px]">
-                  {isImageUrl(boUrl) ? (
+                  {isImageUrl(boUrl, boFileName) ? (
                     // eslint-disable-next-line @next/next/no-img-element
                     <img
                       src={boUrl}
-                      alt={displayApp.bo_attachment_name || 'PO attachment'}
+                      alt={boFileName || 'PO attachment'}
                       className="max-h-[280px] w-full object-contain rounded"
                     />
-                  ) : isPdfUrl(boUrl) ? (
+                  ) : isPdfUrl(boUrl, boFileName) ? (
                     <iframe
                       src={boUrl}
                       title="PO attachment preview"
@@ -530,7 +538,7 @@ export function TccApplicationViewDialog({
                   ) : (
                     <div className="p-6 text-center text-sm text-slate-500">
                       <FileText className="h-8 w-8 mx-auto mb-2 text-slate-400" />
-                      <p className="font-medium">{displayApp.bo_attachment_name || 'Attachment file'}</p>
+                      <p className="font-medium">{boFileName || 'Attachment file'}</p>
                       <a
                         href={boUrl}
                         target="_blank"
