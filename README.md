@@ -25,7 +25,7 @@ SMTP_HOST=mail.smtp2go.com
 SMTP_PORT=587
 SMTP_USER=...
 SMTP_PASS=...
-SMTP_FROM=Pharmegic Healthcare <noreply@pharmegichealthcare.com>
+SMTP_FROM=Pharmegic Healthcare Limited <noreply@pharmegichealthcare.com>
 NEXT_PUBLIC_APP_URL=http://localhost:3000
 ```
 

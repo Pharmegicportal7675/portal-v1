@@ -1,4 +1,4 @@
-# Pharmegic Healthcare Portal — Deployment Guide (Hostinger)
+# Pharmegic Healthcare Limited Portal — Deployment Guide (Hostinger)
 
 Production app: **portal.pharmegichealthcare.com**
 

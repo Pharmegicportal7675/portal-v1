@@ -46,7 +46,7 @@ export default async function VerifyCertificatePage({ params }: VerifyPageProps)
       <div className="text-center mb-8">
         <div className="inline-flex items-center gap-2.5 bg-white border border-slate-200 rounded-full px-5 py-2.5 shadow-sm mb-6">
           <Shield className="h-5 w-5 text-emerald-600" />
-          <span className="text-sm font-bold text-slate-700">Pharmegic Healthcare — Certificate Verification Portal</span>
+          <span className="text-sm font-bold text-slate-700">Pharmegic Healthcare Limited — Certificate Verification Portal</span>
         </div>
       </div>
 
@@ -191,7 +191,7 @@ export default async function VerifyCertificatePage({ params }: VerifyPageProps)
         {/* Footer */}
         <div className="mt-6 text-center space-y-2">
           <p className="text-xs text-slate-400 font-medium">
-            Issued by Pharmegic Healthcare Compliance Division
+            Issued by Pharmegic Healthcare Limited Compliance Division
           </p>
           <Link href="/login" className="inline-flex items-center gap-1 text-xs text-slate-400 hover:text-slate-600 font-medium transition-colors">
             <ExternalLink className="h-3 w-3" /> Portal Login

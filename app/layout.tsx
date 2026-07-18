@@ -15,19 +15,19 @@ const geistMono = Geist_Mono({
 
 export const metadata: Metadata = {
   metadataBase: new URL(process.env.NEXT_PUBLIC_APP_URL || "https://portal.pharmegichealthcare.com"),
-  title: "Pharmegic Healthcare — Compliance Portal",
+  title: "Pharmegic Healthcare Limited — Compliance Portal",
   description: "Enterprise pharmaceutical compliance and TCC certificate management portal.",
   openGraph: {
-    title: "Pharmegic Healthcare — Compliance Portal",
+    title: "Pharmegic Healthcare Limited — Compliance Portal",
     description: "Enterprise pharmaceutical compliance and TCC certificate management portal.",
     url: "/",
-    siteName: "Pharmegic Healthcare",
-    images: [{ url: "/pharmegic-logo.png", alt: "Pharmegic Healthcare" }],
+    siteName: "Pharmegic Healthcare Limited",
+    images: [{ url: "/pharmegic-logo.png", alt: "Pharmegic Healthcare Limited" }],
     type: "website",
   },
   twitter: {
     card: "summary",
-    title: "Pharmegic Healthcare — Compliance Portal",
+    title: "Pharmegic Healthcare Limited — Compliance Portal",
     description: "Enterprise pharmaceutical compliance and TCC certificate management portal.",
     images: ["/pharmegic-logo.png"],
   },

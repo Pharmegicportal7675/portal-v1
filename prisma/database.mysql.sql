@@ -1,4 +1,4 @@
--- Pharmegic Healthcare — MySQL schema (converted from database.sql)
+-- Pharmegic Healthcare Limited — MySQL schema (converted from database.sql)
 -- Safe to re-run on empty database. Uses CREATE TABLE IF NOT EXISTS.
 
 SET FOREIGN_KEY_CHECKS = 0;
@@ -295,7 +295,7 @@ INSERT IGNORE INTO templates (id, accent_color, footer_text)
 VALUES (
   'd4e30b6f-6c18-472e-8d8a-36fb644b9b94',
   '#064e3b',
-  'Pharmegic Healthcare Compliance Division. For verification, scan the QR code.'
+  'Pharmegic Healthcare Limited Compliance Division. For verification, scan the QR code.'
 );
 
 INSERT IGNORE INTO chemicals (id, chemical_name, cas_number, ec_number, tonnage_band, validity_date, available_quantity, exported_quantity, status)

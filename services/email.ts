@@ -17,7 +17,7 @@ function buildTransporter(config?: SmtpConfig) {
   const port = config?.smtp_port || parseInt(process.env.SMTP_PORT || '587', 10);
   const user = config?.smtp_user || process.env.SMTP_USER;
   const pass = config?.smtp_pass || process.env.SMTP_PASS;
-  const from = config?.smtp_from || process.env.SMTP_FROM || 'Pharmegic Healthcare <noreply@pharmegic-portal.com>';
+  const from = config?.smtp_from || process.env.SMTP_FROM || 'Pharmegic Healthcare Limited <noreply@pharmegic-portal.com>';
 
   if (!host || !user || !pass) {
     return { transporter: null, from };

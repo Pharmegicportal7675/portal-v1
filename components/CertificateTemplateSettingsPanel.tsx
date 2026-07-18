@@ -272,7 +272,7 @@ export function CertificateTemplateSettingsPanel({
                 value={footerText}
                 onChange={(e) => onFooterTextChange(e.target.value)}
                 className="w-full text-sm p-3 border border-slate-200 rounded-lg bg-slate-50 focus:bg-white focus:ring-2 focus:ring-primary focus:border-transparent transition-all outline-none font-medium text-slate-700"
-                placeholder="Pharmegic Healthcare Compliance Registry..."
+                placeholder="Pharmegic Healthcare Limited Compliance Registry..."
               />
             </div>
 

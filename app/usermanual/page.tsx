@@ -7,8 +7,8 @@ import UserManualContent from '@/components/UserManualContent';
 
 export const revalidate = 0;
 
-const MANUAL_TITLE = 'User Manual — Pharmegic Healthcare';
-const MANUAL_DESCRIPTION = 'Step-by-step guide to using the Pharmegic Healthcare compliance portal.';
+const MANUAL_TITLE = 'User Manual — Pharmegic Healthcare Limited';
+const MANUAL_DESCRIPTION = 'Step-by-step guide to using the Pharmegic Healthcare Limited compliance portal.';
 
 export const metadata: Metadata = {
   title: MANUAL_TITLE,
@@ -17,8 +17,8 @@ export const metadata: Metadata = {
     title: MANUAL_TITLE,
     description: MANUAL_DESCRIPTION,
     url: '/usermanual',
-    siteName: 'Pharmegic Healthcare',
-    images: [{ url: '/pharmegic-logo.png', alt: 'Pharmegic Healthcare' }],
+    siteName: 'Pharmegic Healthcare Limited',
+    images: [{ url: '/pharmegic-logo.png', alt: 'Pharmegic Healthcare Limited' }],
     type: 'article',
   },
   twitter: {
@@ -41,7 +41,7 @@ export default async function UserManualPage() {
             <div>
               <h1 className="text-xl font-bold tracking-tight text-slate-800">User Manual</h1>
               <p className="text-sm text-slate-500">
-                Pharmegic Healthcare Compliance &amp; TCC Certificate Portal
+                Pharmegic Healthcare Limited Compliance &amp; TCC Certificate Portal
               </p>
               <p className="mt-0.5 text-xs text-slate-400">Version 1.0.0 &middot; Client Representative Guide</p>
             </div>
@@ -61,7 +61,7 @@ export default async function UserManualPage() {
       <UserManualContent />
 
       <footer className="border-t border-slate-100 bg-white py-6 text-center text-xs text-slate-400">
-        This page is public — no login required. &copy; {new Date().getFullYear()} Pharmegic Healthcare.
+        This page is public — no login required. &copy; {new Date().getFullYear()} Pharmegic Healthcare Limited.
       </footer>
     </div>
   );

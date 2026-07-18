@@ -60,7 +60,7 @@ export default function AdminDashboard({ stats, reachStats }: AdminDashboardProp
       <div>
         <h1 className="text-2xl font-black text-slate-800 tracking-tight">Compliance Analytics</h1>
         <p className="text-sm text-slate-500 font-medium">
-          Pharmegic Healthcare registry and certificate monitoring console.
+          Pharmegic Healthcare Limited registry and certificate monitoring console.
         </p>
       </div>
 

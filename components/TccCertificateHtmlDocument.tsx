@@ -37,7 +37,7 @@ function TccCertPageShell({
           <header className="tcc-cert-header">
             {data.logoUrl ? (
               // eslint-disable-next-line @next/next/no-img-element
-              <img src={data.logoUrl} alt="Pharmegic Healthcare" className="tcc-brand-logo" />
+              <img src={data.logoUrl} alt="Pharmegic Healthcare Limited" className="tcc-brand-logo" />
             ) : null}
           </header>
           <div className="tcc-cert-content">{children}</div>

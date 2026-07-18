@@ -40,12 +40,12 @@ const SECTIONS: Section[] = [
     icon: LogIn,
     title: '1. Getting Started — Signing In',
     intro:
-      'The Pharmegic Healthcare portal is accessed with the corporate email and password issued by your account administrator. No separate app installation is required — the portal works in any modern web browser, on desktop, tablet, or mobile.',
+      'The Pharmegic Healthcare Limited portal is accessed with the corporate email and password issued by your account administrator. No separate app installation is required — the portal works in any modern web browser, on desktop, tablet, or mobile.',
     steps: [
       'Open the portal login page in your browser.',
       'Enter your Corporate Email and Password in the fields provided.',
       'Click "Authenticate Session" to sign in.',
-      'If you forget your credentials, contact your Pharmegic Healthcare account administrator to have them reset — there is no self-service password reset.',
+      'If you forget your credentials, contact your Pharmegic Healthcare Limited account administrator to have them reset — there is no self-service password reset.',
     ],
     image: '/user-manual-assets/login.png',
     imageAlt: 'Portal login screen',
@@ -145,11 +145,11 @@ const REQUIREMENTS = [
 const FAQS = [
   {
     q: 'I forgot my password. What do I do?',
-    a: 'There is no self-service reset. Contact your Pharmegic Healthcare account administrator and they will issue a new password.',
+    a: 'There is no self-service reset. Contact your Pharmegic Healthcare Limited account administrator and they will issue a new password.',
   },
   {
     q: 'Can I change my login email myself?',
-    a: 'No. Login credentials are managed by your Pharmegic Healthcare administrator — contact them to update your registered email.',
+    a: 'No. Login credentials are managed by your Pharmegic Healthcare Limited administrator — contact them to update your registered email.',
   },
   {
     q: 'Can I edit a TCC application after submitting it?',
@@ -161,7 +161,7 @@ const FAQS = [
   },
   {
     q: "I didn't receive a certificate email.",
-    a: 'Check your spam/junk folder first. If it still isn’t there, contact Pharmegic Healthcare support and the notification can be resent.',
+    a: 'Check your spam/junk folder first. If it still isn’t there, contact Pharmegic Healthcare Limited support and the notification can be resent.',
   },
 ];
 
@@ -351,7 +351,7 @@ export default function UserManualContent() {
               <li>Never share your password with anyone, including colleagues.</li>
               <li>Always click &quot;Log Out&quot; when you&apos;re done, especially on a shared computer.</li>
               <li>Don&apos;t save your password in a browser on a public or shared computer.</li>
-              <li>Report anything suspicious (unexpected certificates, applications you didn&apos;t submit) to Pharmegic Healthcare immediately.</li>
+              <li>Report anything suspicious (unexpected certificates, applications you didn&apos;t submit) to Pharmegic Healthcare Limited immediately.</li>
             </ul>
           </section>
 
@@ -397,10 +397,10 @@ export default function UserManualContent() {
             </div>
             <p className="mt-3 max-w-3xl text-sm leading-relaxed text-slate-600">
               If you run into an issue not covered here — a missing certificate, a quota discrepancy,
-              or trouble signing in — reach out to Pharmegic Healthcare directly.
+              or trouble signing in — reach out to Pharmegic Healthcare Limited directly.
             </p>
             <div className="mt-4 max-w-3xl space-y-3 rounded-xl border border-slate-200 bg-white p-5 shadow-xs">
-              <p className="text-sm font-bold text-slate-800">Pharmegic Healthcare</p>
+              <p className="text-sm font-bold text-slate-800">Pharmegic Healthcare Limited</p>
               <div className="flex items-start gap-2.5 text-sm text-slate-600">
                 <MapPin className="mt-0.5 h-4 w-4 shrink-0 text-primary" />
                 <span>B-74, Pariseema Complex, Near Lal Bungalow Cross Roads, C.G. Road, Ahmedabad – 380006</span>

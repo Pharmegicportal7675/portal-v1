@@ -113,7 +113,7 @@ export default function SettingsDashboard({ initialSettings, initialTemplate, in
   const [tccAccentColor, setTccAccentColor] = useState(tccDefaults.accent_color);
   const [tccFooterText, setTccFooterText] = useState(
     tccDefaults.footer_text ||
-      'Pharmegic Healthcare Compliance Division. For verification, scan the QR code.'
+      'Pharmegic Healthcare Limited Compliance Division. For verification, scan the QR code.'
   );
   const [tccLogo, setTccLogo] = useState<string | null>(tccDefaults.logo);
   const [tccSignature, setTccSignature] = useState<string | null>(tccDefaults.signature_image);
@@ -261,7 +261,7 @@ export default function SettingsDashboard({ initialSettings, initialTemplate, in
 
   const handleResetRcTemplate = () => {
     setRcAccentColor('#064e3b');
-    setRcFooterText('Pharmegic Healthcare Compliance Division. For verification, scan the QR code.');
+    setRcFooterText('Pharmegic Healthcare Limited Compliance Division. For verification, scan the QR code.');
     setRcLogo(null);
     setRcSignature(null);
     toast.info('CT template inputs reset to defaults.');
@@ -269,7 +269,7 @@ export default function SettingsDashboard({ initialSettings, initialTemplate, in
 
   const handleResetTccTemplate = () => {
     setTccAccentColor('#064e3b');
-    setTccFooterText('Pharmegic Healthcare Compliance Division. For verification, scan the QR code.');
+    setTccFooterText('Pharmegic Healthcare Limited Compliance Division. For verification, scan the QR code.');
     setTccLogo(null);
     setTccSignature(null);
     toast.info('TCC template inputs reset to defaults.');

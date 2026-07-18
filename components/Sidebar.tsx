@@ -212,7 +212,7 @@ export default function Sidebar({ role, companyName, regulatoryRegistrations = [
       <div className="px-3 py-6 border-t border-primary-hover bg-primary-hover/30 space-y-4">
         <UserManualButton />
         <div className="text-[11px] text-primary-foreground/50 text-center font-medium">
-          Pharmegic Healthcare v1.0.0
+          Pharmegic Healthcare Limited v1.0.0
         </div>
       </div>
     </div>

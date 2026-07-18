@@ -186,14 +186,14 @@ export function buildEmailShell(options: {
 <body>
   <div class="container">
     <div class="header">
-      <img src="${EMAIL_LOGO_SRC}" alt="Pharmegic Healthcare" style="max-height:48px;max-width:220px;object-fit:contain;display:inline-block;background:#ffffff;border-radius:8px;padding:8px 14px;" />
+      <img src="${EMAIL_LOGO_SRC}" alt="Pharmegic Healthcare Limited" style="max-height:48px;max-width:220px;object-fit:contain;display:inline-block;background:#ffffff;border-radius:8px;padding:8px 14px;" />
       ${subtitle}
     </div>
     <div class="body">
       ${options.bodyHtml}
     </div>
     <div class="footer">
-      Pharmegic Healthcare Compliance Division | This is an automated compliance notification.
+      Pharmegic Healthcare Limited Compliance Division | This is an automated compliance notification.
     </div>
   </div>
 </body>

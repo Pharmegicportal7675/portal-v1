@@ -22,7 +22,7 @@ export default function BrandLogo({ variant = 'full', href = '/', className }: B
     // Plain img — avoids /_next/image sharp pipeline on Hostinger (503 under load).
     <img
       src={src}
-      alt="Pharmegic Healthcare"
+      alt="Pharmegic Healthcare Limited"
       width={width}
       height={height}
       className={clsx('h-auto w-full max-w-full object-contain', className)}

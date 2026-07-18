@@ -23,7 +23,7 @@ export default function ReachCertificateHtmlDocument({ data }: ReachCertificateH
           <header className="reach-cert-header">
             {data.logoUrl ? (
               // eslint-disable-next-line @next/next/no-img-element
-              <img src={data.logoUrl} alt="Pharmegic Healthcare" className="reach-brand-logo" />
+              <img src={data.logoUrl} alt="Pharmegic Healthcare Limited" className="reach-brand-logo" />
             ) : null}
           </header>
 
