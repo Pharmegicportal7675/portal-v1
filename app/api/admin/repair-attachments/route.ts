@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getSession } from '@/lib/auth/session';
 import { regenerateMissingTccCertificateFiles } from '@/lib/regenerate-tcc-certificate-file';
+import { cleanupOrphanCertificateFiles } from '@/lib/cleanup-orphan-certificate-files';
 
 export const runtime = 'nodejs';
 export const maxDuration = 300;
@@ -18,12 +19,44 @@ function isAuthorized(request: NextRequest, session: Awaited<ReturnType<typeof g
   );
 }
 
-/** Live-only repair: regenerate missing TCC PDFs on server disk (add-only, no deletes). */
+/**
+ * Live repair:
+ *   POST { "mode": "tcc" } — regenerate missing TCC PDFs (add-only)
+ *   POST { "mode": "orphans", "folder": "COLORS_INDIA", "apply": true } — delete orphan PDFs
+ */
 export async function POST(request: NextRequest) {
   try {
     const session = await getSession();
     if (!isAuthorized(request, session)) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
+
+    let body: { mode?: string; folder?: string; apply?: boolean } = {};
+    try {
+      body = (await request.json()) as typeof body;
+    } catch {
+      body = {};
+    }
+
+    const mode = body.mode || new URL(request.url).searchParams.get('mode') || 'tcc';
+
+    if (mode === 'orphans') {
+      const folder =
+        body.folder || new URL(request.url).searchParams.get('folder') || undefined;
+      const apply =
+        body.apply === true ||
+        new URL(request.url).searchParams.get('apply') === '1';
+      const result = await cleanupOrphanCertificateFiles({
+        dryRun: !apply,
+        folder,
+      });
+      return NextResponse.json({
+        ok: true,
+        message: apply
+          ? 'Orphan certificate files deleted on live disk (DB untouched).'
+          : 'Orphan certificate files listed (dry-run). Pass apply:true to delete.',
+        ...result,
+      });
     }
 
     const result = await regenerateMissingTccCertificateFiles();
