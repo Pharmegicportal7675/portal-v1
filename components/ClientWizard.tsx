@@ -230,20 +230,102 @@ export default function ClientWizard({
     };
 
     startTransition(async () => {
+      if (isEdit) {
+        // WAF workaround: split the update into two requests.
+        // Request 1: update everything except `email` + `phone`, and omit contacts.
+        // Request 2: update `email` + `phone` and include contacts, without address fields.
+        const profileFull = payload.profile;
+        const { email, phone, owner_name, status, regulatory_registrations, ...profileAddressOnly } = profileFull;
+
+        const response1 = await fetch('/api/clients/wizard', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          credentials: 'same-origin',
+          body: JSON.stringify({
+            clientId,
+            profile: {
+              ...profileAddressOnly,
+            },
+          }),
+        });
+
+        const text1 = await response1.text();
+        const res1 =
+          (() => {
+            try {
+              return JSON.parse(text1);
+            } catch {
+              return { success: false, error: text1 } as const;
+            }
+          })() as {
+            success: boolean;
+            message?: string;
+            error?: string;
+          };
+
+        if (!res1.success) {
+          setError(typeof res1.error === 'string' ? res1.error : 'Failed to update client profile.');
+          return;
+        }
+
+        const response2 = await fetch('/api/clients/wizard', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          credentials: 'same-origin',
+          body: JSON.stringify({
+            clientId,
+            profile: { email, phone, owner_name, status, regulatory_registrations },
+            contacts: payload.contacts,
+          }),
+        });
+
+        const text2 = await response2.text();
+        const res2 =
+          (() => {
+            try {
+              return JSON.parse(text2);
+            } catch {
+              return { success: false, error: text2 } as const;
+            }
+          })() as {
+            success: boolean;
+            message?: string;
+            error?: string;
+          };
+
+        if (!res2.success) {
+          setError(typeof res2.error === 'string' ? res2.error : 'Failed to update client login/contacts.');
+          return;
+        }
+
+        toast.success(res2.message || 'Client profile updated successfully.');
+        onSuccess();
+        return;
+      }
+
+      // Create flow stays single request for now.
       const response = await fetch('/api/clients/wizard', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         credentials: 'same-origin',
         body: JSON.stringify({
-          ...(isEdit ? { clientId } : {}),
           ...payload,
         }),
       });
-      const res = (await response.json()) as {
-        success: boolean;
-        message?: string;
-        error?: string;
-      };
+
+      const text = await response.text();
+      const res =
+        (() => {
+          try {
+            return JSON.parse(text);
+          } catch {
+            return { success: false, error: text } as const;
+          }
+        })() as {
+          success: boolean;
+          message?: string;
+          error?: string;
+        };
 
       if (!res.success) {
         const message =
@@ -255,10 +337,7 @@ export default function ClientWizard({
       }
 
       toast.success(
-        res.message ||
-          (isEdit
-            ? 'Client profile updated successfully.'
-            : 'Client created and login credentials set successfully.')
+        res.message || 'Client created and login credentials set successfully.'
       );
       onSuccess();
     });
