@@ -27,11 +27,11 @@ export async function resolveClientStorageFolder(
     .from('tcc_applications')
     .select('bo_attachment_url')
     .eq('client_id', clientId)
-    .not('bo_attachment_url', 'is', null)
     .order('created_at', { ascending: false })
-    .limit(5);
+    .limit(20);
 
   for (const row of poRows ?? []) {
+    if (!row.bo_attachment_url?.trim()) continue;
     const folder = extractClientFolderFromStorageUrl(row.bo_attachment_url);
     if (folder) return folder;
   }
@@ -40,11 +40,11 @@ export async function resolveClientStorageFolder(
     .from('certificates')
     .select('file_url')
     .eq('client_id', clientId)
-    .not('file_url', 'is', null)
     .order('issued_at', { ascending: false })
-    .limit(5);
+    .limit(20);
 
   for (const row of certRows ?? []) {
+    if (!row.file_url?.trim()) continue;
     const folder = extractClientFolderFromStorageUrl(row.file_url);
     if (folder) return folder;
   }
