@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { createClientAction, updateClientWizardAction } from '@/actions/client-wizard';
+import { createClientWizard, updateClientWizard } from '@/services/client-wizard';
 
 export const runtime = 'nodejs';
 export const maxDuration = 60;
@@ -18,10 +18,11 @@ export async function POST(request: NextRequest) {
     };
 
     const result = body.clientId?.trim()
-      ? await updateClientWizardAction(body.clientId.trim(), payload)
-      : await createClientAction(null, payload);
+      ? await updateClientWizard(body.clientId.trim(), payload)
+      : await createClientWizard(payload);
 
-    return NextResponse.json(result, { status: result.success ? 200 : 400 });
+    const status = result.success ? 200 : result.error?.toLowerCase().includes('unauthorized') ? 403 : 400;
+    return NextResponse.json(result, { status });
   } catch (err: unknown) {
     console.error('[api/clients/wizard]', err);
     return NextResponse.json(
