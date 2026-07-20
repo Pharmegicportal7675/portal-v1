@@ -98,7 +98,7 @@ export default function ClientsDashboard({ initialClients, chemicals, adminRole 
   // Search & Filter state
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState('all');
-  const [sortColumn, setSortColumn] = useState<SortColumn | null>(null);
+  const [sortColumn, setSortColumn] = useState<SortColumn | null>('company');
   const [sortDirection, setSortDirection] = useState<SortDirection>('asc');
   const [clients, setClients] = useState<Client[]>(initialClients);
 

@@ -115,8 +115,25 @@ export const clientProfileEditPartialSchema = z.object({
 });
 
 export const clientWizardEditPartialSchema = z.object({
-  profile: clientProfileEditPartialSchema,
+  profile: clientProfileEditPartialSchema.extend({
+    password: z.string().min(6, { message: 'Password must be at least 6 characters' }).optional().or(z.literal('')),
+  }),
   contacts: z.array(contactSchema).optional(),
+});
+
+/** Step 1 of split create — address + company only (WAF-safe payload). */
+export const clientWizardCreateDraftSchema = z.object({
+  profile: z.object({
+    company_name: z.string().min(2, { message: 'Company name is required' }),
+    uuid_number: z.string().min(1, { message: 'UUID number is required' }),
+    primary_contact_first_name: z.string().min(1, { message: 'First name is required' }),
+    primary_contact_last_name: z.string().min(1, { message: 'Last name is required' }),
+    address: z.string().min(1, { message: 'Address is required' }),
+    city: z.string(),
+    state: z.string(),
+    country: z.string().min(1, { message: 'Country is required' }),
+    postal_code: z.string().min(1, { message: 'Postal code is required' }),
+  }),
 });
 
 // ============================================================================

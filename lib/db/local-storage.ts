@@ -1,16 +1,23 @@
 import fs from 'fs/promises';
 import path from 'path';
+import {
+  getPrimaryCertificatesUploadRoot,
+  resolveCertificatesFilePath,
+} from '@/lib/certificates-upload-root';
 
 export const CERTIFICATES_BUCKET = 'certificates';
-const UPLOAD_ROOT = path.join(process.cwd(), 'public', 'uploads', 'certificates');
 
 function resolveStorageFilePath(fileName: string): string {
   const relative = fileName.replace(/\\/g, '/').replace(/^\/+/, '');
-  return path.join(UPLOAD_ROOT, ...relative.split('/').filter(Boolean));
+  const existing = resolveCertificatesFilePath(relative);
+  if (existing) return existing;
+
+  const uploadRoot = getPrimaryCertificatesUploadRoot();
+  return path.join(uploadRoot, ...relative.split('/').filter(Boolean));
 }
 
 async function ensureDir(): Promise<void> {
-  await fs.mkdir(UPLOAD_ROOT, { recursive: true });
+  await fs.mkdir(getPrimaryCertificatesUploadRoot(), { recursive: true });
 }
 
 function publicUrl(fileName: string): string {
@@ -86,7 +93,8 @@ export function createLocalStorage() {
       list: async (prefix = '') => {
         try {
           await ensureDir();
-          const entries = await fs.readdir(UPLOAD_ROOT);
+          const uploadRoot = getPrimaryCertificatesUploadRoot();
+          const entries = await fs.readdir(uploadRoot);
           const files = entries
             .filter((name) => name.startsWith(prefix))
             .map((name) => ({ name }));

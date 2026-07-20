@@ -403,7 +403,7 @@ export default function UserManualContent() {
               <p className="text-sm font-bold text-slate-800">Pharmegic Healthcare Limited</p>
               <div className="flex items-start gap-2.5 text-sm text-slate-600">
                 <MapPin className="mt-0.5 h-4 w-4 shrink-0 text-primary" />
-                <span>B-74, Pariseema Complex, Near Lal Bungalow Cross Roads, C.G. Road, Ahmedabad – 380006</span>
+                <span>6th Floor, Konstitucijos av. 21A, Vilnius, 08130, Lithuania</span>
               </div>
               <div className="flex items-center gap-2.5 text-sm text-slate-600">
                 <Mail className="h-4 w-4 shrink-0 text-primary" />

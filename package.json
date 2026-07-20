@@ -26,7 +26,15 @@
     "setup:live-pdf": "bash scripts/setup-live-pdf.sh",
     "deploy:live": "bash scripts/deploy-live.sh",
     "cleanup:tcc-docx": "npx tsx scripts/cleanup-tcc-docx-storage.ts",
-    "cleanup:tcc-docx:dry": "npx tsx scripts/cleanup-tcc-docx-storage.ts --dry-run"
+    "cleanup:tcc-docx:dry": "npx tsx scripts/cleanup-tcc-docx-storage.ts --dry-run",
+    "audit:attachments": "node scripts/audit-missing-attachments.mjs",
+    "list:uploads-for-live": "node scripts/list-uploads-for-live.mjs",
+    "regenerate:missing-tcc": "npx tsx scripts/regenerate-missing-tcc-pdfs.ts",
+    "regenerate:missing-tcc:dry": "npx tsx scripts/regenerate-missing-tcc-pdfs.ts --dry-run",
+    "fix:tcc-file-url-paths": "node scripts/fix-tcc-file-url-paths.mjs",
+    "fix:tcc-file-url-paths:dry": "node scripts/fix-tcc-file-url-paths.mjs --dry-run",
+    "live:repair-db": "node scripts/fix-tcc-file-url-paths.mjs",
+    "live:repair": "node scripts/run-live-repair.mjs"
   },
   "dependencies": {
     "@prisma/adapter-mariadb": "^7.8.0",

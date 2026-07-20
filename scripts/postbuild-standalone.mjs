@@ -10,14 +10,18 @@ if (!fs.existsSync(path.join(standaloneDir, 'server.js'))) {
   process.exit(0);
 }
 
-function copyDir(src, dest) {
+function copyDir(src, dest, options = {}) {
+  const { skipRelativePaths = [] } = options;
   if (!fs.existsSync(src)) return;
   fs.mkdirSync(dest, { recursive: true });
   for (const entry of fs.readdirSync(src, { withFileTypes: true })) {
+    const rel = entry.name;
+    if (skipRelativePaths.includes(rel)) continue;
+
     const srcPath = path.join(src, entry.name);
     const destPath = path.join(dest, entry.name);
     if (entry.isDirectory()) {
-      copyDir(srcPath, destPath);
+      copyDir(srcPath, destPath, options);
     } else {
       fs.copyFileSync(srcPath, destPath);
     }
@@ -64,7 +68,11 @@ function ensureNodeModulesCopy(...segments) {
 
 console.info('[postbuild] Copying static assets into standalone bundle…');
 
-copyDir(path.join(root, 'public'), path.join(standaloneDir, 'public'));
+// Never copy repo uploads/ — server PO/TCC files must survive deploys (add-only).
+copyDir(path.join(root, 'public'), path.join(standaloneDir, 'public'), {
+  skipRelativePaths: ['uploads'],
+});
+fs.mkdirSync(path.join(standaloneDir, 'public', 'uploads', 'certificates'), { recursive: true });
 copyDir(path.join(root, '.next', 'static'), path.join(standaloneDir, '.next', 'static'));
 copyDir(path.join(root, 'templates'), path.join(standaloneDir, 'templates'));
 copyDir(path.join(root, 'generated'), path.join(standaloneDir, 'generated'));

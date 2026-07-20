@@ -1,5 +1,6 @@
 import type { DbClient } from '@/lib/db/types';
-import { buildPoStoragePath } from '@/lib/storage-paths';
+import { buildClientYearStoragePath } from '@/lib/storage-paths';
+import { resolveClientStorageFolder, extractClientFolderFromStorageUrl } from '@/lib/client-storage-folder';
 import { CERTIFICATES_BUCKET, ensureCertificatesBucket } from '@/lib/storage';
 
 const MAX_BO_BYTES = 10 * 1024 * 1024; // 10 MB
@@ -57,11 +58,23 @@ export async function uploadBoAttachment(
   supabase: DbClient,
   file: File,
   options: {
+    clientId: string;
     clientName: string;
     folderDate?: string | Date | null;
+    existingAttachmentUrl?: string | null;
   }
 ): Promise<{ url: string; name: string }> {
-  const fileName = buildPoStoragePath(options.clientName, options.folderDate, file.name);
+  const clientFolder = options.existingAttachmentUrl
+    ? extractClientFolderFromStorageUrl(options.existingAttachmentUrl) ||
+      (await resolveClientStorageFolder(supabase, options.clientId, options.clientName))
+    : await resolveClientStorageFolder(supabase, options.clientId, options.clientName);
+
+  const fileName = buildClientYearStoragePath(
+    'PO',
+    clientFolder,
+    options.folderDate,
+    file.name.replace(/[^a-zA-Z0-9._-]/g, '_')
+  );
   const buffer = Buffer.from(await file.arrayBuffer());
 
   await ensureCertificatesBucket(supabase);

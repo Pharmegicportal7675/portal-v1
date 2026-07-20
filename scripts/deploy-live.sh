@@ -19,6 +19,10 @@ npm ci
 echo "==> npm run build..."
 npm run build
 
+echo "==> Regenerate missing TCC PDFs (add-only — no DB rows or PO files deleted)..."
+node scripts/fix-tcc-file-url-paths.mjs || echo "WARN: file_url path fix skipped."
+npx tsx scripts/regenerate-missing-tcc-pdfs.ts || echo "WARN: TCC PDF regeneration skipped or partial — re-run manually if needed."
+
 echo "==> PDF converter setup..."
 bash scripts/setup-live-pdf.sh
 

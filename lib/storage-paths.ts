@@ -149,3 +149,22 @@ export function extractStorageRelativePath(fileUrl: string): string | null {
     return parts[parts.length - 1] || null;
   }
 }
+
+/** Keep the live folder layout from DB — only build a new path when none is stored yet. */
+export function resolveCertificateStorageRelativePath(options: {
+  storedFileUrl?: string | null;
+  folder: StorageFolder;
+  clientFolder: string;
+  date: string | Date | null | undefined;
+  fileName: string;
+}): string {
+  const fromUrl = extractStorageRelativePath(options.storedFileUrl?.trim() || '');
+  if (fromUrl) return fromUrl;
+
+  return buildClientYearStoragePath(
+    options.folder,
+    options.clientFolder,
+    options.date,
+    options.fileName
+  );
+}

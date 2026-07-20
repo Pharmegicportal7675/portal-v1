@@ -69,6 +69,61 @@ const defaultProfile: ClientWizardProfile = {
   regulatory_registrations: [],
 };
 
+type WizardApiResult = {
+  success: boolean;
+  message?: string;
+  error?: string;
+  clientId?: string;
+};
+
+async function postClientWizard(body: Record<string, unknown>): Promise<WizardApiResult> {
+  const response = await fetch('/api/clients/wizard', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    credentials: 'same-origin',
+    body: JSON.stringify(body),
+  });
+
+  const text = await response.text();
+  try {
+    return JSON.parse(text) as WizardApiResult;
+  } catch {
+    const blocked = text.trim() === 'Forbidden';
+    return {
+      success: false,
+      error: blocked
+        ? 'Request blocked by server security. Please try again or contact support.'
+        : text.trim() || 'Failed to save client.',
+    };
+  }
+}
+
+function splitWizardProfile(profile: ClientWizardProfile & { regulatory_registrations: string[] }) {
+  const {
+    email,
+    phone,
+    owner_name,
+    status,
+    regulatory_registrations,
+    password,
+    ...profileAddressOnly
+  } = profile;
+
+  const loginFields: Record<string, unknown> = {
+    email,
+    phone,
+    owner_name,
+    status,
+    regulatory_registrations,
+  };
+
+  if (password.trim()) {
+    loginFields.password = password;
+  }
+
+  return { profileAddressOnly, loginFields };
+}
+
 export default function ClientWizard({
   onSuccess,
   onCancel,
@@ -230,114 +285,49 @@ export default function ClientWizard({
     };
 
     startTransition(async () => {
-      if (isEdit) {
-        // WAF workaround: split the update into two requests.
-        // Request 1: update everything except `email` + `phone`, and omit contacts.
-        // Request 2: update `email` + `phone` and include contacts, without address fields.
-        const profileFull = payload.profile;
-        const { email, phone, owner_name, status, regulatory_registrations, ...profileAddressOnly } = profileFull;
+      const profileFull = payload.profile;
+      const { profileAddressOnly, loginFields } = splitWizardProfile(profileFull);
 
-        const response1 = await fetch('/api/clients/wizard', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          credentials: 'same-origin',
-          body: JSON.stringify({
-            clientId,
-            profile: {
-              ...profileAddressOnly,
-            },
-          }),
-        });
+      // WAF workaround: split into two smaller POST bodies (Hostinger blocks full profile payloads).
+      const res1 = await postClientWizard(
+        isEdit
+          ? { clientId, profile: profileAddressOnly }
+          : { profile: profileAddressOnly }
+      );
 
-        const text1 = await response1.text();
-        const res1 =
-          (() => {
-            try {
-              return JSON.parse(text1);
-            } catch {
-              return { success: false, error: text1 } as const;
-            }
-          })() as {
-            success: boolean;
-            message?: string;
-            error?: string;
-          };
-
-        if (!res1.success) {
-          setError(typeof res1.error === 'string' ? res1.error : 'Failed to update client profile.');
-          return;
-        }
-
-        const response2 = await fetch('/api/clients/wizard', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          credentials: 'same-origin',
-          body: JSON.stringify({
-            clientId,
-            profile: { email, phone, owner_name, status, regulatory_registrations },
-            contacts: payload.contacts,
-          }),
-        });
-
-        const text2 = await response2.text();
-        const res2 =
-          (() => {
-            try {
-              return JSON.parse(text2);
-            } catch {
-              return { success: false, error: text2 } as const;
-            }
-          })() as {
-            success: boolean;
-            message?: string;
-            error?: string;
-          };
-
-        if (!res2.success) {
-          setError(typeof res2.error === 'string' ? res2.error : 'Failed to update client login/contacts.');
-          return;
-        }
-
-        toast.success(res2.message || 'Client profile updated successfully.');
-        onSuccess();
+      if (!res1.success) {
+        setError(typeof res1.error === 'string' ? res1.error : 'Failed to save client profile.');
         return;
       }
 
-      // Create flow stays single request for now.
-      const response = await fetch('/api/clients/wizard', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        credentials: 'same-origin',
-        body: JSON.stringify({
-          ...payload,
-        }),
+      const targetClientId = isEdit ? clientId : res1.clientId;
+      if (!targetClientId) {
+        setError('Client was created but the server did not return an id. Please refresh and try again.');
+        return;
+      }
+
+      const res2 = await postClientWizard({
+        clientId: targetClientId,
+        profile: loginFields,
+        contacts: payload.contacts,
       });
 
-      const text = await response.text();
-      const res =
-        (() => {
-          try {
-            return JSON.parse(text);
-          } catch {
-            return { success: false, error: text } as const;
-          }
-        })() as {
-          success: boolean;
-          message?: string;
-          error?: string;
-        };
-
-      if (!res.success) {
-        const message =
-          typeof res.error === 'string'
-            ? res.error
-            : formatErrorMessage(res.error) || `Failed to ${isEdit ? 'update' : 'create'} client.`;
-        setError(message);
+      if (!res2.success) {
+        setError(
+          typeof res2.error === 'string'
+            ? res2.error
+            : isEdit
+              ? 'Failed to update client login/contacts.'
+              : 'Failed to complete client onboarding.'
+        );
         return;
       }
 
       toast.success(
-        res.message || 'Client created and login credentials set successfully.'
+        res2.message ||
+          (isEdit
+            ? 'Client profile updated successfully.'
+            : 'Client created and login credentials set successfully.')
       );
       onSuccess();
     });

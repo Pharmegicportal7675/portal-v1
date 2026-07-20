@@ -1,7 +1,8 @@
 import type { DbClient } from '@/lib/db/types';
 import { createAdminClient } from '@/lib/db/admin';
 import { CERTIFICATES_BUCKET } from '@/lib/storage';
-import { buildClientDateStoragePath } from '@/lib/storage-paths';
+import { resolveCertificateStorageRelativePath } from '@/lib/storage-paths';
+import { resolveClientStorageFolder } from '@/lib/client-storage-folder';
 import {
   buildTccCertificatePdfInputFromCert,
   resolveTccCertificateDownloadFile,
@@ -41,6 +42,7 @@ export async function cleanupLegacyTccDocxStorage(
       id,
       certificate_number,
       file_url,
+      client_id,
       expires_at,
       registration_number,
       clients (
@@ -143,6 +145,7 @@ async function cleanupOneTccDocx(
     id: string;
     certificate_number: string;
     file_url?: string | null;
+    client_id?: string;
     expires_at?: string | null;
     registration_number?: string | null;
     clients: unknown;
@@ -203,12 +206,20 @@ async function cleanupOneTccDocx(
       input.issuedDate ||
       input.validUntilDate ||
       new Date().toISOString().slice(0, 10);
-    const storagePath = buildClientDateStoragePath(
-      'tcc',
-      client?.company_name || 'client',
-      issuedDate,
-      certFile.fileName
-    );
+    const clientFolder = cert.client_id
+      ? await resolveClientStorageFolder(
+          adminSupabase,
+          cert.client_id,
+          client?.company_name || 'client'
+        )
+      : client?.company_name || 'client';
+    const storagePath = resolveCertificateStorageRelativePath({
+      storedFileUrl: cert.file_url,
+      folder: 'TCC',
+      clientFolder,
+      date: issuedDate,
+      fileName: certFile.fileName,
+    });
     const { error: uploadError } = await adminSupabase.storage
       .from(CERTIFICATES_BUCKET)
       .upload(storagePath, certFile.buffer, {

@@ -3,7 +3,11 @@ import { getSession } from '@/lib/auth/session';
 import { hashPassword } from '@/lib/auth/password';
 import { formatErrorMessage } from '@/lib/format-error';
 import { findPortalEmailConflict, findPortalUuidConflict } from '@/lib/portal-email-check';
-import { clientWizardSchema, clientWizardEditPartialSchema } from '@/lib/validations';
+import {
+  clientWizardSchema,
+  clientWizardCreateDraftSchema,
+  clientWizardEditPartialSchema,
+} from '@/lib/validations';
 import { revalidatePath } from 'next/cache';
 import { randomUUID } from 'crypto';
 import {
@@ -26,6 +30,15 @@ async function requireAdmin() {
 function optionalText(value: string | undefined | null): string | null {
   const trimmed = value?.trim();
   return trimmed ? trimmed : null;
+}
+
+function buildPendingClientEmail(): string {
+  return `pending+${randomUUID()}@pending.internal`;
+}
+
+function isPendingClientEmail(email: string | null | undefined): boolean {
+  const normalized = String(email ?? '').trim().toLowerCase();
+  return normalized.startsWith('pending+') && normalized.endsWith('@pending.internal');
 }
 
 type ClientProfileInput = {
@@ -63,6 +76,65 @@ function buildClientUpdateData(profile: ClientProfileInput) {
     regulatory_registrations: profile.regulatory_registrations,
     updated_at: new Date(),
   };
+}
+
+export async function createClientWizardDraft(data: unknown) {
+  try {
+    const session = await requireAdmin();
+    if (!session) return { success: false, error: 'Unauthorized. Admins only.' };
+
+    const parsed = clientWizardCreateDraftSchema.safeParse(data);
+    if (!parsed.success) {
+      return { success: false, error: parsed.error.issues[0].message };
+    }
+
+    const adminSupabase = createAdminClient();
+    const { profile } = parsed.data;
+
+    const uuidConflict = await findPortalUuidConflict(adminSupabase, profile.uuid_number);
+    if (uuidConflict) return { success: false, error: uuidConflict };
+
+    const pendingEmail = buildPendingClientEmail();
+
+    const { data: client, error: clientError } = await adminSupabase
+      .from('clients')
+      .insert({
+        company_name: profile.company_name.trim(),
+        legal_name: null,
+        registration_number: null,
+        uuid_number: profile.uuid_number.trim(),
+        owner_name: null,
+        email: pendingEmail,
+        phone: null,
+        primary_contact_first_name: profile.primary_contact_first_name.trim(),
+        primary_contact_last_name: profile.primary_contact_last_name.trim(),
+        address: profile.address.trim(),
+        city: profile.city.trim(),
+        state: profile.state.trim(),
+        country: profile.country.trim(),
+        postal_code: profile.postal_code.trim(),
+        status: 'pending',
+        regulatory_registrations: [],
+      })
+      .select()
+      .single();
+
+    if (clientError || !client) {
+      return {
+        success: false,
+        error: formatErrorMessage(clientError || new Error('Failed to create client record.')),
+      };
+    }
+
+    return {
+      success: true,
+      message: 'Client draft saved.',
+      clientId: client.id as string,
+    };
+  } catch (err) {
+    console.error('[CLIENT DRAFT CREATE ERROR]:', err);
+    return { success: false, error: formatErrorMessage(err) };
+  }
 }
 
 export async function createClientWizard(data: unknown) {
@@ -205,6 +277,11 @@ export async function updateClientWizard(clientId: string, data: unknown) {
     const hasOwn = (obj: object, key: string) => Object.prototype.hasOwnProperty.call(obj, key);
     const hasEmailKey = hasOwn(incomingProfile, 'email');
     const hasUuidKey = hasOwn(incomingProfile, 'uuid_number');
+    const hasPasswordKey = hasOwn(incomingProfile, 'password');
+    const incomingPassword =
+      hasPasswordKey && typeof incomingProfile.password === 'string'
+        ? incomingProfile.password.trim()
+        : '';
 
     const [{ data: beforeClient }, { data: beforeContactsRaw }, { data: loginUser }] =
       await Promise.all([
@@ -279,13 +356,53 @@ export async function updateClientWizard(clientId: string, data: unknown) {
       if (uuidConflict) return { success: false, error: uuidConflict };
     }
 
+    const completingDraft = isPendingClientEmail(beforeEmailLower);
+    if (completingDraft) {
+      if (!hasEmailKey || !emailLower || isPendingClientEmail(emailLower)) {
+        return { success: false, error: 'Primary contact email is required.' };
+      }
+      if (!hasPasswordKey || incomingPassword.length < 6) {
+        return { success: false, error: 'Password must be at least 6 characters.' };
+      }
+      const regs =
+        incomingProfile.regulatory_registrations ??
+        normalizeRegulatoryRegistrations(beforeProfile.regulatory_registrations);
+      if (!Array.isArray(regs) || regs.length === 0) {
+        return { success: false, error: 'Select at least one regulatory registration.' };
+      }
+    }
+
     const { error: updateError } = await adminSupabase
       .from('clients')
       .update(updatePayload)
       .eq('id', clientId);
     if (updateError) throw updateError;
 
-    if (loginUser && loginUser.email !== emailLower) {
+    let createdLoginUser = false;
+
+    if (!loginUser && incomingPassword.length >= 6 && hasEmailKey && !isPendingClientEmail(emailLower)) {
+      const password_hash = await hashPassword(incomingPassword);
+      const { data: user, error: userError } = await adminSupabase
+        .from('users')
+        .insert({
+          email: emailLower,
+          password_hash,
+          login_password: incomingPassword,
+          role: 'CLIENT',
+          client_id: clientId,
+          is_disabled: false,
+        })
+        .select()
+        .single();
+
+      if (userError || !user) {
+        return {
+          success: false,
+          error: formatErrorMessage(userError || new Error('Failed to create client login credentials.')),
+        };
+      }
+      createdLoginUser = true;
+    } else if (loginUser && loginUser.email !== emailLower) {
       const { error: userEmailError } = await adminSupabase
         .from('users')
         .update({ email: emailLower })
@@ -416,13 +533,19 @@ export async function updateClientWizard(clientId: string, data: unknown) {
     await writeActivityLog(adminSupabase, {
       client_id: clientId,
       user_id: session.userId,
-      action: 'CLIENT_UPDATED',
+      action: createdLoginUser ? 'CLIENT_CREATED' : 'CLIENT_UPDATED',
       entity_type: 'clients',
       entity_id: clientId,
       description:
-        descriptionParts.length > 0
-          ? descriptionParts.join('; ')
-          : 'Client profile updated by admin',
+        createdLoginUser
+          ? `Client ${updatePayload.company_name} created by admin${
+              contactNotes.length > 0
+                ? ` · ${contactNotes.length} secondary contact${contactNotes.length === 1 ? '' : 's'} added`
+                : ''
+            }`
+          : descriptionParts.length > 0
+            ? descriptionParts.join('; ')
+            : 'Client profile updated by admin',
       metadata: {
         changes: profileChanges,
         contact_notes: contactNotes,
@@ -433,7 +556,12 @@ export async function updateClientWizard(clientId: string, data: unknown) {
     revalidatePath(`/admin/clients/${clientId}/edit`);
     revalidatePath('/admin/clients');
     revalidatePath('/admin/activity-logs');
-    return { success: true, message: 'Client profile updated successfully.' };
+    return {
+      success: true,
+      message: createdLoginUser
+        ? 'Client created and login credentials set successfully.'
+        : 'Client profile updated successfully.',
+    };
   } catch (err) {
     console.error('[CLIENT UPDATE ERROR]:', err);
     return { success: false, error: formatErrorMessage(err) };

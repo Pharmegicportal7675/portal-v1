@@ -47,7 +47,7 @@ import {
 import { CertificatePdfDownloadLink } from '@/components/CertificatePdfDownloadLink';
 import { toast } from '@/store/toast';
 import { isEuReachFramework } from '@/lib/regulatory-registrations';
-import { buildPoAttachmentApiUrl } from '@/lib/tcc-po-attachment-url';
+import { buildPoAttachmentPreviewUrl } from '@/lib/tcc-po-attachment-url';
 
 export interface TccViewCertificate {
   id: string;
@@ -133,7 +133,11 @@ function DetailItem({ label, children }: { label: string; children: React.ReactN
 
 function isPdfUrl(url: string, fileName?: string | null) {
   const haystack = `${url} ${fileName || ''}`;
-  return /\.pdf($|\?|\s)/i.test(haystack) || url.includes('application/pdf');
+  return (
+    /\.pdf($|\?|\s)/i.test(haystack) ||
+    url.includes('application/pdf') ||
+    url.includes('/api/tcc/po-attachment')
+  );
 }
 
 function isImageUrl(url: string, fileName?: string | null) {
@@ -278,9 +282,7 @@ export function TccApplicationViewDialog({
   const showActions =
     allowReview && canReviewActions(displayApp.status) && !isEditing && isEuReachFramework(displayApp.regulatory_framework);
   const boUrl = displayApp.bo_attachment_url
-    ? displayApp.id
-      ? buildPoAttachmentApiUrl(displayApp.id)
-      : displayApp.bo_attachment_url
+    ? buildPoAttachmentPreviewUrl(displayApp.id, displayApp.bo_attachment_url)
     : null;
   const boFileName = displayApp.bo_attachment_name;
   const showDraftPreview = Boolean(displayApp.export_date || displayApp.id);

@@ -1,6 +1,7 @@
 import type { DbClient } from '@/lib/db/types';
 import { buildTccCertificateStoredFile } from '@/lib/tcc-pdf-data';
-import { buildClientDateStoragePath } from '@/lib/storage-paths';
+import { resolveCertificateStorageRelativePath } from '@/lib/storage-paths';
+import { resolveClientStorageFolder } from '@/lib/client-storage-folder';
 import { resolveTccPdfChemicalTonnageBand } from '@/lib/tcc-certificate-pdf';
 import type { TccPdfChemical } from '@/lib/tcc-certificate-html-data';
 import { generateUniqueTccCertificateNumber } from '@/lib/tcc-certificate-number';
@@ -76,7 +77,7 @@ export async function upsertTccCertificateForApplication(
 
   const { data: existingCert } = await supabase
     .from('certificates')
-    .select('id, certificate_number')
+    .select('id, certificate_number, file_url')
     .eq('tcc_application_id', application.id)
     .eq('type', 'TCC')
     .maybeSingle();
@@ -105,7 +106,18 @@ export async function upsertTccCertificateForApplication(
   });
   const clientName =
     (application.clients as { company_name?: string | null } | null)?.company_name || 'client';
-  const storagePath = buildClientDateStoragePath('tcc', clientName, issueDateRaw, certFile.fileName);
+  const clientFolder = await resolveClientStorageFolder(
+    supabase,
+    application.client_id,
+    clientName
+  );
+  const storagePath = resolveCertificateStorageRelativePath({
+    storedFileUrl: existingCert?.file_url,
+    folder: 'TCC',
+    clientFolder,
+    date: issueDateRaw,
+    fileName: certFile.fileName,
+  });
 
   await ensureCertificatesBucket(supabase);
   const { error: uploadError } = await supabase.storage

@@ -9,7 +9,8 @@ import {
 import { adminTccApplicationUpdateSchema, tccEuApplicationSchema, tccNotificationApplicationSchema } from '@/lib/validations';
 import { uploadBoAttachment, validateBoAttachment } from '@/lib/tcc-attachments';
 import { CERTIFICATES_BUCKET, ensureCertificatesBucket } from '@/lib/storage';
-import { buildClientDateStoragePath, extractStorageRelativePath, CERTIFICATES_UPLOAD_URL_MARKER } from '@/lib/storage-paths';
+import { buildClientDateStoragePath, extractStorageRelativePath } from '@/lib/storage-paths';
+import { collectPoAttachmentRelativePaths } from '@/lib/tcc-po-attachment-paths';
 import { revalidatePath } from 'next/cache';
 import { notifyAllAdmins, notifyUser } from '@/lib/notifications';
 import { notifyTccApplicationByEmail } from '@/lib/tcc-application-notification';
@@ -45,6 +46,7 @@ import {
 import { canClientEditTccApplication } from '@/lib/tcc-application';
 import { formatErrorMessage } from '@/lib/format-error';
 import { upsertTccCertificateForApplication } from '@/lib/tcc-certificate-issuance';
+import { regenerateTccCertificateFile } from '@/lib/regenerate-tcc-certificate-file';
 import {
   resendTccCertificateEmail,
   sendTccCertificateEmailFirst,
@@ -175,34 +177,8 @@ async function validateClientTccSubmission(
 }
 
 function extractBoStoragePath(publicUrl: string | null | undefined): string | null {
-  if (!publicUrl?.trim()) return null;
-  const fromUploads = extractStorageRelativePath(publicUrl);
-  if (fromUploads) return fromUploads;
-
-  const markers = [`/object/public/${CERTIFICATES_BUCKET}/`, `/${CERTIFICATES_BUCKET}/`];
-  for (const marker of markers) {
-    const idx = publicUrl.indexOf(marker);
-    if (idx >= 0) {
-      return decodeURIComponent(publicUrl.slice(idx + marker.length).split('?')[0] ?? '');
-    }
-  }
-
-  const poIdx = publicUrl.indexOf('/PO/');
-  if (poIdx >= 0) {
-    const uploadsIdx = publicUrl.indexOf(CERTIFICATES_UPLOAD_URL_MARKER);
-    if (uploadsIdx >= 0) {
-      return decodeURIComponent(
-        publicUrl.slice(uploadsIdx + CERTIFICATES_UPLOAD_URL_MARKER.length).split('?')[0] ?? ''
-      );
-    }
-  }
-
-  const boIdx = publicUrl.indexOf('/bo/');
-  if (boIdx >= 0) {
-    return decodeURIComponent(publicUrl.slice(boIdx + 1).split('?')[0] ?? '');
-  }
-
-  return null;
+  const paths = collectPoAttachmentRelativePaths(publicUrl);
+  return paths[0] ?? null;
 }
 
 // ============================================================================
@@ -326,6 +302,7 @@ export async function applyForTccAction(prevState: unknown, formData: FormData) 
     reachCert = validation.reachCert;
 
     const { url: boUrl, name: boName } = await uploadBoAttachment(adminSupabase, boFile, {
+      clientId,
       clientName: client.company_name || 'client',
       folderDate: euData.export_date,
     });
@@ -550,8 +527,10 @@ export async function updateTccApplicationAction(prevState: unknown, formData: F
 
     if (hasNewBo) {
       const uploaded = await uploadBoAttachment(adminSupabase, boFile, {
+        clientId: existing.client_id,
         clientName: client.company_name || 'client',
         folderDate: euData.export_date,
+        existingAttachmentUrl: existing.bo_attachment_url,
       });
       boUrl = uploaded.url;
       boName = uploaded.name;
@@ -611,49 +590,6 @@ export async function updateTccApplicationAction(prevState: unknown, formData: F
   }
 }
 
-const TCC_CERTIFICATE_RELATION_SELECT = `
-  id,
-  certificate_number,
-  expires_at,
-  registration_number,
-  client_id,
-  type,
-  tcc_application_id,
-  clients (
-    company_name,
-    uuid_number,
-    address,
-    city,
-    state,
-    postal_code,
-    country
-  ),
-  chemicals (
-    chemical_name,
-    cas_number,
-    ec_number,
-    tonnage_band,
-    is_intermediate_substance
-  ),
-  tcc_applications!certificates_tcc_application_id_fkey (
-    quantity_mt,
-    export_date,
-    tracking_id,
-    registration_number,
-    remarks,
-    eu_importer_company_name,
-    eu_importer_address,
-    purchase_order_number,
-    chemicals (
-      chemical_name,
-      cas_number,
-      ec_number,
-      tonnage_band,
-      is_intermediate_substance
-    )
-  )
-`;
-
 async function syncQuotaForClientChemical(
   adminSupabase: ReturnType<typeof createAdminClient>,
   clientId: string,
@@ -711,46 +647,6 @@ async function syncQuotaForClientChemical(
     .from('chemicals')
     .update({ exported_quantity: totalExported })
     .eq('id', chemicalId);
-}
-
-async function regenerateTccCertificateFile(
-  adminSupabase: ReturnType<typeof createAdminClient>,
-  certificateId: string
-) {
-  const { data: cert, error } = await adminSupabase
-    .from('certificates')
-    .select(TCC_CERTIFICATE_RELATION_SELECT)
-    .eq('id', certificateId)
-    .eq('type', 'TCC')
-    .single();
-
-  if (error || !cert) {
-    throw new Error('Certificate not found for regeneration.');
-  }
-
-  const input = await buildTccCertificatePdfInputFromStoredCert(adminSupabase, cert as never);
-  const certFile = await resolveTccCertificateDownloadFile(adminSupabase, input);
-  const clientName = input.client.company_name || 'client';
-  const issuedDate = input.issuedDate || input.validUntilDate || new Date().toISOString().slice(0, 10);
-  const storagePath = buildClientDateStoragePath('tcc', clientName, issuedDate, certFile.fileName);
-
-  await ensureCertificatesBucket(adminSupabase);
-  const { error: uploadError } = await adminSupabase.storage
-    .from(CERTIFICATES_BUCKET)
-    .upload(storagePath, certFile.buffer, {
-      contentType: certFile.contentType,
-      upsert: true,
-    });
-
-  if (uploadError) {
-    throw new Error(`Certificate regeneration failed: ${uploadError.message}`);
-  }
-
-  const {
-    data: { publicUrl },
-  } = adminSupabase.storage.from(CERTIFICATES_BUCKET).getPublicUrl(storagePath);
-
-  await adminSupabase.from('certificates').update({ file_url: publicUrl }).eq('id', certificateId);
 }
 
 function parseAdminTccUpdateFormData(formData: FormData) {

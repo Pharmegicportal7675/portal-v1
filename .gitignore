@@ -48,4 +48,6 @@ next-env.d.ts
 # chromium extract + temp (Hostinger PDF)
 .cache/
 
-# uploaded certificate files
+# uploaded certificate files (live server only — never commit local uploads)
+/public/uploads/certificates/**
+!/public/uploads/certificates/.gitkeep
