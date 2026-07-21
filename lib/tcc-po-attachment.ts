@@ -230,3 +230,9 @@ export async function loadPoAttachmentForApplication(
     status: 404,
   };
 }
+
+/** True when the application has a PO URL and the file can be read from disk/HTTP. */
+export async function isPoAttachmentFileAvailable(applicationId: string): Promise<boolean> {
+  const result = await loadPoAttachmentForApplication(applicationId);
+  return result.ok;
+}

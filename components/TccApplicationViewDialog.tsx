@@ -551,9 +551,14 @@ export function TccApplicationViewDialog({
                       </a>
                     </div>
                   )}
+                  <p className="px-2 pb-2 text-[11px] text-slate-500 font-medium">
+                    If preview shows unavailable, the PO file is missing on the server — use Request Changes so the client re-uploads.
+                  </p>
                 </div>
               ) : (
-                <p className="p-6 text-sm text-slate-400 text-center font-medium">No PO attachment uploaded</p>
+                <p className="p-6 text-sm text-slate-400 text-center font-medium">
+                  No PO attachment uploaded — client must upload PO before approval.
+                </p>
               )}
             </div>
           </div>

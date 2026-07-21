@@ -62,7 +62,11 @@ export async function GET(request: NextRequest) {
     const result = await loadPoAttachmentForApplication(applicationId);
     if (!result.ok) {
       if (wantsHtml(request)) {
-        return htmlError('PO attachment unavailable', result.error, result.status);
+        const message =
+          result.status === 404
+            ? 'PO attachment file was not found on the server. Ask the client to re-upload the PO (Request Changes), then open again.'
+            : result.error;
+        return htmlError('PO attachment unavailable', message, result.status);
       }
       return NextResponse.json({ error: result.error }, { status: result.status });
     }

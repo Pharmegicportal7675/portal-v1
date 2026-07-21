@@ -37,7 +37,10 @@
     "live:repair": "node scripts/run-live-repair.mjs",
     "audit:orphans": "node scripts/audit-orphan-certificates.mjs",
     "cleanup:orphans:dry": "node scripts/cleanup-orphan-certificate-files.mjs --dry-run",
-    "cleanup:orphans": "node scripts/cleanup-orphan-certificate-files.mjs --apply"
+    "cleanup:orphans": "node scripts/cleanup-orphan-certificate-files.mjs --apply",
+    "sync:certs-to-db-paths": "npx tsx scripts/sync-certs-to-live-db-paths.ts",
+    "sync:certs-tcc": "npx tsx scripts/sync-certs-to-live-db-paths.ts --tcc-only",
+    "sync:certs-colour": "npx tsx scripts/sync-certs-to-live-db-paths.ts --client=COLOUR"
   },
   "dependencies": {
     "@prisma/adapter-mariadb": "^7.8.0",

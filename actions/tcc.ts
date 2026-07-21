@@ -11,6 +11,7 @@ import { uploadBoAttachment, validateBoAttachment } from '@/lib/tcc-attachments'
 import { CERTIFICATES_BUCKET, ensureCertificatesBucket } from '@/lib/storage';
 import { buildClientDateStoragePath, extractStorageRelativePath } from '@/lib/storage-paths';
 import { collectPoAttachmentRelativePaths } from '@/lib/tcc-po-attachment-paths';
+import { isPoAttachmentFileAvailable, loadPoAttachmentForApplication } from '@/lib/tcc-po-attachment';
 import { revalidatePath } from 'next/cache';
 import { notifyAllAdmins, notifyUser } from '@/lib/notifications';
 import { notifyTccApplicationByEmail } from '@/lib/tcc-application-notification';
@@ -508,6 +509,16 @@ export async function updateTccApplicationAction(prevState: unknown, formData: F
     const hasNewBo = boFile instanceof File && boFile.size > 0;
     if (!hasNewBo && !existing.bo_attachment_url) {
       return { success: false, error: 'PO attachment is required.' };
+    }
+    if (!hasNewBo && existing.bo_attachment_url) {
+      const poAvailable = await isPoAttachmentFileAvailable(applicationId);
+      if (!poAvailable) {
+        return {
+          success: false,
+          error:
+            'PO attachment file is missing on the server. Please re-upload the PO attachment before submitting.',
+        };
+      }
     }
 
     if (hasNewBo) {
@@ -1096,6 +1107,22 @@ export async function processTccAction(
     } | null = null;
 
     if (status === 'approved') {
+      if (!app.bo_attachment_url?.trim()) {
+        return {
+          success: false,
+          error: 'Cannot approve: PO attachment is required. Ask the client to upload the PO.',
+        };
+      }
+
+      const poFile = await loadPoAttachmentForApplication(applicationId);
+      if (!poFile.ok) {
+        return {
+          success: false,
+          error:
+            'Cannot approve: PO attachment file is missing on the server. Use Request Changes so the client can re-upload the PO.',
+        };
+      }
+
       if (!app.export_date) {
         return { success: false, error: 'Cannot approve: export shipment date is missing.' };
       }

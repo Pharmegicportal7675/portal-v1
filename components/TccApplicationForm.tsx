@@ -126,6 +126,7 @@ export default function TccApplicationForm({
   const [invoiceNumber, setInvoiceNumber] = useState(editApplication?.invoice_number ?? '');
   const [caseNumber, setCaseNumber] = useState('');
   const [boFile, setBoFile] = useState<File | null>(null);
+  const [existingPoMissing, setExistingPoMissing] = useState(false);
   const allowedFrameworks = REGULATORY_REGISTRATION_OPTIONS.filter((option) =>
     regulatoryRegistrations.includes(option.value)
   );
@@ -149,8 +150,34 @@ export default function TccApplicationForm({
     setPurchaseOrderNumber(editApplication.purchase_order_number ?? '');
     setInvoiceNumber(editApplication.invoice_number ?? '');
     setBoFile(null);
+    setExistingPoMissing(false);
     setError(null);
   }, [editApplication]);
+
+  useEffect(() => {
+    if (!editApplication?.id || !editApplication.bo_attachment_url) {
+      setExistingPoMissing(false);
+      return;
+    }
+
+    let cancelled = false;
+    const check = async () => {
+      try {
+        const res = await fetch(`/api/tcc/po-attachment?id=${encodeURIComponent(editApplication.id)}`, {
+          method: 'GET',
+          headers: { Accept: 'application/json' },
+          cache: 'no-store',
+        });
+        if (!cancelled) setExistingPoMissing(!res.ok);
+      } catch {
+        if (!cancelled) setExistingPoMissing(true);
+      }
+    };
+    void check();
+    return () => {
+      cancelled = true;
+    };
+  }, [editApplication?.id, editApplication?.bo_attachment_url]);
 
   const selectedSubstance = authorizedSubstances.find((s) => s.id === chemicalId);
 
@@ -186,7 +213,8 @@ export default function TccApplicationForm({
   const eligibleSubstances = isEuReach
     ? authorizedSubstances.filter((s) => s.has_reach_history)
     : authorizedSubstances;
-  const hasExistingBo = Boolean(editApplication?.bo_attachment_url);
+  const hasExistingBo = Boolean(editApplication?.bo_attachment_url) && !existingPoMissing;
+  const poAttachmentReady = Boolean(boFile) || hasExistingBo;
 
   const formIsComplete = useMemo(() => {
     if (!regulatoryFramework) return false;
@@ -197,7 +225,7 @@ export default function TccApplicationForm({
     if (!euImporterCompanyName.trim()) return false;
     if (!euImporterAddress.trim()) return false;
     if (!purchaseOrderNumber.trim()) return false;
-    if (!boFile && !hasExistingBo) return false;
+    if (!poAttachmentReady) return false;
     if (
       isEuReach &&
       (quotaExceeded || (noQuotaLeft && !isEditing) || noReachForExportDate)
@@ -218,6 +246,8 @@ export default function TccApplicationForm({
     purchaseOrderNumber,
     boFile,
     hasExistingBo,
+    poAttachmentReady,
+    existingPoMissing,
     quotaExceeded,
     noQuotaLeft,
     isEditing,
@@ -271,8 +301,10 @@ export default function TccApplicationForm({
       return 'Purchase order number is required.';
     }
 
-    if (!boFile && !hasExistingBo) {
-      return 'PO attachment is required.';
+    if (!poAttachmentReady) {
+      return existingPoMissing
+        ? 'Previous PO file is missing on the server. Please re-upload the PO attachment.'
+        : 'PO attachment is required.';
     }
 
     return null;
@@ -619,6 +651,11 @@ export default function TccApplicationForm({
                   <FormLabel required={!hasExistingBo}>
                     PO Attachment{hasExistingBo ? ' (replace optional)' : ''}
                   </FormLabel>
+                  {existingPoMissing && (
+                    <p className="text-xs font-medium text-amber-700 bg-amber-50 border border-amber-100 rounded-lg px-3 py-2">
+                      Previous PO file is missing on the server. Re-upload the PO attachment to continue.
+                    </p>
+                  )}
                   {hasExistingBo && (
                     <p className="text-[11px] text-slate-500 font-medium">
                       Current file:{' '}

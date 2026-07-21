@@ -1,6 +1,7 @@
 import { createAdminClient } from '@/lib/db/admin';
 import { buildReachCertificateStoredFile } from '@/lib/reach-pdf-data';
-import { buildClientDateStoragePath } from '@/lib/storage-paths';
+import { resolveCertificateStorageRelativePath } from '@/lib/storage-paths';
+import { resolveClientStorageFolder } from '@/lib/client-storage-folder';
 import { CERTIFICATES_BUCKET, ensureCertificatesBucket } from '@/lib/storage';
 import { clearReachCertificateStorageFiles } from '@/lib/reach-certificate-storage';
 import { revalidatePath } from 'next/cache';
@@ -191,12 +192,17 @@ export async function createReachCertificate(input: CreateReachCertificateInput)
     clientId,
     chemicalId,
   });
-  const storagePath = buildClientDateStoragePath(
-    'rc',
-    client.company_name,
-    issuedDate,
-    certFile.fileName
+  const clientFolder = await resolveClientStorageFolder(
+    adminSupabase,
+    clientId,
+    client.company_name || 'client'
   );
+  const storagePath = resolveCertificateStorageRelativePath({
+    folder: 'RC',
+    clientFolder,
+    date: issuedDate,
+    fileName: certFile.fileName,
+  });
 
   await ensureCertificatesBucket(adminSupabase);
   const { error: uploadError } = await adminSupabase.storage
@@ -363,12 +369,18 @@ export async function regenerateReachCertificateFile(certId: string) {
       clientId: cert.client_id,
       chemicalId: cert.chemical_id,
     });
-    const storagePath = buildClientDateStoragePath(
-      'rc',
-      client.company_name,
-      cert.issued_at.split('T')[0],
-      certFile.fileName
+    const clientFolder = await resolveClientStorageFolder(
+      adminSupabase,
+      cert.client_id,
+      client.company_name || 'client'
     );
+    const storagePath = resolveCertificateStorageRelativePath({
+      storedFileUrl: cert.file_url,
+      folder: 'RC',
+      clientFolder,
+      date: cert.issued_at.split('T')[0],
+      fileName: certFile.fileName,
+    });
 
     await ensureCertificatesBucket(adminSupabase);
     const { error: uploadError } = await adminSupabase.storage
@@ -384,7 +396,10 @@ export async function regenerateReachCertificateFile(certId: string) {
       data: { publicUrl },
     } = adminSupabase.storage.from(CERTIFICATES_BUCKET).getPublicUrl(storagePath);
 
-    await adminSupabase.from('certificates').update({ file_url: publicUrl }).eq('id', certId);
+    // Keep existing live path when already correct — only update if path changed.
+    if (!cert.file_url || !String(cert.file_url).includes(storagePath)) {
+      await adminSupabase.from('certificates').update({ file_url: publicUrl }).eq('id', certId);
+    }
 
     return { success: true as const, fileUrl: publicUrl };
   } catch (err: unknown) {
