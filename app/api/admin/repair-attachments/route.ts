@@ -2,6 +2,8 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getSession } from '@/lib/auth/session';
 import { regenerateMissingTccCertificateFiles } from '@/lib/regenerate-tcc-certificate-file';
 import { cleanupOrphanCertificateFiles } from '@/lib/cleanup-orphan-certificate-files';
+import { spawnSync } from 'node:child_process';
+import path from 'node:path';
 
 export const runtime = 'nodejs';
 export const maxDuration = 300;
@@ -19,9 +21,23 @@ function isAuthorized(request: NextRequest, session: Awaited<ReturnType<typeof g
   );
 }
 
+function runEnsureFoldersScript(): { ok: boolean; output: string } {
+  const script = path.join(process.cwd(), 'scripts', 'ensure-live-folder-structure.mjs');
+  const result = spawnSync(process.execPath, [script], {
+    cwd: process.cwd(),
+    encoding: 'utf8',
+    env: process.env,
+  });
+  return {
+    ok: result.status === 0,
+    output: `${result.stdout || ''}${result.stderr || ''}`.trim(),
+  };
+}
+
 /**
  * Live repair:
  *   POST { "mode": "tcc" } — regenerate missing TCC PDFs (add-only)
+ *   POST { "mode": "folders" } — ensure Client/Year/PO|RC|TCC folders exist
  *   POST { "mode": "orphans", "folder": "COLORS_INDIA", "apply": true } — delete orphan PDFs
  */
 export async function POST(request: NextRequest) {
@@ -39,6 +55,15 @@ export async function POST(request: NextRequest) {
     }
 
     const mode = body.mode || new URL(request.url).searchParams.get('mode') || 'tcc';
+
+    if (mode === 'folders') {
+      const result = runEnsureFoldersScript();
+      return NextResponse.json({
+        ok: result.ok,
+        message: 'Ensured live certificate folder structure (Client/Year/PO|RC|TCC).',
+        output: result.output,
+      });
+    }
 
     if (mode === 'orphans') {
       const folder =

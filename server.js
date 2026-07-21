@@ -61,20 +61,54 @@ function verifyStandaloneBundle() {
   return true;
 }
 
+function isSymlink(targetPath) {
+  try {
+    return fs.lstatSync(targetPath).isSymbolicLink();
+  } catch {
+    return false;
+  }
+}
+
+/**
+ * Standalone cwd writes to .next/standalone/public/uploads by default.
+ * Hostinger File Manager + static serving use nodejs/public/uploads.
+ * Always link those two so certificates appear in the live folder you inspect.
+ */
 function linkRuntimeUploads() {
   const uploadsSrc = path.join(root, 'public', 'uploads');
   const uploadsDest = path.join(standaloneDir, 'public', 'uploads');
-  if (!fs.existsSync(uploadsSrc)) return;
 
+  fs.mkdirSync(uploadsSrc, { recursive: true });
+  fs.mkdirSync(path.join(uploadsSrc, 'certificates'), { recursive: true });
   fs.mkdirSync(path.dirname(uploadsDest), { recursive: true });
-  if (fs.existsSync(uploadsDest)) return;
+
+  // Prefer the Hostinger public path for all certificate writes.
+  if (!process.env.CERTIFICATES_UPLOAD_ROOT) {
+    process.env.CERTIFICATES_UPLOAD_ROOT = path.join(uploadsSrc, 'certificates');
+  }
+
+  if (isSymlink(uploadsDest)) {
+    console.info('[portal] uploads already linked → public/uploads');
+    return;
+  }
+
+  if (fs.existsSync(uploadsDest)) {
+    try {
+      // Rescue any files previously written into standalone uploads.
+      copyDir(uploadsDest, uploadsSrc);
+      fs.rmSync(uploadsDest, { recursive: true, force: true });
+      console.info('[portal] Moved standalone uploads → public/uploads');
+    } catch (err) {
+      console.warn('[portal] Could not merge standalone uploads:', err.message || err);
+    }
+  }
 
   try {
     fs.symlinkSync(uploadsSrc, uploadsDest, 'dir');
-    console.info('[portal] Linked uploads → standalone/public/uploads');
-  } catch {
+    console.info('[portal] Linked standalone/public/uploads → public/uploads');
+  } catch (err) {
+    console.warn('[portal] Symlink failed, copying uploads into standalone:', err.message || err);
     copyDir(uploadsSrc, uploadsDest);
-    console.info('[portal] Copied uploads → standalone/public/uploads');
   }
 }
 

@@ -32,13 +32,17 @@ export function getCertificatesUploadRoots(): string[] {
   });
 }
 
-/** Primary upload root used for new writes (first existing candidate). */
+/** Primary upload root used for new writes. Prefer Hostinger public/uploads, not standalone. */
 export function getPrimaryCertificatesUploadRoot(): string {
-  const roots = getCertificatesUploadRoots();
-  if (roots.length > 0) return roots[0]!;
-
   const envRoot = process.env.CERTIFICATES_UPLOAD_ROOT?.trim();
   if (envRoot) return path.resolve(envRoot);
+
+  const roots = getCertificatesUploadRoots();
+  const preferred = roots.find(
+    (root) => !root.replace(/\\/g, '/').includes('/.next/standalone/')
+  );
+  if (preferred) return preferred;
+  if (roots.length > 0) return roots[0]!;
 
   return path.join(process.cwd(), CERTIFICATES_RELATIVE);
 }

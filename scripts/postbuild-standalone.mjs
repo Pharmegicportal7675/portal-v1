@@ -68,11 +68,13 @@ function ensureNodeModulesCopy(...segments) {
 
 console.info('[postbuild] Copying static assets into standalone bundle…');
 
-// Never copy repo uploads/ — server PO/TCC files must survive deploys (add-only).
+// Never create a real uploads tree inside standalone — server.js will symlink to
+// nodejs/public/uploads so File Manager and the app share one folder.
 copyDir(path.join(root, 'public'), path.join(standaloneDir, 'public'), {
   skipRelativePaths: ['uploads'],
 });
-fs.mkdirSync(path.join(standaloneDir, 'public', 'uploads', 'certificates'), { recursive: true });
+fs.mkdirSync(path.join(root, 'public', 'uploads', 'certificates'), { recursive: true });
+fs.mkdirSync(path.join(standaloneDir, 'public'), { recursive: true });
 copyDir(path.join(root, '.next', 'static'), path.join(standaloneDir, '.next', 'static'));
 copyDir(path.join(root, 'templates'), path.join(standaloneDir, 'templates'));
 copyDir(path.join(root, 'generated'), path.join(standaloneDir, 'generated'));

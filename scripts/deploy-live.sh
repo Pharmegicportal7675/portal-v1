@@ -19,6 +19,9 @@ npm ci
 echo "==> npm run build..."
 npm run build
 
+echo "==> Ensure live certificate folder structure (Client/Year/PO|RC|TCC)..."
+node scripts/ensure-live-folder-structure.mjs || echo "WARN: folder ensure skipped."
+
 echo "==> Regenerate missing TCC PDFs (add-only — no DB rows or PO files deleted)..."
 node scripts/fix-tcc-file-url-paths.mjs || echo "WARN: file_url path fix skipped."
 npx tsx scripts/regenerate-missing-tcc-pdfs.ts || echo "WARN: TCC PDF regeneration skipped or partial — re-run manually if needed."
