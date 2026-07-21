@@ -44,6 +44,14 @@ export async function cleanupOrphanCertificateFiles(options?: {
     throw new Error(`Failed to load certificates: ${error.message}`);
   }
 
+  const { data: poApps, error: poError } = await adminSupabase
+    .from('tcc_applications')
+    .select('bo_attachment_url, bo_attachment_name');
+
+  if (poError) {
+    throw new Error(`Failed to load PO attachments: ${poError.message}`);
+  }
+
   const referenced = new Set<string>();
   for (const cert of certs ?? []) {
     const relative = extractStorageRelativePath(cert.file_url || '');
@@ -52,6 +60,19 @@ export async function cleanupOrphanCertificateFiles(options?: {
     if (number) {
       referenced.add(`${number}.pdf`);
       referenced.add(`${number}.docx`);
+    }
+  }
+
+  for (const row of poApps ?? []) {
+    const relative = extractStorageRelativePath(row.bo_attachment_url || '');
+    if (relative) {
+      referenced.add(relative.replace(/\\/g, '/'));
+      referenced.add(path.basename(relative));
+    }
+    const name = row.bo_attachment_name?.trim();
+    if (name) {
+      referenced.add(name);
+      referenced.add(name.replace(/[^a-zA-Z0-9._-]/g, '_'));
     }
   }
 

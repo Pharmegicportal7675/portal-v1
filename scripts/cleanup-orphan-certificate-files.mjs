@@ -101,6 +101,11 @@ const certs = await conn.query(
    WHERE file_url IS NOT NULL OR certificate_number IS NOT NULL`
 );
 
+const poRows = await conn.query(
+  `SELECT bo_attachment_url, bo_attachment_name FROM tcc_applications
+   WHERE bo_attachment_url IS NOT NULL AND TRIM(bo_attachment_url) <> ''`
+);
+
 const referenced = new Set();
 for (const cert of certs) {
   const relative = extractRelative(cert.file_url);
@@ -108,6 +113,17 @@ for (const cert of certs) {
   if (cert.certificate_number) {
     referenced.add(`${cert.certificate_number}.pdf`);
     referenced.add(`${cert.certificate_number}.docx`);
+  }
+}
+
+for (const row of poRows) {
+  const relative = extractRelative(row.bo_attachment_url);
+  if (relative) referenced.add(relative.replace(/\\/g, '/'));
+  const base = path.basename(relative || '');
+  if (base) referenced.add(base);
+  if (row.bo_attachment_name?.trim()) {
+    referenced.add(row.bo_attachment_name.trim());
+    referenced.add(row.bo_attachment_name.trim().replace(/[^a-zA-Z0-9._-]/g, '_'));
   }
 }
 

@@ -34,6 +34,17 @@ const nextConfig = {
       },
     ];
   },
+  // Force certificate files through the disk API (standalone public/uploads is often empty).
+  async rewrites() {
+    return {
+      beforeFiles: [
+        {
+          source: '/uploads/certificates/:path*',
+          destination: '/api/uploads/certificates/:path*',
+        },
+      ],
+    };
+  },
   outputFileTracingIncludes: {
     '/api/health': PRISMA_TRACE,
     '/api/health/db': PRISMA_TRACE,

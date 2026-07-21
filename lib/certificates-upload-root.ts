@@ -80,14 +80,20 @@ export function resolveCertificatesFilePath(relativePath: string): string | null
   if (!relative) return null;
 
   const segments = relative.split('/').filter(Boolean);
+  const fileName = segments[segments.length - 1] || '';
+  const parentSegments = segments.slice(0, -1);
+  const nameCandidates = fileNameVariants(fileName);
+
   for (const root of getCertificatesUploadRoots()) {
-    const fullPath = path.join(root, ...segments);
-    try {
-      if (fs.existsSync(fullPath) && fs.statSync(fullPath).isFile()) {
-        return fullPath;
+    for (const name of nameCandidates) {
+      const fullPath = path.join(root, ...parentSegments, name);
+      try {
+        if (fs.existsSync(fullPath) && fs.statSync(fullPath).isFile()) {
+          return fullPath;
+        }
+      } catch {
+        // try next candidate
       }
-    } catch {
-      // try next root
     }
   }
 
