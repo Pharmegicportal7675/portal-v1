@@ -17,6 +17,7 @@ import {
 import { updateTemplateAction } from '@/actions/templates';
 import { CertificateTemplateSettingsPanel } from '@/components/CertificateTemplateSettingsPanel';
 import UserManualSettings, { type UserManualInfo } from '@/components/UserManualSettings';
+import StorageCleanupPanel from '@/components/StorageCleanupPanel';
 import {
   resolveRcBranding,
   resolveTccBranding,
@@ -38,6 +39,7 @@ import {
   Bell,
   FileText,
   BookOpen,
+  HardDrive,
 } from 'lucide-react';
 
 interface SettingsData {
@@ -90,7 +92,7 @@ export default function SettingsDashboard({ initialSettings, initialTemplate, in
   const [isNotificationPending, startNotificationTransition] = useTransition();
 
   const [activeTab, setActiveTab] = useState<
-    'profile' | 'rc-template' | 'tcc-template' | 'security' | 'smtp-tcc' | 'smtp-rc' | 'notification-email' | 'user-manual'
+    'profile' | 'rc-template' | 'tcc-template' | 'security' | 'smtp-tcc' | 'smtp-rc' | 'notification-email' | 'user-manual' | 'storage-cleanup'
   >('profile');
 
   // 1. Profile Settings State
@@ -478,6 +480,17 @@ export default function SettingsDashboard({ initialSettings, initialTemplate, in
             <BookOpen className="h-4.5 w-4.5" />
             User Manual
           </button>
+          <button
+            onClick={() => setActiveTab('storage-cleanup')}
+            className={`flex shrink-0 md:shrink items-center gap-2.5 px-4 py-3 rounded-lg text-sm font-bold text-left cursor-pointer transition-all whitespace-nowrap md:whitespace-normal ${
+              activeTab === 'storage-cleanup'
+                ? 'bg-primary text-white'
+                : 'text-slate-600 hover:text-slate-900 hover:bg-slate-50'
+            }`}
+          >
+            <HardDrive className="h-4.5 w-4.5" />
+            Storage Cleanup
+          </button>
         </div>
 
         {/* Workspace Panels (Right Content) */}
@@ -744,6 +757,25 @@ export default function SettingsDashboard({ initialSettings, initialTemplate, in
                     Save Notification Emails
                   </Button>
                 </div>
+              </CardContent>
+            </Card>
+          )}
+
+          {/* TAB 7: STORAGE CLEANUP */}
+          {activeTab === 'storage-cleanup' && (
+            <Card className="border-slate-100 shadow-xs">
+              <CardHeader>
+                <div className="flex items-center gap-2 text-primary">
+                  <HardDrive className="h-5 w-5" />
+                  <CardTitle>Storage Cleanup</CardTitle>
+                </div>
+                <CardDescription>
+                  Find and remove orphan certificate files on the live disk that no longer have a
+                  matching database record.
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                <StorageCleanupPanel />
               </CardContent>
             </Card>
           )}
