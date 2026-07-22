@@ -1,9 +1,13 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useTransition } from 'react';
 import { Button } from './ui/Button';
 import { Input } from './ui/Input';
 import { toast } from '@/store/toast';
+import {
+  scanOrphanCertificateFilesAction,
+  deleteOrphanCertificateFilesAction,
+} from '@/actions/super-tools';
 
 interface ScanResult {
   uploadRoot: string;
@@ -14,63 +18,61 @@ interface ScanResult {
   errors: string[];
 }
 
-async function callRepair(folder: string, apply: boolean): Promise<ScanResult> {
-  const res = await fetch('/api/admin/repair-attachments', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ mode: 'orphans', folder: folder.trim() || undefined, apply }),
-  });
-  const data = await res.json();
-  if (!res.ok) {
-    throw new Error(data?.error || 'Request failed');
-  }
-  return data as ScanResult;
-}
-
 export default function StorageCleanupPanel() {
   const [folder, setFolder] = useState('');
   const [result, setResult] = useState<ScanResult | null>(null);
-  const [isScanning, setIsScanning] = useState(false);
-  const [isDeleting, setIsDeleting] = useState(false);
+  const [isPending, startTransition] = useTransition();
 
-  const handleScan = async () => {
-    setIsScanning(true);
-    try {
-      const data = await callRepair(folder, false);
-      setResult(data);
-      toast.info(`Found ${data.orphans.length} orphan file(s) out of ${data.scanned} scanned.`);
-    } catch (err) {
-      toast.error(err);
-    } finally {
-      setIsScanning(false);
-    }
+  const handleScan = () => {
+    startTransition(async () => {
+      const data = await scanOrphanCertificateFilesAction(folder);
+      if (!data.success) {
+        toast.error(data.error || 'Scan failed.');
+        return;
+      }
+      setResult({
+        uploadRoot: data.uploadRoot || '',
+        scanned: data.scanned || 0,
+        orphans: data.orphans || [],
+        deleted: data.deleted || 0,
+        dryRun: data.dryRun ?? true,
+        errors: data.errors || [],
+      });
+      toast.info(`Found ${(data.orphans || []).length} orphan file(s) out of ${data.scanned || 0} scanned.`);
+    });
   };
 
-  const handleDelete = async () => {
+  const handleDelete = () => {
     if (!result || result.orphans.length === 0) return;
     const confirmed = window.confirm(
       `Delete ${result.orphans.length} orphan file(s) from live disk? This cannot be undone. Database rows are never touched.`
     );
     if (!confirmed) return;
 
-    setIsDeleting(true);
-    try {
-      const data = await callRepair(folder, true);
-      setResult(data);
-      toast.success(`Deleted ${data.deleted} orphan file(s).`);
-    } catch (err) {
-      toast.error(err);
-    } finally {
-      setIsDeleting(false);
-    }
+    startTransition(async () => {
+      const data = await deleteOrphanCertificateFilesAction(folder);
+      if (!data.success) {
+        toast.error(data.error || 'Delete failed.');
+        return;
+      }
+      setResult({
+        uploadRoot: data.uploadRoot || '',
+        scanned: data.scanned || 0,
+        orphans: data.orphans || [],
+        deleted: data.deleted || 0,
+        dryRun: data.dryRun ?? false,
+        errors: data.errors || [],
+      });
+      toast.success(data.message || `Deleted ${data.deleted} orphan file(s).`);
+    });
   };
 
   return (
     <div className="space-y-6">
       <div className="bg-amber-50 border border-amber-200 rounded-xl p-4 text-xs font-semibold text-amber-800">
-        Scans the live certificates upload folder for PDF/DOCX files that no certificate row in the
+        Scans the certificates upload folder for PDF/DOCX files that no certificate or PO row in the
         database points to, and lets you delete them. Database rows are never modified — only
-        unreferenced files on disk.
+        unreferenced files on disk. Super Admin only.
       </div>
 
       <Input
@@ -81,14 +83,14 @@ export default function StorageCleanupPanel() {
       />
 
       <div className="flex flex-wrap gap-3">
-        <Button onClick={handleScan} isLoading={isScanning} disabled={isScanning || isDeleting}>
+        <Button onClick={handleScan} isLoading={isPending} disabled={isPending}>
           Scan for Orphan Files
         </Button>
         <Button
           variant="destructive"
           onClick={handleDelete}
-          isLoading={isDeleting}
-          disabled={isDeleting || isScanning || !result || result.orphans.length === 0}
+          isLoading={isPending}
+          disabled={isPending || !result || result.orphans.length === 0}
         >
           Delete Found Orphans
         </Button>

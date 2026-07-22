@@ -151,13 +151,10 @@ async function main() {
   const zipPath = path.join(process.cwd(), 'certificates-for-live.zip');
   if (fs.existsSync(zipPath)) fs.unlinkSync(zipPath);
 
+  // Prefer tar: Compress-Archive breaks on Windows folder names ending with "."
   const zip = spawnSync(
-    'powershell',
-    [
-      '-NoProfile',
-      '-Command',
-      `Compress-Archive -Path "${uploadRoot}\\*" -DestinationPath "${zipPath}" -Force`,
-    ],
+    'tar',
+    ['-a', '-c', '-f', zipPath, '-C', uploadRoot, '.'],
     { encoding: 'utf8' }
   );
 
@@ -169,6 +166,7 @@ async function main() {
   } else {
     console.log('\nZip failed — upload the folder public/uploads/certificates manually.');
     if (zip.stderr) console.log(zip.stderr);
+    if (zip.stdout) console.log(zip.stdout);
   }
 
   console.log(`\nSynced: ${synced.length}`);

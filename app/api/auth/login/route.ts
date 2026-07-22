@@ -91,7 +91,15 @@ export async function POST(request: NextRequest) {
   const auth = await authenticateUser(email, password);
   if (!auth.ok) {
     await logLoginFailure(email, auth.error || 'Invalid credentials');
-    return loginFailureRedirect(request, redirectTo, 'InvalidCredentials');
+    const isDbUnavailable =
+      /database is temporarily unavailable|connection limit|pool timeout|too many connections/i.test(
+        auth.error || ''
+      );
+    return loginFailureRedirect(
+      request,
+      redirectTo,
+      isDbUnavailable ? 'DatabaseUnavailable' : 'InvalidCredentials'
+    );
   }
 
   try {

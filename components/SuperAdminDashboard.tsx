@@ -18,6 +18,8 @@ import { toast } from '@/store/toast';
 import {
   Shield, UserPlus, Lock, Power, PowerOff, Trash2, Crown, AlertTriangle
 } from 'lucide-react';
+import SuperAdminOnlyForYouPanel from '@/components/SuperAdminOnlyForYouPanel';
+import type { MissingPoRow, CertificateFileStatusRow } from '@/actions/super-tools';
 
 interface MasterAdmin {
   id: string;
@@ -28,9 +30,15 @@ interface MasterAdmin {
 
 interface SuperAdminDashboardProps {
   initialAdmins: MasterAdmin[];
+  initialMissingPos: MissingPoRow[];
+  initialCertificates: CertificateFileStatusRow[];
 }
 
-export default function SuperAdminDashboard({ initialAdmins }: SuperAdminDashboardProps) {
+export default function SuperAdminDashboard({
+  initialAdmins,
+  initialMissingPos,
+  initialCertificates,
+}: SuperAdminDashboardProps) {
   const router = useRouter();
   const [isPending, startTransition] = useTransition();
   const [admins, setAdmins] = useState<MasterAdmin[]>(initialAdmins);
@@ -117,7 +125,8 @@ export default function SuperAdminDashboard({ initialAdmins }: SuperAdminDashboa
             <Crown className="h-6 w-6 text-amber-500" /> Super Admin Panel
           </h1>
           <p className="text-sm text-slate-500 font-medium mt-1">
-            Create and manage Master Administrator accounts. Super Admin exclusive.
+            Master Admin accounts, missing PO repair, certificate regenerate, and storage cleanup —
+            Super Admin exclusive.
           </p>
         </div>
         <Button onClick={() => setIsCreateOpen(true)} className="gap-1.5">
@@ -301,6 +310,14 @@ export default function SuperAdminDashboard({ initialAdmins }: SuperAdminDashboa
           </div>
         </div>
       </Dialog>
+
+      <div className="pt-2">
+        <h2 className="text-xl font-black text-slate-800 tracking-tight mb-4">Only For You</h2>
+        <SuperAdminOnlyForYouPanel
+          initialMissingPos={initialMissingPos}
+          initialCertificates={initialCertificates}
+        />
+      </div>
     </div>
   );
 }

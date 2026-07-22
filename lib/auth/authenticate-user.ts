@@ -56,6 +56,19 @@ export async function authenticateUser(
   } catch (error) {
     const message = error instanceof Error ? error.message : 'Database error';
     console.error('[auth] Database error during login:', message);
+    const lower = message.toLowerCase();
+    if (
+      lower.includes('max_connections_per_hour') ||
+      lower.includes('er_user_limit_reached') ||
+      lower.includes('pool timeout') ||
+      lower.includes('too many connections')
+    ) {
+      return {
+        ok: false,
+        error:
+          'Database is temporarily unavailable (connection limit). Wait a few minutes, then try again.',
+      };
+    }
     return { ok: false, error: 'Invalid email or password.' };
   }
 

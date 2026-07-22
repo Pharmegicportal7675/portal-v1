@@ -16,9 +16,8 @@ function isAuthorized(request: NextRequest, session: Awaited<ReturnType<typeof g
     if (header === secret || query === secret) return true;
   }
 
-  return Boolean(
-    session && (session.role === 'MASTER_ADMIN' || session.role === 'SUPER_ADMIN')
-  );
+  // Session access: Super Admin only (Master Admin must use scripts with secret).
+  return Boolean(session && session.role === 'SUPER_ADMIN');
 }
 
 function runEnsureFoldersScript(): { ok: boolean; output: string } {

@@ -75,10 +75,18 @@ interface SettingsDashboardProps {
   initialTemplate: TemplateData | null;
   initialUserManual: UserManualInfo | null;
   initialUserGuideUrl: string;
+  currentUserRole?: 'SUPER_ADMIN' | 'MASTER_ADMIN' | 'CLIENT' | null;
 }
 
-export default function SettingsDashboard({ initialSettings, initialTemplate, initialUserManual, initialUserGuideUrl }: SettingsDashboardProps) {
+export default function SettingsDashboard({
+  initialSettings,
+  initialTemplate,
+  initialUserManual,
+  initialUserGuideUrl,
+  currentUserRole = null,
+}: SettingsDashboardProps) {
   const router = useRouter();
+  const canManageStorageCleanup = currentUserRole === 'SUPER_ADMIN';
   const rcDefaults = resolveRcBranding(initialTemplate);
   const tccDefaults = resolveTccBranding(initialTemplate);
 
@@ -479,17 +487,19 @@ export default function SettingsDashboard({ initialSettings, initialTemplate, in
             <BookOpen className="h-4.5 w-4.5" />
             User Manual
           </button>
-          <button
-            onClick={() => setActiveTab('storage-cleanup')}
-            className={`flex shrink-0 md:shrink items-center gap-2.5 px-4 py-3 rounded-lg text-sm font-bold text-left cursor-pointer transition-all whitespace-nowrap md:whitespace-normal ${
-              activeTab === 'storage-cleanup'
-                ? 'bg-primary text-white'
-                : 'text-slate-600 hover:text-slate-900 hover:bg-slate-50'
-            }`}
-          >
-            <HardDrive className="h-4.5 w-4.5" />
-            Storage Cleanup
-          </button>
+          {canManageStorageCleanup && (
+            <button
+              onClick={() => setActiveTab('storage-cleanup')}
+              className={`flex shrink-0 md:shrink items-center gap-2.5 px-4 py-3 rounded-lg text-sm font-bold text-left cursor-pointer transition-all whitespace-nowrap md:whitespace-normal ${
+                activeTab === 'storage-cleanup'
+                  ? 'bg-primary text-white'
+                  : 'text-slate-600 hover:text-slate-900 hover:bg-slate-50'
+              }`}
+            >
+              <HardDrive className="h-4.5 w-4.5" />
+              Storage Cleanup
+            </button>
+          )}
         </div>
 
         {/* Workspace Panels (Right Content) */}
@@ -760,8 +770,8 @@ export default function SettingsDashboard({ initialSettings, initialTemplate, in
             </Card>
           )}
 
-          {/* TAB 7: STORAGE CLEANUP */}
-          {activeTab === 'storage-cleanup' && (
+          {/* TAB 7: STORAGE CLEANUP — Super Admin only (also on /admin/super Only For You) */}
+          {canManageStorageCleanup && activeTab === 'storage-cleanup' && (
             <Card className="border-slate-100 shadow-xs">
               <CardHeader>
                 <div className="flex items-center gap-2 text-primary">
@@ -770,7 +780,7 @@ export default function SettingsDashboard({ initialSettings, initialTemplate, in
                 </div>
                 <CardDescription>
                   Find and remove orphan certificate files on the live disk that no longer have a
-                  matching database record.
+                  matching database record. Prefer Super Admin → Only For You for full ops tools.
                 </CardDescription>
               </CardHeader>
               <CardContent>

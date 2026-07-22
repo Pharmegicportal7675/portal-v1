@@ -1,0 +1,56 @@
+Missing PO attachments (cannot auto-regenerate)
+Generated: 2026-07-22
+Action: restore from Hostinger backup OR ask client to re-upload via TCC application edit.
+
+1. Nepa Overseas
+   File: L2026050212 18 05 2026 DOE.pdf
+   Path: Nepa_Overseas/2026/PO/L2026050212_18_05_2026_DOE.pdf
+   App ID: dd3ed25d-800e-11f1-9b63-8d739aa98188
+
+2. Navpad Pigments Private Limited
+   File: Commercial Packing List 14-07.pdf
+   Path: NAVPAD_PIGMENTS_PRIVATE_LIMITED/2026/PO/Commercial_Packing_List_14-07.pdf
+   App IDs: 97e6b6ab-7f81-11f1-9b63-8d739aa98188, 66963b98-7f81-11f1-9b63-8d739aa98188
+
+3. Shree Industries
+   File: Preliminary PO 10EX SHREE - 2100KG PR 122.pdf
+   Path: Shree_Industries/2026/PO/Preliminary_PO_10EX_SHREE_-_2100KG_PR_122.pdf
+   App ID: 46099b3e-7b8b-11f1-9b63-8d739aa98188
+
+4. Shree Industries
+   File: PO 19EX - 2100kg PR 122 - preliminary FOB Basis.pdf
+   Path: Shree_Industries/2026/PO/PO_19EX_-_2100kg_PR_122_-_preliminary_FOB_Basis.pdf
+   App ID: ca02e867-7b85-11f1-9b63-8d739aa98188
+
+5. Ami Pigments Pvt Ltd.
+   File: PRELIMINARY PO 15EX FOB - 1MT PV 23.pdf
+   Path: Ami_Pigments_Pvt_Ltd./2026/PO/PRELIMINARY_PO_15EX_FOB_-_1MT_PV_23.pdf
+   App ID: 0ad2d8b0-7b83-11f1-9b63-8d739aa98188
+
+6. Navpad Pigments Private Limited
+   File: Commercial Packing List.pdf
+   Path: NAVPAD_PIGMENTS_PRIVATE_LIMITED/2026/PO/Commercial_Packing_List.pdf
+   App ID: 268be002-760b-11f1-9b63-8d739aa98188
+
+7. Prasad International Pvt Ltd
+   File: POST PACKING LIST.PDF
+   Path: Prasad_International_Pvt_Ltd/2026/PO/POST_PACKING_LIST.PDF
+   App ID: e56b8e3d-73bb-11f1-9b63-8d739aa98188
+
+8. Fairchem Organics Limited
+   File: Delivery Challan _ SDCE2627_200020.PDF
+   Path: Fairchem_Organics_Limited/2026/PO/Delivery_Challan___SDCE2627_200020.PDF
+   App ID: cd54db6d-73aa-11f1-9b63-8d739aa98188
+
+9. COLOUR INDIA
+   File: PO_2510016067_compressed.pdf
+   Path: COLOUR_INDIA/2026/PO/PO_2510016067_compressed.pdf
+   App ID: e6c77afb-7164-11f1-b711-023f3757104b
+
+Present locally (1/11):
+- Vibfast Pigments / 018 36  221VIBFAST.pdf
+  Vibfast_Pigments/2026/PO/018_36__221VIBFAST.pdf
+
+After restoring a PO file, place it at:
+  nodejs/public/uploads/certificates/<Path above>
+on Hostinger (same relative path as listed).

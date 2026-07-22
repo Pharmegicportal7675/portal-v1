@@ -56,6 +56,10 @@ const ACTION_LABELS: Record<string, string> = {
   USER_MANUAL_UPLOADED: 'User manual uploaded',
   USER_MANUAL_DELETED: 'User manual removed',
   USER_GUIDE_URL_UPDATED: 'User Guide URL updated',
+  SUPER_PO_UPLOAD: 'Super Admin uploaded missing PO',
+  SUPER_CERT_REGEN: 'Super Admin regenerated certificate file',
+  SUPER_ORPHAN_CLEANUP: 'Super Admin cleaned orphan certificate files',
+  SUPER_ENSURE_FOLDERS: 'Super Admin ensured certificate folders',
 };
 
 export function formatActivityLogAction(action: string): string {

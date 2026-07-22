@@ -11,6 +11,8 @@ export default async function SuperAdminPage() {
     redirect('/admin?error=Unauthorized');
   }
 
+  // Keep SSR light — Only For You lists load client-side to avoid MySQL pool timeouts
+  // when scanning many certificate/PO paths in parallel with other admin queries.
   const adminSupabase = createAdminClient();
   const { data: admins } = await adminSupabase
     .from('users')
@@ -18,5 +20,11 @@ export default async function SuperAdminPage() {
     .eq('role', 'MASTER_ADMIN')
     .order('created_at', { ascending: false });
 
-  return <SuperAdminDashboard initialAdmins={admins || []} />;
+  return (
+    <SuperAdminDashboard
+      initialAdmins={admins || []}
+      initialMissingPos={[]}
+      initialCertificates={[]}
+    />
+  );
 }

@@ -9,6 +9,16 @@ export function formatErrorMessage(err: unknown): string {
   if (uniqueMessage) return uniqueMessage;
 
   if (err instanceof Error) {
+    const raw = err.message?.trim() || '';
+    // Prisma/MariaDB pool errors are often JSON-stringified into Error.message
+    if (raw.startsWith('{') && raw.includes('"message"')) {
+      try {
+        const parsed = JSON.parse(raw) as Record<string, unknown>;
+        return formatErrorMessage(parsed);
+      } catch {
+        // fall through
+      }
+    }
     const friendlyFromMessage = formatFriendlyUniqueConstraintError({ message: err.message });
     if (friendlyFromMessage) return friendlyFromMessage;
     return err.message;

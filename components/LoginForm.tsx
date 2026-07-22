@@ -16,9 +16,11 @@ export default function LoginForm() {
       ? 'Your session expired. Please sign in again.'
       : errorParam === 'Unauthorized'
         ? 'You are not authorized to access that area.'
-        : errorParam === 'InvalidCredentials'
-          ? 'Invalid email or password.'
-          : '';
+        : errorParam === 'DatabaseUnavailable'
+          ? 'Database is temporarily unavailable (connection limit). Wait a few minutes, then try again.'
+          : errorParam === 'InvalidCredentials'
+            ? 'Invalid email or password.'
+            : '';
 
   const [showPassword, setShowPassword] = useState(false);
   const [errorMsg] = useState(initialError);
