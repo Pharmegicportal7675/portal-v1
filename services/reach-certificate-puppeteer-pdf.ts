@@ -18,7 +18,7 @@ import { withPdfGenerationLock } from '@/lib/pdf-generation-lock';
 import { loadBundledChromiumModule, loadPuppeteerCore } from '@/lib/puppeteer-runtime';
 import { launchBundledChromiumBrowser } from '@/services/reach-certificate-bundled-chromium';
 
-export { isReachPuppeteerPdfAvailable, resolveSystemChromeExecutable, usesBundledChromiumFallback };
+export { isReachPuppeteerPdfAvailable };
 
 const execFileAsync = promisify(execFile);
 

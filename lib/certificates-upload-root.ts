@@ -4,7 +4,7 @@ import path from 'node:path';
 const CERTIFICATES_RELATIVE = path.join('public', 'uploads', 'certificates');
 
 /** Resolve every directory that may hold certificate / PO files on this host. */
-export function getCertificatesUploadRoots(): string[] {
+function getCertificatesUploadRoots(): string[] {
   const roots = new Set<string>();
 
   const envRoot = process.env.CERTIFICATES_UPLOAD_ROOT?.trim();
@@ -52,7 +52,7 @@ function normalizeRelativePath(relative: string): string {
 }
 
 /** Same rules as upload — spaces and special chars become underscores. */
-export function sanitizeStorageFileName(fileName: string): string {
+function sanitizeStorageFileName(fileName: string): string {
   return fileName.replace(/[^a-zA-Z0-9._-]/g, '_');
 }
 
@@ -97,15 +97,6 @@ export function resolveCertificatesFilePath(relativePath: string): string | null
     }
   }
 
-  return null;
-}
-
-/** Last-resort lookup when DB path and legacy transforms do not match on disk. */
-export function findCertificatesFileByName(fileName: string): string | null {
-  for (const variant of fileNameVariants(fileName)) {
-    const match = findCertificatesFileByExactName(variant);
-    if (match) return match;
-  }
   return null;
 }
 

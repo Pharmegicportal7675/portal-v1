@@ -15,24 +15,6 @@ async function requireSuperAdmin() {
 }
 
 // ============================================================================
-// LIST ALL MASTER ADMINS
-// ============================================================================
-export async function listMasterAdminsAction() {
-  const session = await requireSuperAdmin();
-  if (!session) return { success: false, error: 'Unauthorized. Super Admin only.' };
-
-  const adminSupabase = createAdminClient();
-  const { data, error } = await adminSupabase
-    .from('users')
-    .select('id, email, is_disabled, created_at')
-    .eq('role', 'MASTER_ADMIN')
-    .order('created_at', { ascending: false });
-
-  if (error) return { success: false, error: error.message };
-  return { success: true, admins: data };
-}
-
-// ============================================================================
 // CREATE MASTER ADMIN
 // ============================================================================
 export async function createMasterAdminAction(email: string, password: string) {

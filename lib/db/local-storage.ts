@@ -5,7 +5,7 @@ import {
   resolveCertificatesFilePath,
 } from '@/lib/certificates-upload-root';
 
-export const CERTIFICATES_BUCKET = 'certificates';
+const CERTIFICATES_BUCKET = 'certificates';
 
 function resolveStorageFilePath(fileName: string): string {
   const relative = fileName.replace(/\\/g, '/').replace(/^\/+/, '');

@@ -100,33 +100,8 @@ function isReachMissingField(value?: string | null): boolean {
   return !trimmed || trimmed === '—';
 }
 
-/** EU REACH: "Street, City - Postal," on one line; country on the next. */
-export function buildEuReachAddressLine1(client: {
-  address?: string | null;
-  city?: string | null;
-  postal_code?: string | null;
-}): string {
-  const street = client.address?.trim();
-  const city = client.city?.trim();
-  const postal = client.postal_code?.trim();
-
-  const parts: string[] = [];
-  if (street && !isReachMissingField(street)) parts.push(street);
-
-  if (city && postal) {
-    parts.push(`${city} - ${postal}`);
-  } else if (city && !isReachMissingField(city)) {
-    parts.push(city);
-  } else if (postal && !isReachMissingField(postal)) {
-    parts.push(postal);
-  }
-
-  if (parts.length === 0) return '—';
-  return `${parts.join(', ')},`;
-}
-
 /** Manufacturer card: "Street, City - Postal, State, Country" on one line (docx uses line1 + line3). */
-export function formatEuReachManufacturerAddress(client: {
+function formatEuReachManufacturerAddress(client: {
   address?: string | null;
   city?: string | null;
   state?: string | null;

@@ -23,7 +23,7 @@ export function formatMobileNumberInput(raw: string): string {
   return '+' + country + (groups.length ? ' ' + groups.join(' ') : '');
 }
 
-export function isValidMobileNumber(value: string): boolean {
+function isValidMobileNumber(value: string): boolean {
   if (!value.startsWith('+')) return false;
   const digits = value.replace(/\D/g, '');
   return digits.length >= E164_MIN_DIGITS && digits.length <= E164_MAX_DIGITS;

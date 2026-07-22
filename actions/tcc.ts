@@ -2,14 +2,10 @@
 
 import { createAdminClient } from '@/lib/db/admin';
 import { getSession } from '@/lib/auth/session';
-import {
-  resolveTccCertificateDownloadFile,
-  buildTccCertificatePdfInputFromStoredCert,
-} from '@/lib/tcc-certificate-pdf';
 import { adminTccApplicationUpdateSchema, tccEuApplicationSchema, tccNotificationApplicationSchema } from '@/lib/validations';
 import { uploadBoAttachment, validateBoAttachment } from '@/lib/tcc-attachments';
-import { CERTIFICATES_BUCKET, ensureCertificatesBucket } from '@/lib/storage';
-import { buildClientDateStoragePath, extractStorageRelativePath } from '@/lib/storage-paths';
+import { CERTIFICATES_BUCKET } from '@/lib/storage';
+import { extractStorageRelativePath } from '@/lib/storage-paths';
 import { collectPoAttachmentRelativePaths } from '@/lib/tcc-po-attachment-paths';
 import { isPoAttachmentFileAvailable, loadPoAttachmentForApplication } from '@/lib/tcc-po-attachment';
 import { revalidatePath } from 'next/cache';
@@ -27,7 +23,6 @@ import { tccSaveErrorMessage } from '@/lib/tcc-save-errors';
 import { writeActivityLog } from '@/lib/activity-log';
 import {
   computeTccQuotaForExportDate,
-  getReachCertAllocatedQuota,
   getRemainingQuota,
   getRemainingQuotaForReachPeriod,
   getTonnageBandMaxQuota,

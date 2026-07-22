@@ -72,7 +72,7 @@ interface Substance {
   reach_certificates?: ReachCertificateInfo[];
 }
 
-export interface TccApplicationEditData {
+interface TccApplicationEditData {
   id: string;
   chemical_id: string;
   quantity_mt: number;

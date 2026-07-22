@@ -74,5 +74,3 @@ export async function resolveReachCertificateDownloadFile(
     throw new Error(message);
   }
 }
-
-export { buildReachCertificateStoredFile } from '@/lib/reach-pdf-data';

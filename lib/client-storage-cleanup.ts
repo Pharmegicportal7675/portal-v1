@@ -7,7 +7,7 @@ import {
   sanitizeStorageFolderName,
 } from '@/lib/storage-paths';
 
-export function getCertificatesUploadRoot(): string {
+function getCertificatesUploadRoot(): string {
   return path.join(process.cwd(), 'public', 'uploads', 'certificates');
 }
 
@@ -19,7 +19,7 @@ function collectFolderNamesFromRelativePath(relative: string, folders: Set<strin
   }
 }
 
-export function collectClientStorageFolderNames(
+function collectClientStorageFolderNames(
   companyName: string,
   fileUrls: Array<string | null | undefined>
 ): string[] {
@@ -35,7 +35,7 @@ export function collectClientStorageFolderNames(
   return [...folders];
 }
 
-export async function deleteClientStorageFolder(folderName: string): Promise<void> {
+async function deleteClientStorageFolder(folderName: string): Promise<void> {
   const safeFolder = folderName.replace(/\\/g, '/').replace(/^\/+|\/+$/g, '');
   if (!safeFolder || safeFolder.includes('..')) return;
 

@@ -39,7 +39,7 @@ function toIsoDate(y: number, m: number, d: number): string {
   return `${y}-${String(m).padStart(2, '0')}-${String(d).padStart(2, '0')}`;
 }
 
-export function formatPickerDisplayDate(iso: string): string {
+function formatPickerDisplayDate(iso: string): string {
   const parsed = parseIsoDate(iso);
   if (!parsed) return '';
   return `${String(parsed.d).padStart(2, '0')}-${String(parsed.m).padStart(2, '0')}-${parsed.y}`;

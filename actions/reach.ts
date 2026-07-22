@@ -24,10 +24,6 @@ import {
   getTodayDateString,
 } from '@/lib/reach-certificate';
 import { normalizeDateInput } from '@/lib/parse-flexible-date';
-import {
-  clientHasEuReachRegistration,
-  EU_REACH_CERTIFICATE_REQUIRED_MESSAGE,
-} from '@/lib/regulatory-registrations';
 
 function normalizeReachCertificateDates(
   issuedDate: string,

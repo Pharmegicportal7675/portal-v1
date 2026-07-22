@@ -20,7 +20,7 @@ import {
 } from '@/lib/regulatory-registrations';
 import { findPortalEmailConflict } from '@/lib/portal-email-check';
 
-export type ClientImportRowResult = {
+type ClientImportRowResult = {
   company_name: string;
   email: string;
   status: 'created' | 'updated' | 'skipped' | 'failed';
@@ -28,14 +28,14 @@ export type ClientImportRowResult = {
   client_id?: string | null;
 };
 
-export type ContactImportRowResult = {
+type ContactImportRowResult = {
   company_name: string;
   email: string;
   status: 'created' | 'updated' | 'skipped' | 'failed';
   reason: string;
 };
 
-export type SubstanceImportRowResult = {
+type SubstanceImportRowResult = {
   company_name: string;
   chemical_name: string;
   cas_number: string;

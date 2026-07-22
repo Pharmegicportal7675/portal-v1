@@ -1,7 +1,7 @@
 import { CERTIFICATES_UPLOAD_URL_MARKER } from '@/lib/storage-paths';
 
 /** Auth-protected API route (download / fallback when static path is unavailable). */
-export function buildPoAttachmentApiUrl(applicationId: string): string {
+function buildPoAttachmentApiUrl(applicationId: string): string {
   return `/api/tcc/po-attachment?id=${encodeURIComponent(applicationId)}`;
 }
 

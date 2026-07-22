@@ -6,7 +6,7 @@ import { hashPassword } from '@/lib/auth/password';
 import { formatErrorMessage } from '@/lib/format-error';
 import { findPortalEmailConflict } from '@/lib/portal-email-check';
 import { normalizeDateInput, normalizeOptionalDateInput } from '@/lib/parse-flexible-date';
-import { getTonnageBandMaxQuota, sumApprovedExports, sumApprovedExportsInReachWindow, getRemainingQuotaForReachPeriod, computeAssignableQuota, type TccExportRecord } from '@/lib/quota';
+import { getTonnageBandMaxQuota, sumApprovedExports, sumApprovedExportsInReachWindow, getRemainingQuotaForReachPeriod, computeAssignableQuota } from '@/lib/quota';
 import {
   clientHasEuReachRegistration,
   EU_REACH_CERTIFICATE_REQUIRED_MESSAGE,

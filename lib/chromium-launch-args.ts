@@ -39,8 +39,3 @@ export function getSystemChromeLaunchArgs(extra: string[] = []): string[] {
     ...extra,
   ];
 }
-
-/** @deprecated Use getBundledChromiumLaunchArgs or getSystemChromeLaunchArgs */
-export function getSharedHostingChromiumArgs(baseArgs: string[] = []): string[] {
-  return getBundledChromiumLaunchArgs(baseArgs);
-}

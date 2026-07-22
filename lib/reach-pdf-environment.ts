@@ -1,5 +1,3 @@
-import fs from 'node:fs';
-
 function chromeCandidates(): string[] {
   const fromEnv = [process.env.PUPPETEER_EXECUTABLE_PATH, process.env.CHROME_PATH].filter(
     (value): value is string => Boolean(value?.trim())

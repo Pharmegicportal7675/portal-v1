@@ -39,20 +39,6 @@ function withAbsoluteAssetUrls(
   };
 }
 
-export function toReachPrintTokenPayload(input: LoadedReachCertificateInput): ReachPrintTokenPayload {
-  if (input.certificateId) {
-    return { certificateId: input.certificateId };
-  }
-  return {
-    clientId: input.clientId,
-    chemicalId: input.chemicalId,
-    registrationNumber: input.registrationNumber,
-    issuedDate: input.issuedDate,
-    validatedDate: input.validatedDate,
-    tonnageBand: input.tonnageBand,
-  };
-}
-
 export async function loadReachHtmlDataFromPrintToken(
   supabase: DbClient,
   tokenPayload: ReachPrintTokenPayload
@@ -115,7 +101,7 @@ export type ReachPdfRenderOptions = {
   withoutStamp?: boolean;
 };
 
-export async function loadReachHtmlDataForInput(
+async function loadReachHtmlDataForInput(
   supabase: DbClient,
   input: LoadedReachCertificateInput | ReachCertPdfInput,
   options?: ReachPdfRenderOptions

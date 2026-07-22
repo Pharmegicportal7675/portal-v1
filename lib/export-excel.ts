@@ -16,7 +16,7 @@ export function buildExcelArrayBuffer(sheets: ExcelSheet[]): ArrayBuffer {
   return XLSX.write(workbook, { type: 'array', bookType: 'xlsx' }) as ArrayBuffer;
 }
 
-export function downloadExcelFile(filename: string, buffer: ArrayBuffer) {
+function downloadExcelFile(filename: string, buffer: ArrayBuffer) {
   const blob = new Blob([buffer], {
     type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
   });

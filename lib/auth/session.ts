@@ -4,19 +4,12 @@ import { cookies } from 'next/headers';
 import { prisma } from '@/lib/prisma';
 import { SESSION_COOKIE, getAuthSecret } from '@/lib/auth/constants';
 import { SESSION_COOKIE_OPTIONS } from '@/lib/auth/cookie-options';
-import { signSessionToken } from '@/lib/auth/sign-session';
 
 export interface SessionPayload {
   userId: string;
   email: string;
   role: 'SUPER_ADMIN' | 'MASTER_ADMIN' | 'CLIENT';
   clientId?: string | null;
-}
-
-export async function createSession(payload: SessionPayload): Promise<void> {
-  const token = await signSessionToken(payload);
-  const cookieStore = await cookies();
-  cookieStore.set(SESSION_COOKIE, token, SESSION_COOKIE_OPTIONS);
 }
 
 type ReconcileResult =

@@ -2,10 +2,6 @@ import type { DbClient } from '@/lib/db/types';
 import { CERTIFICATES_BUCKET } from '@/lib/storage';
 import { extractStorageRelativePath } from '@/lib/storage-paths';
 
-const PDF_CONTENT_TYPE = 'application/pdf';
-const DOCX_CONTENT_TYPE =
-  'application/vnd.openxmlformats-officedocument.wordprocessingml.document';
-
 function extractCertificateFileName(fileUrl: string): string | null {
   return extractStorageRelativePath(fileUrl);
 }
@@ -55,7 +51,7 @@ export async function clearReachCertificateStorageFiles(
   await supabase.storage.from(CERTIFICATES_BUCKET).remove([...paths]);
 }
 
-export async function downloadReachCertificateFile(
+async function downloadReachCertificateFile(
   supabase: DbClient,
   fileName: string
 ): Promise<Buffer | null> {
@@ -81,5 +77,3 @@ export async function uploadReachCertificateFile(
   } = supabase.storage.from(CERTIFICATES_BUCKET).getPublicUrl(fileName);
   return publicUrl;
 }
-
-export { PDF_CONTENT_TYPE, DOCX_CONTENT_TYPE };

@@ -71,7 +71,7 @@ function flattenActionError(error: unknown): string {
   return 'Failed to save changes.';
 }
 
-export type TccAdminEditSavedUpdates = Partial<TccViewApplication> & {
+type TccAdminEditSavedUpdates = Partial<TccViewApplication> & {
   certificateIssuedAt?: string;
   certificateExpiresAt?: string;
 };

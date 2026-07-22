@@ -1,7 +1,4 @@
-import {
-  ensureTccApplicationSchema,
-  hasTccApplicationColumn,
-} from '@/lib/tcc-application-schema';
+import { hasTccApplicationColumn } from '@/lib/tcc-application-schema';
 import { normalizeCertDateIso } from '@/lib/reach-certificate-data';
 import { prisma } from '@/lib/prisma';
 
@@ -21,7 +18,7 @@ function formatValidUntilRaw(raw: Date | string | null | undefined): string | nu
 }
 
 /** Load Valid Upto directly from MySQL (bypasses Prisma client field list). */
-export async function fetchTccApplicationValidUntilDateById(
+async function fetchTccApplicationValidUntilDateById(
   applicationId: string
 ): Promise<string | null> {
   if (!(await hasTccApplicationColumn('certificate_valid_until_date'))) return null;
@@ -110,14 +107,4 @@ export function isMissingTccSchemaColumnError(err: unknown): boolean {
     message.includes('regulatory_framework') ||
     message.includes('reach_certificate_id')
   );
-}
-
-/** @deprecated Use ensureTccApplicationSchema */
-export function isMissingTccValidUntilColumnError(err: unknown): boolean {
-  return isMissingTccSchemaColumnError(err);
-}
-
-/** Ensures TCC table columns exist (includes Valid Upto). */
-export async function ensureTccValidUntilColumn(): Promise<boolean> {
-  return ensureTccApplicationSchema();
 }

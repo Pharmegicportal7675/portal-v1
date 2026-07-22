@@ -1,6 +1,3 @@
-import { REACH_CERTIFICATE_TYPE } from '@/lib/reach-certificate';
-import { buildTccCertificatePdfDownloadUrl } from '@/lib/tcc-certificate-download';
-
 export function buildReachCertificateHtmlPdfUrl(params: {
   certificateId?: string;
   clientId?: string;
@@ -85,18 +82,4 @@ export function buildReachCertificateDocxPreviewUrlByClientChemical(params: {
     search.set('tonnageBand', params.tonnageBand);
   }
   return `/api/reach-certificate/docx?${search.toString()}`;
-}
-
-export function resolveReachCertificateDownloadUrl(cert: {
-  id: string;
-  type?: string | null;
-  file_url?: string | null;
-}): string {
-  if (cert.type === REACH_CERTIFICATE_TYPE || cert.type === 'REACH') {
-    return buildReachCertificatePdfDownloadUrl(cert.id);
-  }
-  if (cert.type === 'TCC') {
-    return buildTccCertificatePdfDownloadUrl(cert.id);
-  }
-  return cert.file_url || '#';
 }

@@ -1,6 +1,5 @@
 import {
   buildReachDocxData,
-  type ReachCertificateDocxData,
   type ReachPdfChemical,
   type ReachPdfSource,
 } from '@/lib/reach-certificate-data';
@@ -10,7 +9,7 @@ import {
   generateReachCertificateDocx,
 } from '@/services/reach-certificate-docx';
 
-export type { ReachCertificateDocxData, ReachPdfChemical, ReachPdfSource } from '@/lib/reach-certificate-data';
+export type { ReachPdfChemical, ReachPdfSource } from '@/lib/reach-certificate-data';
 export { buildReachDocxData } from '@/lib/reach-certificate-data';
 
 const DOCX_CONTENT_TYPE =

@@ -279,38 +279,6 @@ function appendCacheBuster(url: string): string {
   return `${url}${separator}_=${Date.now()}`;
 }
 
-async function fetchDocxBlob(docxUrl: string): Promise<Blob> {
-  const res = await fetch(appendCacheBuster(docxUrl), {
-    credentials: docxUrl.startsWith('/') ? 'same-origin' : 'omit',
-    cache: 'no-store',
-  });
-  if (!res.ok) {
-    const body = (await res.json().catch(() => null)) as { error?: string } | null;
-    throw new Error(body?.error || 'Failed to load certificate document.');
-  }
-  return res.blob();
-}
-
-async function downloadPdfFromDocxSources(
-  docxUrls: string[],
-  fileName: string
-): Promise<CertificateDownloadResult> {
-  let lastError: string | undefined;
-
-  for (const docxUrl of docxUrls) {
-    try {
-      await convertDocxBlobToPdfAndDownload(await fetchDocxBlob(docxUrl), fileName);
-      return { format: 'pdf', fileName };
-    } catch (err) {
-      if (err instanceof Error) {
-        lastError = err.message;
-      }
-    }
-  }
-
-  throw new Error(lastError || 'Failed to generate certificate PDF.');
-}
-
 function extractCertificateIdFromUrl(url: string): string | null {
   try {
     const parsed = new URL(url, window.location.origin);

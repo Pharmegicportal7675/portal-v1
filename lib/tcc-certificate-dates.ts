@@ -12,7 +12,7 @@ function yearFromIso(value: string | null | undefined): number | null {
 }
 
 /** Calendar year used for TCC validity (export year first, then issue year). */
-export function resolveTccCertificateYear(
+function resolveTccCertificateYear(
   exportDate?: string | null,
   issueDate?: string | null
 ): number {

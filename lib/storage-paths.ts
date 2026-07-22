@@ -1,7 +1,7 @@
 export type StorageFolder = 'PO' | 'RC' | 'TCC';
 
 /** @deprecated Use StorageFolder — kept for existing call sites. */
-export type StorageCategory = 'bo' | 'rc' | 'tcc';
+type StorageCategory = 'bo' | 'rc' | 'tcc';
 
 export const CERTIFICATES_UPLOAD_URL_MARKER = '/uploads/certificates/';
 
@@ -24,7 +24,7 @@ export function sanitizeStorageFolderName(name: string): string {
 }
 
 /** Calendar year (YYYY) from an ISO date, export date, or today. */
-export function formatStorageYearFolder(date?: string | Date | null): string {
+function formatStorageYearFolder(date?: string | Date | null): string {
   if (!date) {
     return String(new Date().getFullYear());
   }
@@ -63,16 +63,6 @@ export function buildClientYearStoragePath(
   return `${safeClient}/${yearFolder}/${folder}/${safeFile}`;
 }
 
-/** @deprecated Prefer buildClientYearStoragePath — maps bo/rc/tcc to PO/RC/TCC. */
-export function buildClientDateStoragePath(
-  category: StorageCategory,
-  clientName: string,
-  date: string | Date | null | undefined,
-  fileName: string
-): string {
-  return buildClientYearStoragePath(LEGACY_CATEGORY_MAP[category], clientName, date, fileName);
-}
-
 /** Map legacy relative paths to the new layout, or null if already current / unknown. */
 export function transformLegacyStorageRelativePath(relative: string): string | null {
   const normalized = relative.replace(/\\/g, '/').replace(/^\/+/, '');
@@ -105,24 +95,6 @@ export function transformLegacyStorageRelativePath(relative: string): string | n
   }
 
   return null;
-}
-
-export function buildPoStoragePath(
-  clientName: string,
-  folderDate: string | Date | null | undefined,
-  originalFileName: string
-): string {
-  const safeName = originalFileName.replace(/[^a-zA-Z0-9._-]/g, '_');
-  return buildClientYearStoragePath('PO', clientName, folderDate, safeName);
-}
-
-/** @deprecated Use buildPoStoragePath */
-export function buildBoStoragePath(
-  clientName: string,
-  folderDate: string | Date | null | undefined,
-  originalFileName: string
-): string {
-  return buildPoStoragePath(clientName, folderDate, originalFileName);
 }
 
 /** Relative storage path from a public file URL (supports nested folders). */

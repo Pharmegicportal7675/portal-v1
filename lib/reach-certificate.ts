@@ -1,7 +1,7 @@
 export const REACH_CERTIFICATE_TYPE = 'REACH';
 
-export const RC_CERTIFICATE_YEAR_MIN = 2020;
-export const RC_CERTIFICATE_YEAR_MAX = 2045;
+const RC_CERTIFICATE_YEAR_MIN = 2020;
+const RC_CERTIFICATE_YEAR_MAX = 2045;
 
 export function getRcCertificateYearRange(): number[] {
   return Array.from(
@@ -207,7 +207,7 @@ export function findReachCertificateForExportDate(
   return matches[0] ?? null;
 }
 
-export function doReachValidityPeriodsOverlap(
+function doReachValidityPeriodsOverlap(
   issuedA: string | Date,
   expiresA: string | Date | null,
   issuedB: string | Date,
@@ -220,7 +220,7 @@ export function doReachValidityPeriodsOverlap(
   return startA <= endB && startB <= endA;
 }
 
-export function normalizeCertDate(value: string | null | undefined): string {
+function normalizeCertDate(value: string | null | undefined): string {
   if (!value?.trim()) return '';
   return value.trim().split('T')[0];
 }
@@ -382,12 +382,6 @@ export function findReachCertificatePeriodConflict(
   }
 
   return null;
-}
-
-export function addOneYear(from: Date = new Date()): Date {
-  const expiry = new Date(from);
-  expiry.setFullYear(expiry.getFullYear() + 1);
-  return expiry;
 }
 
 /** YYYY-MM-DD for January 1 of the given year (defaults to current year). */

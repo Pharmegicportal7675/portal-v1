@@ -10,7 +10,7 @@ function escapeCsvCell(value: string): string {
   return value;
 }
 
-export function buildCsvContent<T>(columns: CsvColumn<T>[], rows: T[]): string {
+function buildCsvContent<T>(columns: CsvColumn<T>[], rows: T[]): string {
   const headerLine = columns.map((column) => escapeCsvCell(column.header)).join(',');
   const dataLines = rows.map((row) =>
     columns.map((column) => escapeCsvCell(String(column.value(row) ?? ''))).join(',')
@@ -18,7 +18,7 @@ export function buildCsvContent<T>(columns: CsvColumn<T>[], rows: T[]): string {
   return [headerLine, ...dataLines].join('\r\n');
 }
 
-export function downloadCsvFile(filename: string, content: string) {
+function downloadCsvFile(filename: string, content: string) {
   const blob = new Blob(['\ufeff', content], { type: 'text/csv;charset=utf-8;' });
   const url = URL.createObjectURL(blob);
   const anchor = document.createElement('a');

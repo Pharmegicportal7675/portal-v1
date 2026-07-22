@@ -16,7 +16,7 @@ import { Dialog } from '@/components/ui/Dialog';
 import { ResponsiveTableScroll } from '@/components/ui/ResponsiveTableScroll';
 import { toast } from '@/store/toast';
 import {
-  Shield, UserPlus, Mail, Lock, Power, PowerOff, Trash2, RefreshCw, Crown, AlertTriangle
+  Shield, UserPlus, Lock, Power, PowerOff, Trash2, Crown, AlertTriangle
 } from 'lucide-react';
 
 interface MasterAdmin {

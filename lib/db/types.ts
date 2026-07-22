@@ -15,7 +15,7 @@ export type DbRealtimeChannel = {
   subscribe: (...args: unknown[]) => DbRealtimeChannel;
 };
 
-export type DbStorageClient = {
+type DbStorageClient = {
   from: (bucket: string) => {
     upload: (
       path: string,
@@ -29,7 +29,7 @@ export type DbStorageClient = {
   };
 };
 
-export type DbQueryBuilder = {
+type DbQueryBuilder = {
   select: (columns?: string, options?: { count?: 'exact'; head?: boolean }) => DbQueryBuilder;
   insert: (payload: unknown) => DbQueryBuilder;
   upsert: (payload: unknown, options?: { onConflict?: string }) => DbQueryBuilder;
@@ -52,7 +52,7 @@ export type DbQueryBuilder = {
   ) => Promise<T>;
 };
 
-export type DbResult<T> = {
+type DbResult<T> = {
   data: T;
   error: { message: string; code?: string; details?: string } | null;
   count?: number | null;

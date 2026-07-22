@@ -1,8 +1,8 @@
 import { readFileSync } from 'fs';
 import { join } from 'path';
 
-export const EMAIL_LOGO_CID = 'pharmegic-email-logo';
-export const EMAIL_LOGO_SRC = `cid:${EMAIL_LOGO_CID}`;
+const EMAIL_LOGO_CID = 'pharmegic-email-logo';
+const EMAIL_LOGO_SRC = `cid:${EMAIL_LOGO_CID}`;
 
 export type EmailInlineAttachment = {
   filename: string;
@@ -78,7 +78,7 @@ async function resolveLogoBuffer(logoUrl?: string | null): Promise<{ buffer: Buf
   return readDefaultLogoBuffer();
 }
 
-export async function createEmailLogoAttachment(
+async function createEmailLogoAttachment(
   logoUrl?: string | null
 ): Promise<EmailInlineAttachment> {
   const { buffer, contentType } = await resolveLogoBuffer(logoUrl);
@@ -105,17 +105,6 @@ export async function withEmailLogoAttachments(
 ): Promise<EmailInlineAttachment[]> {
   const logoAttachment = await createEmailLogoAttachment(logoUrl);
   return [logoAttachment, ...attachments];
-}
-
-/** @deprecated External image URLs are unreliable in email clients. Use EMAIL_LOGO_SRC with CID attachments. */
-export function resolveEmailLogoUrl(templateLogo?: string | null): string {
-  const trimmed = templateLogo?.trim();
-  if (trimmed && (trimmed.startsWith('data:') || trimmed.startsWith('http'))) {
-    return trimmed;
-  }
-
-  const base = (process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000').replace(/\/$/, '');
-  return `${base}/pharmegic-logo.png`;
 }
 
 export function escapeEmailHtml(value: string): string {

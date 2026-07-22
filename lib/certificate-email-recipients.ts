@@ -6,7 +6,7 @@ export function parseEmailList(raw?: string | null): string[] {
     .filter(Boolean);
 }
 
-export function uniqueEmails(emails: string[]): string[] {
+function uniqueEmails(emails: string[]): string[] {
   const seen = new Set<string>();
   return emails.filter((email) => {
     const key = email.toLowerCase();

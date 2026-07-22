@@ -9,7 +9,7 @@ import {
 import { resolveTccCertificateDateOfIssue } from '@/lib/tcc-certificate-dates';
 import { buildEuImporterFullAddress, splitEuImporterAddress } from '@/lib/tcc-eu-importer';
 
-export type TccPdfClient = {
+type TccPdfClient = {
   company_name: string;
   uuid_number?: string | null;
   address?: string | null;
@@ -27,7 +27,7 @@ export type TccPdfChemical = {
   is_intermediate_substance?: boolean | null;
 };
 
-export type TccPdfApplication = {
+type TccPdfApplication = {
   quantity_mt: number;
   export_date?: string | null;
   tracking_id?: string | null;
@@ -76,7 +76,7 @@ export type TccCertificateHtmlData = TccCertificateDocxData & {
   isIntermediateSubstance: boolean;
 };
 
-export const TCC_CERTIFICATE_FOOTER_LINES = [
+const TCC_CERTIFICATE_FOOTER_LINES = [
   'Pharmegic Healthcare Limited',
   '6th, Floor, Konstitucijos av. 21A, 08130 Vilnius, Lithuania | VAT: LT100012557418',
   'js@pharmegichealthcarelimited.com | : +37 05 2074005 | www.pharmegichealthcare.com',
@@ -87,9 +87,6 @@ export const TCC_LEGAL_PARAGRAPH_1 =
 
 export const TCC_LEGAL_PARAGRAPH_2 =
   'We hereby issue this volume tracking and tonnage coverage certificate to show the enforcement authorities of member states that the imported product delivered to the EU entity below is covered by the registration of Pharmegic Healthcare Limited and is thus REACH compliant. The EU importer below will be regarded as downstream users and thus be exempt from REACH registration. However, the EU importer remains responsible for his import from other non-EU suppliers.';
-
-/** @deprecated Use TCC_LEGAL_PARAGRAPH_1 and TCC_LEGAL_PARAGRAPH_2 */
-export const TCC_LEGAL_PARAGRAPH = `${TCC_LEGAL_PARAGRAPH_1} ${TCC_LEGAL_PARAGRAPH_2}`;
 
 const DEFAULT_ACCENT = '#145E40';
 const DEFAULT_LOGO = '/pharmegic-logo.png';
@@ -203,7 +200,7 @@ function buildTccDocxFields(input: {
   };
 }
 
-export function parseTccFooterLines(footerText?: string | null): string[] {
+function parseTccFooterLines(footerText?: string | null): string[] {
   if (footerText?.includes('\n')) {
     const lines = footerText.split('\n').map((line) => line.trim()).filter(Boolean);
     if (lines.length > 0) {

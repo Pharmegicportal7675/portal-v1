@@ -15,6 +15,3 @@ export function buildTccCertificateApplicationHtmlDataUrl(
   return `${base}&v=${encodeURIComponent(String(cacheBust))}`;
 }
 
-export function buildTccCertificateApplicationPdfUrl(applicationId: string): string {
-  return `/api/tcc-certificate/pdf-html?applicationId=${encodeURIComponent(applicationId)}`;
-}

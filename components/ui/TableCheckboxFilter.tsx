@@ -5,7 +5,7 @@ import { ChevronDown, Filter, X } from 'lucide-react';
 import { clsx } from 'clsx';
 import { twMerge } from 'tailwind-merge';
 
-export type CheckboxFilterOption = {
+type CheckboxFilterOption = {
   value: string;
   label: string;
 };

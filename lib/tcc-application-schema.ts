@@ -21,7 +21,7 @@ async function listTableColumns(table: string): Promise<Set<string>> {
   return new Set((rows || []).map((row) => row.Field));
 }
 
-export async function getTccApplicationTableColumns(): Promise<Set<string>> {
+async function getTccApplicationTableColumns(): Promise<Set<string>> {
   if (cachedColumns) return cachedColumns;
   cachedColumns = await listTableColumns('tcc_applications');
   return cachedColumns;
@@ -98,7 +98,7 @@ const ADMIN_TCC_APPLICATION_FIELDS = [
 ] as const;
 
 /** Present in MySQL but omitted from Prisma select/update until the client is regenerated. */
-export const TCC_APPLICATION_PRISMA_DEFERRED_FIELDS = new Set(['certificate_valid_until_date']);
+const TCC_APPLICATION_PRISMA_DEFERRED_FIELDS = new Set(['certificate_valid_until_date']);
 
 export async function buildAdminTccApplicationSelect(): Promise<string> {
   await ensureTccApplicationSchema();

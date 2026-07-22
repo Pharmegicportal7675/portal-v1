@@ -55,7 +55,7 @@ export function getTonnageBandMaxQuota(tonnageBand: string | null | undefined): 
   return null;
 }
 
-export function getTccCertificateDate(app: TccExportRecord): Date | null {
+function getTccCertificateDate(app: TccExportRecord): Date | null {
   const cert = app.certificates;
   const resolved = Array.isArray(cert) ? cert[0] : cert;
   const raw = resolved?.issued_at || app.export_date || app.updated_at || app.created_at;

@@ -1,4 +1,4 @@
-export function extractDbErrorMessage(err: unknown): string {
+function extractDbErrorMessage(err: unknown): string {
   if (err instanceof Error) return err.message;
   if (err && typeof err === 'object' && typeof (err as { message?: string }).message === 'string') {
     return (err as { message: string }).message;
@@ -6,14 +6,14 @@ export function extractDbErrorMessage(err: unknown): string {
   return '';
 }
 
-export function extractDbErrorCode(err: unknown): string | null {
+function extractDbErrorCode(err: unknown): string | null {
   if (err && typeof err === 'object' && typeof (err as { code?: string }).code === 'string') {
     return (err as { code: string }).code;
   }
   return null;
 }
 
-export function isUniqueConstraintError(err: unknown): boolean {
+function isUniqueConstraintError(err: unknown): boolean {
   const code = extractDbErrorCode(err);
   if (code === 'P2002' || code === '23505') return true;
   const message = extractDbErrorMessage(err).toLowerCase();

@@ -817,7 +817,6 @@ export default function RcCertificatesTable({
                     const yearVal = getReachCertificateYear(cert.issued_at);
 
                     // Find mapping from clientChemicals to calculate edit/renew actions
-                    const chemId = cert.chemical_id;
                     const cc = resolveClientChemForActions(clientChemicals, cert, group);
 
                     const siblingCerts = cc && certificates

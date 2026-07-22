@@ -4,7 +4,6 @@ import { hashPassword } from '@/lib/auth/password';
 import { formatErrorMessage } from '@/lib/format-error';
 import { findPortalEmailConflict, findPortalUuidConflict } from '@/lib/portal-email-check';
 import {
-  clientWizardSchema,
   clientWizardCreateDraftSchema,
   clientWizardEditPartialSchema,
 } from '@/lib/validations';
@@ -133,129 +132,6 @@ export async function createClientWizardDraft(data: unknown) {
     };
   } catch (err) {
     console.error('[CLIENT DRAFT CREATE ERROR]:', err);
-    return { success: false, error: formatErrorMessage(err) };
-  }
-}
-
-export async function createClientWizard(data: unknown) {
-  try {
-    const session = await requireAdmin();
-    if (!session) return { success: false, error: 'Unauthorized. Admins only.' };
-
-    const parsed = clientWizardSchema.safeParse(data);
-    if (!parsed.success) {
-      return { success: false, error: parsed.error.issues[0].message };
-    }
-
-    const adminSupabase = createAdminClient();
-    const { profile, contacts } = parsed.data;
-    const emailLower = profile.email.toLowerCase();
-
-    const emailConflict = await findPortalEmailConflict(adminSupabase, emailLower);
-    if (emailConflict) return { success: false, error: emailConflict };
-
-    const uuidConflict = await findPortalUuidConflict(adminSupabase, profile.uuid_number);
-    if (uuidConflict) return { success: false, error: uuidConflict };
-
-    const password_hash = await hashPassword(profile.password);
-
-    const { data: client, error: clientError } = await adminSupabase
-      .from('clients')
-      .insert({
-        company_name: profile.company_name,
-        legal_name: null,
-        registration_number: null,
-        uuid_number: profile.uuid_number.trim(),
-        owner_name: profile.owner_name || null,
-        email: emailLower,
-        phone: profile.phone || null,
-        primary_contact_first_name: profile.primary_contact_first_name,
-        primary_contact_last_name: profile.primary_contact_last_name,
-        address: profile.address.trim(),
-        city: profile.city.trim(),
-        state: profile.state.trim(),
-        country: profile.country.trim(),
-        postal_code: profile.postal_code.trim(),
-        status: profile.status,
-        regulatory_registrations: profile.regulatory_registrations,
-      })
-      .select()
-      .single();
-
-    if (clientError || !client) {
-      return {
-        success: false,
-        error: formatErrorMessage(clientError || new Error('Failed to create client record.')),
-      };
-    }
-
-    const { data: user, error: userError } = await adminSupabase
-      .from('users')
-      .insert({
-        email: emailLower,
-        password_hash,
-        login_password: profile.password,
-        role: 'CLIENT',
-        client_id: client.id,
-        is_disabled: false,
-      })
-      .select()
-      .single();
-
-    if (userError || !user) {
-      await adminSupabase.from('clients').delete().eq('id', client.id);
-      return {
-        success: false,
-        error: formatErrorMessage(userError || new Error('Failed to create client login credentials.')),
-      };
-    }
-
-    if (contacts.length > 0) {
-      const contactRows = contacts.map((c) => ({
-        id: randomUUID(),
-        client_id: client.id,
-        first_name: c.first_name.trim(),
-        last_name: c.last_name.trim(),
-        email: c.email.trim().toLowerCase(),
-        phone: optionalText(c.phone),
-        role: optionalText(c.role),
-      }));
-      const { error: contactError } = await adminSupabase.from('client_contacts').insert(contactRows);
-      if (contactError) throw contactError;
-    }
-
-    const contactSummary =
-      contacts.length > 0
-        ? ` · ${contacts.length} secondary contact${contacts.length === 1 ? '' : 's'} added`
-        : '';
-
-    await writeActivityLog(adminSupabase, {
-      client_id: client.id,
-      user_id: session.userId,
-      action: 'CLIENT_CREATED',
-      entity_type: 'clients',
-      entity_id: client.id,
-      description: `Client ${client.company_name} created by admin${contactSummary}`,
-      metadata: {
-        contacts: contacts.map((c) => ({
-          first_name: c.first_name,
-          last_name: c.last_name,
-          email: c.email,
-          phone: c.phone || null,
-          role: c.role || null,
-        })),
-      },
-    });
-
-    revalidatePath('/admin/clients');
-    revalidatePath('/admin/activity-logs');
-    return {
-      success: true,
-      message: 'Client created and login credentials set successfully.',
-      clientId: client.id,
-    };
-  } catch (err) {
-    console.error('[CLIENT CREATE ERROR]:', err);
     return { success: false, error: formatErrorMessage(err) };
   }
 }

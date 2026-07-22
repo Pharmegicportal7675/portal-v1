@@ -1,6 +1,5 @@
 'use client';
 
-import { formatErrorMessage } from '@/lib/format-error';
 import { formatMobileNumberInput, getMobileNumberError } from '@/lib/mobile-number';
 import { Button } from './ui/Button';
 import { Input } from './ui/Input';

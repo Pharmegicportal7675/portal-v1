@@ -2,21 +2,9 @@ import fs from 'fs';
 import PizZip from 'pizzip';
 import { EU_REACH_TEMPLATE } from '@/lib/eu-reach-certificate-template';
 import {
-  buildEuReachAddressLine1,
-  buildReachAddressLines,
   escapeReachXml,
-  formatReachCertDate,
   formatReachCertDateLong,
   type ReachCertificateDocxData,
-} from '@/lib/reach-certificate-data';
-
-export type { ReachCertificateDocxData } from '@/lib/reach-certificate-data';
-export {
-  buildEuReachAddressLine1,
-  buildReachAddressLines,
-  escapeReachXml,
-  formatReachCertDate,
-  formatReachCertDateLong,
 } from '@/lib/reach-certificate-data';
 
 function resolveTemplatePath(): string {
@@ -61,5 +49,3 @@ export function generateReachCertificateDocx(data: ReachCertificateDocxData): Bu
   zip.file('word/document.xml', xml);
   return zip.generate({ type: 'nodebuffer', compression: 'DEFLATE' });
 }
-
-export { EU_REACH_TEMPLATE };

@@ -12,7 +12,7 @@ import {
   resolveTccCertificateDownloadFile,
 } from '@/lib/tcc-certificate-pdf';
 
-export const TCC_CERTIFICATE_RELATION_SELECT = `
+const TCC_CERTIFICATE_RELATION_SELECT = `
   id,
   certificate_number,
   file_url,
@@ -59,7 +59,7 @@ export const TCC_CERTIFICATE_RELATION_SELECT = `
 
 const DEFAULT_ATTACHMENT_ORIGIN = 'https://portal.pharmegichealthcare.com';
 
-export function isStoredCertificateFileMissingOnDisk(
+function isStoredCertificateFileMissingOnDisk(
   fileUrl: string | null | undefined
 ): boolean {
   const relative = extractStorageRelativePath(fileUrl || '');
@@ -68,7 +68,7 @@ export function isStoredCertificateFileMissingOnDisk(
 }
 
 /** True only when the file is absent on disk AND on the live static URL (safe for add-only repair). */
-export async function isStoredCertificateFileMissing(
+async function isStoredCertificateFileMissing(
   fileUrl: string | null | undefined
 ): Promise<boolean> {
   if (!isStoredCertificateFileMissingOnDisk(fileUrl)) return false;

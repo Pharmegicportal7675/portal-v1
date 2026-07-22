@@ -3,25 +3,22 @@ export const REACH_CERT_A4_WIDTH_PX = 794;
 export const REACH_CERT_A4_HEIGHT_PX = 1123;
 
 /** ISO A4 (portrait). */
-export const REACH_CERT_A4_WIDTH_MM = 210;
-export const REACH_CERT_A4_HEIGHT_MM = 297;
+const REACH_CERT_A4_WIDTH_MM = 210;
+const REACH_CERT_A4_HEIGHT_MM = 297;
 
 /** Inner page margin — 50px @ 96dpi ≈ 13.23mm (screen / PDF preview). */
 export const REACH_CERT_A4_PADDING_PX = 50;
 /** Bottom padding matches the other sides so the A4 page is evenly inset. */
 export const REACH_CERT_A4_PADDING_BOTTOM_PX = REACH_CERT_A4_PADDING_PX;
-export const REACH_CERT_A4_PADDING_MM = 13.23;
+const REACH_CERT_A4_PADDING_MM = 13.23;
 
 /**
  * Tighter inset for browser print so the lime frame and footer stay inside the
  * printer non-printable area. Bottom needs extra room (HP / Ink Tank, etc.).
  */
-export const REACH_CERT_A4_PRINT_PADDING_TOP_MM = 10;
-export const REACH_CERT_A4_PRINT_PADDING_X_MM = 10;
-export const REACH_CERT_A4_PRINT_PADDING_BOTTOM_MM = 14;
-
-/** @deprecated Use side-specific print padding constants */
-export const REACH_CERT_A4_PRINT_PADDING_MM = REACH_CERT_A4_PRINT_PADDING_TOP_MM;
+const REACH_CERT_A4_PRINT_PADDING_TOP_MM = 10;
+const REACH_CERT_A4_PRINT_PADDING_X_MM = 10;
+const REACH_CERT_A4_PRINT_PADDING_BOTTOM_MM = 14;
 
 export const REACH_CERT_A4_CSS_VARS = {
   '--reach-a4-width': `${REACH_CERT_A4_WIDTH_PX}px`,

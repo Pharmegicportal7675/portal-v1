@@ -66,7 +66,7 @@ export type ClientImportParseResult = {
   skippedRows: { rowNumber: number; reason: string }[];
 };
 
-export const SUBSTANCE_IMPORT_DEFAULTS = {
+const SUBSTANCE_IMPORT_DEFAULTS = {
   registration_number: 'TEST-REG',
   issued_date: '2026-01-01',
   validity_date: '2026-12-31',
@@ -137,7 +137,7 @@ function parseBooleanCell(value: unknown): boolean {
   return ['true', 'yes', 'y', '1'].includes(normalized);
 }
 
-export function parseRegistrationsFromRow(
+function parseRegistrationsFromRow(
   row: Record<string, unknown>,
   headerMap: Map<string, string>
 ): RegulatoryRegistration[] {
@@ -169,7 +169,7 @@ export function parseRegistrationsFromRow(
   );
 }
 
-export function parseRegistrations(value: string): RegulatoryRegistration[] {
+function parseRegistrations(value: string): RegulatoryRegistration[] {
   if (!value) return [REGULATORY_REGISTRATIONS.EU_REACH];
   const parts = String(value)
     .split(/[,;|]/)

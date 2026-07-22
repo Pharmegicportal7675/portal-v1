@@ -1,5 +1,5 @@
 /** Parse YYYY-MM-DD (or ISO datetime) to local midnight date */
-export function parseFilterDate(value: string): Date | null {
+function parseFilterDate(value: string): Date | null {
   if (!value.trim()) return null;
   const datePart = value.trim().split('T')[0];
   const d = new Date(`${datePart}T00:00:00`);

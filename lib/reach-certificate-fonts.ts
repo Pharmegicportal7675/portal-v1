@@ -70,7 +70,7 @@ function getFontFileIndex(): Map<string, string> {
 }
 
 /** Resolve font path on case-sensitive Linux hosts (Hostinger). */
-export function resolveReachCertificateFontFile(file: string): string {
+function resolveReachCertificateFontFile(file: string): string {
   const index = getFontFileIndex();
   const actualName = index.get(file.toLowerCase());
 
@@ -82,13 +82,6 @@ export function resolveReachCertificateFontFile(file: string): string {
   }
 
   return path.join(PUBLIC_FONTS_DIR, actualName);
-}
-
-/** Public URL with exact on-disk casing for /fonts static serving. */
-export function reachCertificateFontPublicUrl(file: string): string {
-  const index = getFontFileIndex();
-  const actualName = index.get(file.toLowerCase()) ?? file;
-  return `/fonts/${actualName}`;
 }
 
 function fontMimeType(format: FontFormat): string {
@@ -116,12 +109,3 @@ export function buildReachCertificateEmbeddedFontCss(): string {
     buildFontFaceBlock(font, toFontDataUrl(font))
   ).join('\n');
 }
-
-/** Public URL paths — for browser preview and print pages served by Next.js. */
-export function buildReachCertificatePublicFontCss(): string {
-  return REACH_CERTIFICATE_FONTS.map((font) =>
-    buildFontFaceBlock(font, reachCertificateFontPublicUrl(font.file))
-  ).join('\n');
-}
-
-export const REACH_CERTIFICATE_FONT_FILES = REACH_CERTIFICATE_FONTS.map((font) => font.file);

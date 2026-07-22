@@ -51,7 +51,7 @@ interface SendMailOptions {
   }>;
 }
 
-export async function sendEmail({ to, subject, html, cc, smtpConfig, attachments }: SendMailOptions) {
+async function sendEmail({ to, subject, html, cc, smtpConfig, attachments }: SendMailOptions) {
   const { transporter, from } = buildTransporter(smtpConfig);
 
   if (transporter) {

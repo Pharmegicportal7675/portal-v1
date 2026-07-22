@@ -30,7 +30,6 @@ import { Input } from './ui/Input';
 import { toast } from '@/store/toast';
 import {
   User,
-  ShieldAlert,
   Lock,
   Mail,
   Palette,

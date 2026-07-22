@@ -1,4 +1,4 @@
-import { SignJWT, jwtVerify } from 'jose';
+import { jwtVerify } from 'jose';
 import { getAuthSecret } from '@/lib/auth/constants';
 
 export type ReachPrintTokenPayload = {
@@ -10,16 +10,6 @@ export type ReachPrintTokenPayload = {
   validatedDate?: string;
   tonnageBand?: string | null;
 };
-
-const TOKEN_TTL = '2m';
-
-export async function createReachPrintToken(payload: ReachPrintTokenPayload): Promise<string> {
-  return new SignJWT({ ...payload })
-    .setProtectedHeader({ alg: 'HS256' })
-    .setIssuedAt()
-    .setExpirationTime(TOKEN_TTL)
-    .sign(getAuthSecret());
-}
 
 export async function verifyReachPrintToken(
   token: string

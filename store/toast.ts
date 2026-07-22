@@ -1,7 +1,7 @@
 import { create } from 'zustand';
 import { formatErrorMessage } from '@/lib/format-error';
 
-export type ToastType = 'success' | 'error' | 'warning' | 'info';
+type ToastType = 'success' | 'error' | 'warning' | 'info';
 
 export interface Toast {
   id: string;

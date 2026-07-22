@@ -1,8 +1,3 @@
-import {
-  extractDbErrorCode,
-  extractDbErrorMessage,
-  formatFriendlyUniqueConstraintError,
-} from '@/lib/db-errors';
 import type { DbClient } from '@/lib/db/types';
 import { formatUserEmailConflictMessage } from '@/lib/db-errors';
 
@@ -55,5 +50,3 @@ export async function findPortalUuidConflict(
   }
   return null;
 }
-
-export { formatUserEmailConflictMessage };

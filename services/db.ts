@@ -216,21 +216,6 @@ export async function getChemicals(supabase: DbClient, search = '', status = 'al
   });
 }
 
-export async function getTrashedChemicals(supabase: DbClient) {
-  const { data, error } = await supabase
-    .from('chemicals')
-    .select('id, chemical_name, cas_number, ec_number, tonnage_band, validity_date, status, created_at')
-    .eq('status', 'trashed')
-    .order('chemical_name', { ascending: true });
-
-  // 22P02 = enum value 'trashed' not added yet — run prisma/database.mysql.sql migration
-  if (error) {
-    if (error.code === '22P02') return [];
-    throw error;
-  }
-  return data || [];
-}
-
 // ============================================================================
 // TCC APPLICATIONS & CERTIFICATE APPROVALS
 // ============================================================================

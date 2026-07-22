@@ -22,7 +22,7 @@ function firstForwardedIp(value: string | null): string | null {
   return cleaned || null;
 }
 
-export function extractClientIp(headerStore: Headers): string | null {
+function extractClientIp(headerStore: Headers): string | null {
   const candidates = [
     headerStore.get('cf-connecting-ip'),
     headerStore.get('x-real-ip'),

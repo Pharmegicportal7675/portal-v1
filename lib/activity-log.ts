@@ -3,14 +3,9 @@ import 'server-only';
 import type { DbClient } from '@/lib/db/types';
 import { getActivityRequestContext } from '@/lib/activity-request-context';
 
-export type {
-  ActivityFieldChange,
-} from '@/lib/activity-log-fields';
-
 export {
   buildActivityFieldChanges,
   formatActivityFieldChangesDescription,
-  parseActivityFieldChanges,
   CONTACT_FIELD_LABELS,
   CLIENT_PROFILE_FIELD_LABELS,
 } from '@/lib/activity-log-fields';

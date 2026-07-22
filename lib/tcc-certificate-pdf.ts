@@ -91,14 +91,6 @@ export async function resolveTccCertificateDownloadFile(
   }
 }
 
-export async function resolveTccCertificatePdfBuffer(
-  supabase: DbClient,
-  input: TccCertPdfInput
-): Promise<Buffer> {
-  const file = await resolveTccCertificateDownloadFile(supabase, input);
-  return file.buffer;
-}
-
 export async function resolveTccPdfChemicalTonnageBand(
   supabase: DbClient,
   params: {

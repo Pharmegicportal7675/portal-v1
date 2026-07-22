@@ -39,7 +39,7 @@ function withAbsoluteAssetUrls(
   };
 }
 
-export async function loadTccHtmlDataForInput(
+async function loadTccHtmlDataForInput(
   supabase: DbClient,
   input: BuildTccHtmlDataInput
 ): Promise<TccCertificateHtmlData> {
