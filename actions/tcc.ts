@@ -161,8 +161,8 @@ async function validateClientTccSubmission(
 
   if (quotaResult.remainingQuota < data.quantity_mt) {
     const periodLabel = quotaResult.reachCert.expires_at
-      ? `${new Date(quotaResult.reachCert.issued_at).toLocaleDateString()} – ${new Date(quotaResult.reachCert.expires_at).toLocaleDateString()}`
-      : new Date(quotaResult.reachCert.issued_at).toLocaleDateString();
+      ? `${new Date(quotaResult.reachCert.issued_at).toLocaleDateString('en-GB')} – ${new Date(quotaResult.reachCert.expires_at).toLocaleDateString('en-GB')}`
+      : new Date(quotaResult.reachCert.issued_at).toLocaleDateString('en-GB');
     return {
       ok: false as const,
       error: `Insufficient quota for CT period (${periodLabel}). Requested: ${data.quantity_mt} MT, Available: ${quotaResult.remainingQuota} MT.`,

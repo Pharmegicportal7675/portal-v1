@@ -2466,7 +2466,7 @@ export default function ClientDashboardDetails({
                 {internalNotes.map(n => (
                   <div key={n.id} className="p-3 bg-slate-50 border border-slate-100 rounded-lg flex justify-between gap-2">
                     <div>
-                      <p className="text-xs font-bold text-slate-700">{n.author_email} <span className="text-slate-400 font-normal" suppressHydrationWarning>on {new Date(n.created_at).toLocaleDateString()}</span></p>
+                      <p className="text-xs font-bold text-slate-700">{n.author_email} <span className="text-slate-400 font-normal" suppressHydrationWarning>on {new Date(n.created_at).toLocaleDateString('en-GB')}</span></p>
                       <p className="text-sm text-red-600 font-medium mt-1 whitespace-pre-wrap">{n.note}</p>
                     </div>
                     <Button variant="ghost" size="sm" className="h-7 w-7 p-0 text-slate-400 hover:text-rose-500" onClick={() => handleDeleteNote(n.id)}><Trash2 className="h-4 w-4" /></Button>

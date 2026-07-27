@@ -31,7 +31,7 @@ export function formatDisplayDate(dateStr: string | null | undefined): string {
   try {
     return new Date(dateStr).toLocaleDateString('en-GB', {
       day: '2-digit',
-      month: 'short',
+      month: '2-digit',
       year: 'numeric',
       timeZone: 'UTC',
     });
@@ -46,7 +46,7 @@ export function formatDisplayDateTime(dateStr: string | null | undefined): strin
   try {
     return new Date(dateStr).toLocaleString('en-GB', {
       day: '2-digit',
-      month: 'short',
+      month: '2-digit',
       year: 'numeric',
       hour: '2-digit',
       minute: '2-digit',
@@ -63,7 +63,7 @@ export function formatActivityLogDateTime(dateStr: string | null | undefined): s
   try {
     return new Date(dateStr).toLocaleString('en-GB', {
       day: '2-digit',
-      month: 'short',
+      month: '2-digit',
       year: 'numeric',
       hour: '2-digit',
       minute: '2-digit',

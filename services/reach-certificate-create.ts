@@ -307,7 +307,7 @@ export async function createReachCertificate(input: CreateReachCertificateInput)
       adminSupabase,
       clientUser.id,
       'CT Compliance Certificate Issued',
-      `Your CT certificate ${certNumber} for ${chemical.chemical_name} is valid until ${expiryDate.toLocaleDateString()}. You may now apply for TCC permits for this substance.`,
+      `Your CT certificate ${certNumber} for ${chemical.chemical_name} is valid until ${expiryDate.toLocaleDateString('en-GB')}. You may now apply for TCC permits for this substance.`,
       '/client'
     );
   }

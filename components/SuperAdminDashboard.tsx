@@ -191,7 +191,7 @@ export default function SuperAdminDashboard({
                         </Badge>
                       </td>
                       <td className="p-4 text-xs text-slate-500 font-medium">
-                        {new Date(admin.created_at).toLocaleDateString()}
+                        {new Date(admin.created_at).toLocaleDateString('en-GB')}
                       </td>
                       <td className="p-4 text-right">
                         <div className="flex flex-wrap items-center justify-end gap-2">

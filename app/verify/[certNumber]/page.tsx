@@ -152,12 +152,12 @@ export default async function VerifyCertificatePage({ params }: VerifyPageProps)
                   <Calendar className="h-3.5 w-3.5" /> Validity Period
                 </div>
                 <p className="text-sm font-semibold text-slate-700">
-                  Issued: <span className="font-bold text-slate-800" suppressHydrationWarning>{new Date(cert.issued_at).toLocaleDateString()}</span>
+                  Issued: <span className="font-bold text-slate-800" suppressHydrationWarning>{new Date(cert.issued_at).toLocaleDateString('en-GB')}</span>
                 </p>
                 <p className={`text-sm font-semibold ${isExpired ? 'text-rose-600' : 'text-slate-700'}`}>
                   Expires:{' '}
                   <span className="font-bold">
-                    <span suppressHydrationWarning>{cert.expires_at ? new Date(cert.expires_at).toLocaleDateString() : 'N/A'}</span>
+                    <span suppressHydrationWarning>{cert.expires_at ? new Date(cert.expires_at).toLocaleDateString('en-GB') : 'N/A'}</span>
                     {isExpired && ' (Expired)'}
                   </span>
                 </p>

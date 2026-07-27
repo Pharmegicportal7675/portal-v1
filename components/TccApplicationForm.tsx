@@ -597,9 +597,9 @@ export default function TccApplicationForm({
                     <p className="text-[10px] text-slate-500 font-medium">
                       CT period:{' '}
                       <span className="font-bold text-slate-700">
-                        {new Date(matchedReachCert.issued_at).toLocaleDateString()} –{' '}
+                        {new Date(matchedReachCert.issued_at).toLocaleDateString('en-GB')} –{' '}
                         {matchedReachCert.expires_at
-                          ? new Date(matchedReachCert.expires_at).toLocaleDateString()
+                          ? new Date(matchedReachCert.expires_at).toLocaleDateString('en-GB')
                           : 'N/A'}
                       </span>{' '}
                       ({matchedReachCert.certificate_number})
@@ -821,11 +821,11 @@ export default function TccApplicationForm({
                         <p className="text-[10px] text-emerald-600 mt-0.5 font-medium">
                           Using {matchedReachCert?.certificate_number} (
                           {matchedReachCert?.issued_at
-                            ? new Date(matchedReachCert.issued_at).toLocaleDateString()
+                            ? new Date(matchedReachCert.issued_at).toLocaleDateString('en-GB')
                             : '—'}{' '}
                           –{' '}
                           {matchedReachCert?.expires_at
-                            ? new Date(matchedReachCert.expires_at).toLocaleDateString()
+                            ? new Date(matchedReachCert.expires_at).toLocaleDateString('en-GB')
                             : '—'}
                           ). {initialQuota} MT available for this period.
                         </p>
