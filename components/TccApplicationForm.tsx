@@ -414,11 +414,11 @@ export default function TccApplicationForm({
   return (
     <div className="max-w-3xl mx-auto space-y-8 animate-slide-in">
       <div>
-        <h1 className="text-2xl font-black text-slate-800 tracking-tight">Tonnage Compliance Declaration</h1>
+        <h1 className="text-2xl font-black text-slate-800 tracking-tight">Tonnage Coverage Certificate</h1>
         <p className="text-sm text-slate-500 font-medium">
           {isEditing
             ? 'Update your TCC application. Changes are allowed until the administrator approves it.'
-            : 'Apply for an official TCC permit. A valid CT Compliance Certificate (1-year validity) is required per substance before TCC application.'}
+            : 'A valid REACH Registration Certificate is required per substance before TCC application.'}
         </p>
       </div>
 

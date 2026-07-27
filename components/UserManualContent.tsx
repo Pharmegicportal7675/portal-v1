@@ -56,7 +56,7 @@ const SECTIONS: Section[] = [
     icon: LayoutDashboard,
     title: '2. Dashboard Overview',
     intro:
-      'After signing in, you land on your company Dashboard — a single-page summary of your compliance status. It shows your active substance permissions, monthly TCC (Tonnage Compliance Certificate) activity, your year-wise CT Compliance Certificates, and every TCC application you have submitted.',
+      'After signing in, you land on your company Dashboard — a single-page summary of your compliance status. It shows your active substance permissions, monthly TCC (Tonnage Coverage Certificate) activity, your year-wise CT Compliance Certificates, and every TCC application you have submitted.',
     steps: [
       '"Active Permissions" shows how many substances your organization is currently authorized to trade, and any renewals pending.',
       '"Monthly TCC Activity" charts approved export volumes per substance for the selected year.',
@@ -71,7 +71,7 @@ const SECTIONS: Section[] = [
     id: 'apply-tcc',
     label: 'Apply for TCC',
     icon: FileSignature,
-    title: '3. Applying for a Tonnage Compliance Certificate (TCC)',
+    title: '3. Applying for a Tonnage Coverage Certificate (TCC)',
     intro:
       'The "Apply for TCC" page is where you submit a new export declaration against your available quota. The form validates your request in real time against your CT Compliance Certificate before it reaches an administrator for approval.',
     steps: [

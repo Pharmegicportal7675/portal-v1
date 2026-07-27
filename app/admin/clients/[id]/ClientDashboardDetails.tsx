@@ -1768,9 +1768,6 @@ export default function ClientDashboardDetails({
           <div className="flex items-center justify-between mb-3">
             <div>
               <h3 className="text-sm font-semibold text-slate-600">Monthly TCC Activity</h3>
-              <p className="text-[11px] text-slate-400 font-medium mt-0.5">
-                Substance-wise approved export lines (MT per month)
-              </p>
             </div>
             <div className="flex flex-wrap items-center gap-1.5">
               {activityYears.map((year) => {

@@ -581,7 +581,7 @@ export default function SettingsDashboard({
           {activeTab === 'tcc-template' && (
             <CertificateTemplateSettingsPanel
               title="TCC Certificate Template"
-              description="Manage Tonnage Compliance Certificate branding, logo, signature, and theme colors."
+              description="Manage Tonnage Coverage Certificate branding, logo, signature, and theme colors."
               certificateType="tcc"
               accentColor={tccAccentColor}
               onAccentColorChange={setTccAccentColor}
@@ -683,7 +683,7 @@ export default function SettingsDashboard({
                   <CardTitle>TCC Certificate Email SMTP</CardTitle>
                 </div>
                 <CardDescription>
-                  SMTP used when sending Tonnage Compliance Certificate (TCC) emails to clients.
+                  SMTP used when sending Tonnage Coverage Certificate (TCC) emails to clients.
                 </CardDescription>
               </CardHeader>
               <CardContent className="space-y-6">

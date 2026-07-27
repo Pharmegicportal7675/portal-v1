@@ -387,7 +387,7 @@ export default function ApprovalsDashboard({ initialApplications, emailDefaults 
         <div>
           <h1 className="text-2xl font-black text-slate-800 tracking-tight">TCC Application Worklist</h1>
           <p className="text-sm text-slate-500 font-medium">
-            Review company tonnage compliance certificate applications, allocate chemicals quota, and issue signed PDF permits.
+            Review company tonnage coverage certificate applications, allocate chemicals quota, and issue signed PDF permits.
           </p>
         </div>
         <TableDataExport

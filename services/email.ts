@@ -441,7 +441,7 @@ function getBulkReachCertificateEmailHtml(
         </thead>
         <tbody>${rows}</tbody>
       </table>
-      <p style="font-size:13px;color:#64748b;">Each CT certificate is attached as a separate PDF file. These certificates are required before applying for a Tonnage Compliance Certificate (TCC).</p>`;
+      <p style="font-size:13px;color:#64748b;">Each CT certificate is attached as a separate PDF file. These certificates are required before applying for a Tonnage Coverage Certificate (TCC).</p>`;
 
   return buildEmailShell({
     subtitle: 'CT Compliance Certificate Registry',

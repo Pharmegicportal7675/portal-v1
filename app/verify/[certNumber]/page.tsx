@@ -76,18 +76,7 @@ export default async function VerifyCertificatePage({ params }: VerifyPageProps)
                     : verificationStatus === 'revoked'
                       ? 'Certificate Revoked'
                       : 'Certificate Not Found'}
-              </h1>
-              <p className="text-white/80 text-sm font-medium mt-1">
-                {verificationStatus === 'valid'
-                  ? isReach
-                    ? 'This CT Compliance Certificate is authentic and currently valid (1-year validity).'
-                    : 'This Tonnage Compliance Certificate is authentic and currently valid.'
-                  : verificationStatus === 'expired'
-                    ? 'This certificate was valid but has passed its expiry date.'
-                    : verificationStatus === 'revoked'
-                      ? 'This certificate has been revoked by the issuing authority.'
-                      : 'No certificate matching this number exists in the registry.'}
-              </p>
+              </h1>              
             </div>
           </div>
         </div>
