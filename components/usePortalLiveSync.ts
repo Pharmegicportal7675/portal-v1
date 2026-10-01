@@ -5,7 +5,7 @@ import { usePathname, useRouter } from 'next/navigation';
 import { fetchPortalLiveState } from '@/actions/live-updates';
 import type { NotificationRow } from '@/lib/notifications';
 
-const POLL_MS = 8000;
+const POLL_MS = 4000;
 
 function notificationKey(items: NotificationRow[], unreadCount: number) {
   return `${unreadCount}|${items.map((item) => `${item.id}:${item.read}:${item.created_at}`).join(',')}`;
@@ -33,7 +33,10 @@ export function usePortalLiveSync(
   const statusTokenRef = useRef<string | null>(null);
   const notificationKeyRef = useRef(notificationKey(initialNotifications, initialUnreadCount));
   const pathnameRef = useRef(pathname);
+  const routerRef = useRef(router);
+  const skipPathRefresh = useRef(true);
   pathnameRef.current = pathname;
+  routerRef.current = router;
 
   useEffect(() => {
     const key = notificationKey(initialNotifications, initialUnreadCount);
@@ -45,6 +48,13 @@ export function usePortalLiveSync(
 
   useEffect(() => {
     statusTokenRef.current = null;
+    if (skipPathRefresh.current) {
+      skipPathRefresh.current = false;
+      return;
+    }
+    if (shouldRefreshStatus(pathname)) {
+      routerRef.current.refresh();
+    }
   }, [pathname]);
 
   useEffect(() => {
@@ -77,7 +87,7 @@ export function usePortalLiveSync(
         if (statusTokenRef.current !== result.data.statusToken) {
           statusTokenRef.current = result.data.statusToken;
           if (shouldRefreshStatus(pathnameRef.current)) {
-            router.refresh();
+            routerRef.current.refresh();
           }
         }
       } catch {
@@ -102,7 +112,7 @@ export function usePortalLiveSync(
       window.clearInterval(intervalId);
       document.removeEventListener('visibilitychange', onVisible);
     };
-  }, [router]);
+  }, []);
 
   return { notifications, unreadCount };
 }

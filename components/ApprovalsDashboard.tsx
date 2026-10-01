@@ -30,6 +30,8 @@ import type { TccEmailDefaults } from '@/components/TccApplicationViewDialog';
 import { buildTccExportColumns, type TccExportApplication } from '@/lib/tcc-export-columns';
 import { toast } from '@/store/toast';
 import { isEuReachFramework } from '@/lib/regulatory-registrations';
+import { applyTccStatusUpdates } from '@/lib/tcc-status-sync';
+import { useTccStatusFeed } from '@/components/useTccStatusFeed';
 import {
   Clock,
   CheckCircle,
@@ -133,6 +135,11 @@ export default function ApprovalsDashboard({ initialApplications, emailDefaults 
   const [isPending, startTransition] = useTransition();
 
   const [applications, setApplications] = useState<Application[]>(initialApplications);
+  const statusUpdates = useTccStatusFeed();
+  const liveApplications = useMemo(
+    () => applyTccStatusUpdates(applications, statusUpdates),
+    [applications, statusUpdates]
+  );
   const [statusFilter, setStatusFilter] = useState<string>('all');
   const [columnFilters, setColumnFilters] = useState(INITIAL_COLUMN_FILTERS);
 
@@ -150,6 +157,15 @@ export default function ApprovalsDashboard({ initialApplications, emailDefaults 
     setApplications(initialApplications);
   }, [initialApplications]);
 
+  useEffect(() => {
+    setViewApp((current) => {
+      if (!current) return current;
+      const next = liveApplications.find((app) => app.id === current.id);
+      if (!next || (next.status === current.status && next.updated_at === current.updated_at)) return current;
+      return next;
+    });
+  }, [liveApplications]);
+
   const activeFilterCount = useMemo(() => {
     let n = 0;
     if (columnFilters.company.trim()) n++;
@@ -163,7 +179,7 @@ export default function ApprovalsDashboard({ initialApplications, emailDefaults 
   }, [columnFilters]);
 
   const filteredApplications = useMemo(() => {
-    return applications.filter((app) => {
+    return liveApplications.filter((app) => {
       if (statusFilter !== 'all') {
         const matchesTab =
           app.status === statusFilter ||
@@ -228,7 +244,7 @@ export default function ApprovalsDashboard({ initialApplications, emailDefaults 
 
       return true;
     });
-  }, [applications, statusFilter, columnFilters]);
+  }, [liveApplications, statusFilter, columnFilters]);
 
   const updateColumnFilter = <K extends keyof typeof INITIAL_COLUMN_FILTERS>(
     key: K,
@@ -309,12 +325,19 @@ export default function ApprovalsDashboard({ initialApplications, emailDefaults 
       };
       if (res.success) {
         setIsActionOpen(false);
+        setApplications((current) =>
+          current.map((app) =>
+            app.id === selectedApp.id
+              ? { ...app, status: actionType, updated_at: new Date().toISOString() }
+              : app
+          )
+        );
+        router.refresh();
         if (actionType === 'approved' && res.certificateId) {
           toast.success('Certificate generated! Redirecting to preview...');
           router.push(`/admin/certificate-preview/${res.certificateId}`);
         } else {
           toast.success(res.message || 'Application processed.');
-          router.refresh();
         }
       } else {
         setActionError(res.error || 'Failed to process application action.');
@@ -431,7 +454,7 @@ export default function ApprovalsDashboard({ initialApplications, emailDefaults 
         {(activeFilterCount > 0 || selectedIds.length > 0) && (
           <div className="px-4 py-2.5 border-b border-slate-100 bg-slate-50/50 flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
             <p className="text-xs font-semibold text-slate-600">
-              Showing {filteredApplications.length} of {applications.length} applications
+              Showing {filteredApplications.length} of {liveApplications.length} applications
               {activeFilterCount > 0 && (
                 <span className="text-primary ml-1">
                   ({activeFilterCount} column filter{activeFilterCount !== 1 ? 's' : ''} active)

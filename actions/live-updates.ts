@@ -4,6 +4,7 @@ import { prisma } from '@/lib/prisma';
 import { getSession } from '@/lib/auth/session';
 import { getUserNotificationFeed } from '@/lib/notification-feed';
 import type { NotificationRow } from '@/lib/notifications';
+import type { TccStatusUpdate } from '@/lib/tcc-status-sync';
 
 export type PortalLiveState = {
   notifications: NotificationRow[];
@@ -58,5 +59,54 @@ export async function fetchPortalLiveState(): Promise<
       unreadCount,
       statusToken: `tcc:${statusTokenFromGroups(applicationGroups)};cert:${statusTokenFromGroups(certificateGroups)}`,
     },
+  };
+}
+
+export async function fetchTccStatusFeed(): Promise<
+  { success: true; rows: TccStatusUpdate[] } | { success: false }
+> {
+  const session = await getSession();
+  if (!session) return { success: false };
+
+  const clientWhere =
+    session.role === 'CLIENT' && session.clientId ? { client_id: session.clientId } : undefined;
+
+  const rows = await prisma.tcc_applications.findMany({
+    where: clientWhere,
+    select: {
+      id: true,
+      status: true,
+      updated_at: true,
+      certificates_certificates_tcc_application_idTotcc_applications: {
+        select: {
+          id: true,
+          certificate_number: true,
+          file_url: true,
+          issued_at: true,
+          status: true,
+        },
+      },
+    },
+  });
+
+  return {
+    success: true,
+    rows: rows.map((row) => {
+      const certificate = row.certificates_certificates_tcc_application_idTotcc_applications;
+      return {
+        id: row.id,
+        status: row.status ?? 'pending',
+        updated_at: stamp(row.updated_at),
+        certificate: certificate
+          ? {
+              id: certificate.id,
+              certificate_number: certificate.certificate_number,
+              file_url: certificate.file_url,
+              issued_at: stamp(certificate.issued_at),
+              status: certificate.status ?? 'active',
+            }
+          : null,
+      };
+    }),
   };
 }

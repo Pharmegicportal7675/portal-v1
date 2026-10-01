@@ -33,6 +33,8 @@ import { formatActivityLogAction } from '@/lib/activity-log-labels';
 import { parseActivityFieldChanges } from '@/lib/activity-log-fields';
 import { resolveQuotaConsumption, sumApprovedExports, sumApprovedExportsInReachWindow, getRemainingQuota, getTonnageBandMaxQuota, getReachCertAllocatedQuota, resolveDisplayedTonnageBand } from '@/lib/quota';
 import { computeTccApplicationRcQuota } from '@/lib/tcc-application-quota';
+import { applyTccStatusUpdates } from '@/lib/tcc-status-sync';
+import { useTccStatusFeed } from '@/components/useTccStatusFeed';
 import {
   isActiveReachCertificate,
   mapLatestReachByChemical,
@@ -141,7 +143,7 @@ export default function ClientDashboardDetails({
   clientChemicals: allClientChemicals,
   allChemicals,
   contacts,
-  tccHistory,
+  tccHistory: tccHistoryFromServer,
   certificates,
   activityLogs,
   internalNotes,
@@ -155,6 +157,11 @@ export default function ClientDashboardDetails({
   const setCustomBreadcrumb = useLayoutStore((state) => state.setCustomBreadcrumb);
 
   const [isMounted, setIsMounted] = useState(false);
+  const statusUpdates = useTccStatusFeed();
+  const tccHistory = useMemo(
+    () => applyTccStatusUpdates(tccHistoryFromServer, statusUpdates),
+    [tccHistoryFromServer, statusUpdates]
+  );
 
   useEffect(() => {
     setIsMounted(true);
@@ -1557,6 +1564,15 @@ export default function ClientDashboardDetails({
     };
   };
 
+  useEffect(() => {
+    setViewTccApp((current) => {
+      if (!current) return current;
+      const next = tccHistory.find((app) => app.id === current.id);
+      if (!next || next.status === current.status) return current;
+      return buildViewApplication(next);
+    });
+  }, [tccHistory]);
+
   const handleOpenTccView = (app: (typeof tccHistory)[number]) => {
     setViewTccApp(buildViewApplication(app));
     setIsTccViewOpen(true);
@@ -1603,12 +1619,12 @@ export default function ClientDashboardDetails({
       });
       if (res.success) {
         setIsTccActionOpen(false);
+        router.refresh();
         if (tccActionType === 'approved' && res.certificateId) {
           toast.success('Certificate generated! Redirecting to preview...');
           router.push(`/admin/certificate-preview/${res.certificateId}`);
         } else {
           toast.success(res.message || 'Application processed.');
-          router.refresh();
         }
       } else {
         setTccActionError(res.error || 'Failed to process application action.');
