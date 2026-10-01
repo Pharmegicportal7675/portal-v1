@@ -106,8 +106,8 @@ export default function NotificationBell({
       >
         <Bell className="h-5 w-5" />
         {unreadCount > 0 && (
-          <span className="absolute top-1.5 right-1.5 flex h-4 w-4 min-w-4 items-center justify-center rounded-full bg-rose-500 text-[10px] font-bold text-white ring-2 ring-white px-0.5">
-            {unreadCount > 9 ? '9+' : unreadCount}
+          <span className="absolute top-1 right-0.5 flex h-4 min-w-4 items-center justify-center rounded-full bg-rose-500 px-1 text-[10px] font-bold leading-none text-white ring-2 ring-white">
+            {unreadCount > 99 ? '99+' : unreadCount}
           </span>
         )}
       </button>
@@ -115,7 +115,10 @@ export default function NotificationBell({
       {open && (
         <div className="absolute right-0 top-full mt-2 w-[min(100vw-2rem,360px)] rounded-xl border border-slate-200 bg-white shadow-xl z-50 overflow-hidden animate-slide-in">
           <div className="flex items-center justify-between px-4 py-3 border-b border-slate-100 bg-slate-50/80">
-            <h3 className="text-sm font-bold text-slate-800">Notifications</h3>
+            <h3 className="text-sm font-bold text-slate-800">
+              Notifications
+              {unreadCount > 0 ? ` (${unreadCount > 99 ? '99+' : unreadCount})` : ''}
+            </h3>
             {unreadCount > 0 && (
               <button
                 type="button"
@@ -166,6 +169,11 @@ export default function NotificationBell({
               </ul>
             )}
           </div>
+          {unreadCount > items.filter((item) => !item.read).length && (
+            <p className="border-t border-slate-100 px-4 py-2 text-center text-[10px] font-medium text-slate-400">
+              Showing the latest unread alerts. Older ones stay in the count until you mark them read.
+            </p>
+          )}
         </div>
       )}
     </div>

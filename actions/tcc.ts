@@ -9,7 +9,14 @@ import { extractStorageRelativePath } from '@/lib/storage-paths';
 import { collectPoAttachmentRelativePaths } from '@/lib/tcc-po-attachment-paths';
 import { isPoAttachmentFileAvailable, loadPoAttachmentForApplication } from '@/lib/tcc-po-attachment';
 import { revalidatePath } from 'next/cache';
-import { notifyAllAdmins, notifyUser } from '@/lib/notifications';
+import { markNewTccApplicationNotificationsRead } from '@/lib/notification-feed';
+import {
+  NEW_TCC_APPLICATION_TITLE,
+  newTccApplicationLink,
+  newTccApplicationMessage,
+  notifyAllAdmins,
+  notifyUser,
+} from '@/lib/notifications';
 import { notifyTccApplicationByEmail } from '@/lib/tcc-application-notification';
 import { getTccCertificateValidUntilDate } from '@/lib/tcc-certificate-dates';
 import { buildAdminTccApplicationSelect, ensureTccApplicationSchema, hasTccApplicationColumn } from '@/lib/tcc-application-schema';
@@ -362,9 +369,9 @@ export async function applyForTccAction(prevState: unknown, formData: FormData) 
       const companyLabel = client.company_name || 'A client';
       await notifyAllAdmins(
         adminSupabase,
-        'New TCC application',
-        `${companyLabel} submitted ${euData.quantity_mt} MT for ${chemical.chemical_name}. Review in Approvals.`,
-        '/admin/approvals'
+        NEW_TCC_APPLICATION_TITLE,
+        newTccApplicationMessage(companyLabel, euData.quantity_mt, chemical.chemical_name),
+        newTccApplicationLink(app.id)
       );
 
       await notifyTccApplicationByEmail(adminSupabase, {
@@ -1077,6 +1084,19 @@ export async function processTccAction(
 
       if (deleteError) throw deleteError;
 
+      try {
+        const removedClient = Array.isArray(app.clients) ? app.clients[0] : app.clients;
+        const removedChemical = Array.isArray(app.chemicals) ? app.chemicals[0] : app.chemicals;
+        await markNewTccApplicationNotificationsRead({
+          applicationId,
+          companyName: removedClient?.company_name,
+          quantityMt: app.quantity_mt,
+          chemicalName: removedChemical?.chemical_name,
+        });
+      } catch (notifyError) {
+        console.error('[TCC] Failed to clear review notifications:', notifyError);
+      }
+
       revalidatePath('/admin/approvals');
       revalidatePath('/admin');
       revalidatePath('/client');
@@ -1204,6 +1224,18 @@ export async function processTccAction(
       .eq('id', applicationId);
 
     if (updateError) throw updateError;
+
+    try {
+      const reviewChemical = Array.isArray(app.chemicals) ? app.chemicals[0] : app.chemicals;
+      await markNewTccApplicationNotificationsRead({
+        applicationId,
+        companyName: clientRecord?.company_name,
+        quantityMt: app.quantity_mt,
+        chemicalName: reviewChemical?.chemical_name,
+      });
+    } catch (notifyError) {
+      console.error('[TCC] Failed to clear review notifications:', notifyError);
+    }
 
     if (status === 'approved') {
       // 3. Deduct client-assigned quota (admin allocation on client_chemicals)
@@ -1488,6 +1520,7 @@ export async function deleteTccApplicationAction(applicationId: string) {
         status,
         bo_attachment_url,
         regulatory_framework,
+        clients ( company_name ),
         chemicals ( id, chemical_name, tonnage_band, exported_quantity ),
         certificates!certificates_tcc_application_id_fkey (
           id,
@@ -1580,6 +1613,18 @@ export async function deleteTccApplicationAction(applicationId: string) {
 
     const certLabel = cert?.certificate_number || '—';
     const chemicalName = chemical?.chemical_name || 'Unknown substance';
+    const clientRow = Array.isArray(app.clients) ? app.clients[0] : app.clients;
+
+    try {
+      await markNewTccApplicationNotificationsRead({
+        applicationId,
+        companyName: clientRow?.company_name,
+        quantityMt: app.quantity_mt,
+        chemicalName: chemical?.chemical_name,
+      });
+    } catch (notifyError) {
+      console.error('[TCC] Failed to clear review notifications:', notifyError);
+    }
 
     await adminSupabase.from('activity_logs').insert({
       client_id: app.client_id,

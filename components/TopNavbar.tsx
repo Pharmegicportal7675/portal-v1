@@ -5,6 +5,7 @@ import { logout } from '@/actions/auth';
 import { LogOut, Menu, User } from 'lucide-react';
 import NotificationBell from './NotificationBell';
 import type { NotificationRow } from '@/lib/notifications';
+import { usePortalLiveSync } from './usePortalLiveSync';
 import { useRouter } from 'next/navigation';
 import { Badge } from './ui/Badge';
 import Breadcrumbs from './Breadcrumbs';
@@ -24,6 +25,10 @@ export default function TopNavbar({
 }: TopNavbarProps) {
   const { toggleSidebar } = useLayoutStore();
   const router = useRouter();
+  const { notifications: liveNotifications, unreadCount: liveUnreadCount } = usePortalLiveSync(
+    notifications,
+    notificationCount
+  );
 
   const handleLogout = async () => {
     try {
@@ -63,8 +68,8 @@ export default function TopNavbar({
 
       <div className="flex shrink-0 items-center gap-2 sm:gap-4">
         <NotificationBell
-          initialNotifications={notifications}
-          unreadCount={notificationCount}
+          initialNotifications={liveNotifications}
+          unreadCount={liveUnreadCount}
           role={role}
         />
 

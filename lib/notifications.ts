@@ -9,6 +9,28 @@ export type NotificationRow = {
   created_at: string;
 };
 
+export const NEW_TCC_APPLICATION_TITLE = 'New TCC application';
+
+export function formatNotificationQuantity(value: unknown): string {
+  const raw = value == null ? '' : String(value).trim();
+  const numeric = Number(raw);
+  if (!raw || !Number.isFinite(numeric)) return raw || '0';
+  return String(numeric);
+}
+
+export function newTccApplicationMessage(
+  companyName: string,
+  quantity: unknown,
+  chemicalName: string
+) {
+  const company = companyName.trim() || 'A client';
+  return `${company} submitted ${formatNotificationQuantity(quantity)} MT for ${chemicalName}. Review in Approvals.`;
+}
+
+export function newTccApplicationLink(applicationId: string) {
+  return `/admin/approvals?app=${encodeURIComponent(applicationId)}`;
+}
+
 export async function notifyUser(
   supabase: DbClient,
   userId: string,

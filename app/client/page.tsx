@@ -3,7 +3,7 @@ import ClientDashboardDetails from '@/components/ClientDashboardDetailsLazy';
 import { loadClientPortalData } from '@/app/admin/clients/[id]/load-client-data';
 import { redirect } from 'next/navigation';
 
-export const revalidate = 30;
+export const revalidate = 0;
 
 export default async function ClientDashboardPage() {
   const session = await getSession();

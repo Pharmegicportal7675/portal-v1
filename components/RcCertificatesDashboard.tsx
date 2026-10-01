@@ -56,7 +56,7 @@ export default function RcCertificatesDashboard({
 }: RcCertificatesDashboardProps) {
   const router = useRouter();
   const [isPending, startTransition] = useTransition();
-  const [certificates] = useState(initialCertificates);
+  const certificates = initialCertificates;
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
   const [, setFilteredRows] = useState<RcCertificateListRow[]>(initialCertificates);
   const [deleteTarget, setDeleteTarget] = useState<DeleteTarget | null>(null);

@@ -2,7 +2,7 @@ import { createAdminClient } from '@/lib/db/admin';
 import { getAdminDashboardStats } from '@/services/db';
 import AdminDashboard from '@/components/AdminDashboard';
 
-export const revalidate = 30;
+export const revalidate = 0;
 
 export default async function AdminDashboardPage() {
   const supabase = createAdminClient();
