@@ -137,7 +137,7 @@ export default function ApprovalsDashboard({ initialApplications, emailDefaults 
   const [applications, setApplications] = useState<Application[]>(initialApplications);
   const statusUpdates = useTccStatusFeed();
   const liveApplications = useMemo(
-    () => applyTccStatusUpdates(applications, statusUpdates, { insertMissing: 'eu' }),
+    () => applyTccStatusUpdates(applications, statusUpdates, { insertMissing: 'all' }),
     [applications, statusUpdates]
   );
   const [statusFilter, setStatusFilter] = useState<string>('all');
