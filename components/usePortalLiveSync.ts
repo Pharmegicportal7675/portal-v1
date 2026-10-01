@@ -70,7 +70,7 @@ export function usePortalLiveSync(
     };
 
     const poll = async () => {
-      if (cancelled || inFlight || document.hidden) return;
+      if (cancelled || inFlight) return;
       inFlight = true;
       const pathAtStart = pathnameRef.current;
       try {

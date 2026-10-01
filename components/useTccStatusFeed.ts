@@ -25,7 +25,7 @@ export function useTccStatusFeed() {
     let inFlight = false;
 
     const poll = async () => {
-      if (cancelled || inFlight || document.hidden) return;
+      if (cancelled || inFlight) return;
       inFlight = true;
       try {
         const result = await fetchTccStatusFeed();
