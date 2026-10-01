@@ -10,6 +10,12 @@ import { collectPoAttachmentRelativePaths } from '@/lib/tcc-po-attachment-paths'
 import { isPoAttachmentFileAvailable, loadPoAttachmentForApplication } from '@/lib/tcc-po-attachment';
 import { revalidatePath } from 'next/cache';
 import { markNewTccApplicationNotificationsRead } from '@/lib/notification-feed';
+import {
+  NEW_TCC_APPLICATION_TITLE,
+  newTccApplicationMessage,
+  newTccApplicationLink,
+  notifyAllAdmins,
+} from '@/lib/notifications';
 import { notifyTccApplicationByEmail } from '@/lib/tcc-application-notification';
 import { getTccCertificateValidUntilDate } from '@/lib/tcc-certificate-dates';
 import { buildAdminTccApplicationSelect, ensureTccApplicationSchema, hasTccApplicationColumn } from '@/lib/tcc-application-schema';
@@ -366,6 +372,20 @@ export async function applyForTccAction(prevState: unknown, formData: FormData) 
           export_date: euData.export_date,
         },
       });
+
+      // Directly notify all admins with a rich message and a link straight to this application.
+      try {
+        const companyForNotification = client.company_name || 'A client';
+        await notifyAllAdmins(
+          adminSupabase,
+          NEW_TCC_APPLICATION_TITLE,
+          newTccApplicationMessage(companyForNotification, euData.quantity_mt, chemical.chemical_name),
+          newTccApplicationLink(app.id)
+        );
+      } catch (notifyErr) {
+        // Never fail the submission because of a notification error.
+        console.error('[TCC] Failed to send admin notification:', notifyErr);
+      }
 
       const companyLabel = client.company_name || 'A client';
       await notifyTccApplicationByEmail(adminSupabase, {
