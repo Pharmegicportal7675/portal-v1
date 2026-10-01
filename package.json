@@ -8,7 +8,7 @@
   },
   "scripts": {
     "dev": "next dev",
-    "build": "prisma generate && next build && node scripts/postbuild-standalone.mjs",
+    "build": "prisma generate && next build --webpack && node scripts/postbuild-standalone.mjs",
     "postinstall": "prisma generate",
     "start": "node server.js",
     "db:import": "prisma db execute --file prisma/database.mysql.sql --schema prisma/schema.prisma",
