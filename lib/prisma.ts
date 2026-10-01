@@ -1,11 +1,67 @@
+import mariadb from 'mariadb';
 import { PrismaMariaDb } from '@prisma/adapter-mariadb';
 import { PrismaClient } from '@/generated/prisma';
+
+const SHARED_CONNECTION_LIMIT = 1;
+
+type ConnectionCreationError = {
+  errno?: number;
+  errors?: Array<{ errno?: number }>;
+};
+
+type ConnectionCreationHandler = (
+  this: object,
+  err: ConnectionCreationError,
+  onSuccess: (...args: unknown[]) => void,
+  onError: (...args: unknown[]) => void,
+  timeoutEnd: number
+) => void;
+
+/**
+ * Hostinger counts every new MySQL login toward max_connections_per_hour.
+ * Errno 1226 is not fatal in the driver, so a single page retries every 500ms
+ * and can spend the whole hourly budget. Fail that attempt immediately.
+ */
+function failFastOnHourlyConnectionLimit(): void {
+  const probe = mariadb.createPool({
+    host: '127.0.0.1',
+    user: 'unused',
+    connectionLimit: 1,
+    minimumIdle: 0,
+    idleTimeout: 0,
+    acquireTimeout: 1,
+    initializationTimeout: 1,
+    connectTimeout: 1,
+  });
+  const proto = Object.getPrototypeOf(probe) as {
+    _handleConnectionCreationError?: ConnectionCreationHandler;
+    hourlyLimitFailFast?: boolean;
+  };
+  void probe.end().catch(() => undefined);
+
+  if (!proto._handleConnectionCreationError || proto.hourlyLimitFailFast) return;
+
+  const original = proto._handleConnectionCreationError;
+  proto._handleConnectionCreationError = function (err, onSuccess, onError, timeoutEnd) {
+    const errno = err?.errno ?? err?.errors?.[0]?.errno;
+    if (errno === 1226) {
+      return original.call(this, err, onSuccess, onError, 0);
+    }
+    return original.call(this, err, onSuccess, onError, timeoutEnd);
+  };
+  proto.hourlyLimitFailFast = true;
+}
+
+failFastOnHourlyConnectionLimit();
 
 function parseDatabaseUrl(databaseUrl: string) {
   const normalized = databaseUrl.replace(/^mysql:\/\//, 'http://');
   const url = new URL(normalized);
   const database = url.pathname.replace(/^\//, '');
-  const connectionLimit = Number(url.searchParams.get('connection_limit') || '2');
+  const requestedLimit = Number(url.searchParams.get('connection_limit') || String(SHARED_CONNECTION_LIMIT));
+  const connectionLimit = Number.isFinite(requestedLimit) && requestedLimit > 0
+    ? Math.min(requestedLimit, SHARED_CONNECTION_LIMIT)
+    : SHARED_CONNECTION_LIMIT;
   const connectTimeoutSeconds = Number(url.searchParams.get('connect_timeout') || '10');
   const connectTimeout = Number.isFinite(connectTimeoutSeconds) && connectTimeoutSeconds > 0
     ? connectTimeoutSeconds * 1000
@@ -17,11 +73,11 @@ function parseDatabaseUrl(databaseUrl: string) {
     user: decodeURIComponent(url.username),
     password: decodeURIComponent(url.password),
     database,
-    connectionLimit: Number.isFinite(connectionLimit) && connectionLimit > 0 ? connectionLimit : 2,
-    // Keep the pool small and drop idle sockets. Hostinger rejects new logins once
-    // max_user_connections is full, and the driver otherwise holds every slot open.
-    minimumIdle: 0,
-    idleTimeout: 15,
+    connectionLimit,
+    // One socket stays open and is reused by every visitor. Closing it would
+    // count as another hourly login on Hostinger.
+    minimumIdle: 1,
+    idleTimeout: 0,
     connectTimeout,
     acquireTimeout: connectTimeout + 5000,
   };
@@ -37,15 +93,11 @@ function createPrismaClient(): PrismaClient {
   return new PrismaClient({ adapter });
 }
 
-const POOL_KEY = 'limit-2-idle-15-acquire-after-connect';
-const HOURLY_LIMIT_BACKOFF_MS = 10 * 60 * 1000;
-const HOURLY_LIMIT_ERROR =
-  "User has exceeded the 'max_connections_per_hour' resource (current value: 500)";
+const POOL_KEY = 'shared-1-idle-0-fail-fast-1226';
 
 const globalForPrisma = globalThis as unknown as {
   prisma: PrismaClient | undefined;
   prismaPoolKey: string | undefined;
-  dbBlockedUntil: number | undefined;
 };
 
 function errorText(error: unknown): string {
@@ -69,20 +121,13 @@ function isHourlyConnectionLimit(error: unknown): boolean {
 
 function noteDatabaseConnectionError(error: unknown): void {
   if (!isHourlyConnectionLimit(error)) return;
-  globalForPrisma.dbBlockedUntil = Date.now() + HOURLY_LIMIT_BACKOFF_MS;
+  // Drop the empty pool. Do not keep refusing later requests: an idle portal
+  // has no open logins, and the next attempt should be allowed to succeed.
   resetPrismaClient();
-}
-
-function assertDatabaseAvailable(): void {
-  const blockedUntil = globalForPrisma.dbBlockedUntil ?? 0;
-  if (Date.now() < blockedUntil) {
-    throw new Error(HOURLY_LIMIT_ERROR);
-  }
 }
 
 function callWithConnectionGuard(fn: (...args: unknown[]) => unknown, thisArg: unknown) {
   return (...args: unknown[]) => {
-    assertDatabaseAvailable();
     try {
       const result = fn.apply(thisArg, args);
       if (result && typeof (result as Promise<unknown>).then === 'function') {
@@ -142,7 +187,6 @@ export const prisma = new Proxy({} as PrismaClient, {
       return typeof value === 'function' ? value.bind(client) : value;
     }
 
-    assertDatabaseAvailable();
     const client = getPrismaClient();
     const value = Reflect.get(client as object, prop, receiver);
     if (typeof value === 'function') {

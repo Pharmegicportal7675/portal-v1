@@ -1,9 +1,32 @@
 import LoginForm from '@/components/LoginForm';
+import { prisma } from '@/lib/prisma';
+import { redirect } from 'next/navigation';
 import { Suspense } from 'react';
 
 export const dynamic = 'force-dynamic';
 
-export default function LoginPage() {
+async function databaseAcceptsConnections(): Promise<boolean> {
+  try {
+    await prisma.$queryRaw`SELECT 1`;
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+export default async function LoginPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ error?: string; redirectTo?: string }>;
+}) {
+  const params = await searchParams;
+  if (params.error === 'DatabaseUnavailable' && (await databaseAcceptsConnections())) {
+    const next = new URLSearchParams();
+    if (params.redirectTo) next.set('redirectTo', params.redirectTo);
+    const query = next.toString();
+    redirect(query ? `/login?${query}` : '/login');
+  }
+
   return (
     <div className="flex-1 flex flex-col justify-center items-center px-4 py-12 bg-white" suppressHydrationWarning>
 
