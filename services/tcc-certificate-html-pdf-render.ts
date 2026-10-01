@@ -97,12 +97,32 @@ function loadCertificateCss(): string {
 export async function renderTccCertificateHtmlDocument(
   data: TccCertificateHtmlData
 ): Promise<string> {
-  const [{ renderToStaticMarkup }, { createElement }, { default: TccCertificateHtmlDocument }] =
-    await Promise.all([
-      import('react-dom/server'),
-      import('react'),
-      import('@/components/TccCertificateHtmlDocument'),
-    ]);
+  const [serverMod, reactMod, compMod] = await Promise.all([
+    import('react-dom/server'),
+    import('react'),
+    import('@/components/TccCertificateHtmlDocument'),
+  ]);
+
+  const renderToStaticMarkup =
+    (serverMod as any).renderToStaticMarkup ||
+    (serverMod as any).default?.renderToStaticMarkup;
+  const createElement =
+    (reactMod as any).createElement ||
+    (reactMod as any).default?.createElement;
+  const TccCertificateHtmlDocument =
+    (compMod as any).default?.default ||
+    (compMod as any).default ||
+    compMod;
+
+  if (typeof renderToStaticMarkup !== 'function') {
+    throw new Error('renderToStaticMarkup is not available from react-dom/server.');
+  }
+  if (typeof createElement !== 'function') {
+    throw new Error('createElement is not available from react.');
+  }
+  if (typeof TccCertificateHtmlDocument !== 'function') {
+    throw new Error('TccCertificateHtmlDocument is not a valid React component function.');
+  }
 
   const markup = renderToStaticMarkup(createElement(TccCertificateHtmlDocument, { data }));
   const css = loadCertificateCss();

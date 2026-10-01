@@ -16,6 +16,8 @@ const nextConfig = {
     'prisma',
     '@prisma/adapter-mariadb',
     'mariadb',
+    'puppeteer-core',
+    '@sparticuz/chromium-min',
   ],
   experimental: {
     optimizePackageImports: ['lucide-react', 'recharts'],

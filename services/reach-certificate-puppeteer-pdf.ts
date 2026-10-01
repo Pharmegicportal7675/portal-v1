@@ -151,19 +151,10 @@ export async function runInProcessPdfCheck(): Promise<string> {
 
   let chromiumPath = 'not resolved (use ?launch=1 to test download)';
   if (process.env.REACH_PDF_HEALTH_LAUNCH === '1') {
-    const { createRequire } = await import('node:module');
     const { resolvePuppeteerProjectRoot } = await import('@/lib/puppeteer-runtime');
     const { getBundledChromiumPackUrl } = await import('@/lib/bundled-chromium-config');
+    const { resolveBundledChromiumExecutable } = await import('@/lib/bundled-chromium-executable');
     const root = resolvePuppeteerProjectRoot();
-    const { resolveBundledChromiumExecutable } = createRequire(path.join(root, 'package.json'))(
-      './scripts/bundled-chromium-executable.cjs'
-    ) as {
-      resolveBundledChromiumExecutable: (
-        chromium: { executablePath: (packUrl: string) => Promise<string> },
-        packUrl: string,
-        projectRoot: string
-      ) => Promise<string>;
-    };
     chromiumPath = await resolveBundledChromiumExecutable(chromium, getBundledChromiumPackUrl(), root);
   }
 

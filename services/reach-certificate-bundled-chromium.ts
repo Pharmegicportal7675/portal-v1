@@ -1,5 +1,3 @@
-import { createRequire } from 'node:module';
-import path from 'node:path';
 import type { Browser } from 'puppeteer-core';
 import { getBundledChromiumLaunchArgs } from '@/lib/chromium-launch-args';
 import { ensureChromiumRuntimeDir } from '@/lib/chromium-runtime-dir';
@@ -10,23 +8,12 @@ import {
   loadPuppeteerCore,
   resolvePuppeteerProjectRoot,
 } from '@/lib/puppeteer-runtime';
-
-function loadBundledChromiumHelper() {
-  const root = resolvePuppeteerProjectRoot();
-  return createRequire(path.join(root, 'package.json'))('./scripts/bundled-chromium-executable.cjs') as {
-    resolveBundledChromiumExecutable: (
-      chromium: { executablePath: (packUrl: string) => Promise<string>; setGraphicsMode?: boolean },
-      packUrl: string,
-      projectRoot: string
-    ) => Promise<string>;
-  };
-}
+import { resolveBundledChromiumExecutable } from '@/lib/bundled-chromium-executable';
 
 async function resolveBundledExecutablePath(): Promise<string> {
   ensureChromiumRuntimeDir();
   const chromium = loadBundledChromiumModule();
   const packUrl = getBundledChromiumPackUrl();
-  const { resolveBundledChromiumExecutable } = loadBundledChromiumHelper();
 
   try {
     chromium.setGraphicsMode = false;

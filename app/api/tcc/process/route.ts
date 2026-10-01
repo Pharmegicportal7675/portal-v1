@@ -27,7 +27,7 @@ export async function POST(request: NextRequest) {
 
     return NextResponse.json(result, { status: result.success ? 200 : 400 });
   } catch (err: unknown) {
-    console.error('[api/tcc/process]', err);
+    console.error('[api/tcc/process]', err instanceof Error ? err.stack : err);
     return NextResponse.json(
       {
         success: false,

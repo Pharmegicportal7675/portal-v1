@@ -1393,7 +1393,7 @@ export async function processTccAction(
     }
   } catch (err: unknown) {
     const message = err instanceof Error ? err.message : String(err);
-    console.error('[TCC PROCESS ERROR]:', err);
+    console.error('[TCC PROCESS ERROR]:', err instanceof Error ? err.stack : err);
     return { success: false, error: message };
   }
 }

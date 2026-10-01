@@ -41,16 +41,37 @@ function resolveProjectRoot(): string {
 }
 
 /** Load runtime deps via Node require — bypasses Next.js hashed external module loader on Hostinger. */
-function projectRequire() {
-  return createRequire(path.join(resolveProjectRoot(), 'package.json'));
+function getModuleRequire(): NodeRequire {
+  // If native CommonJS require exists in the current scope, use it directly
+  if (typeof require === 'function') {
+    return require;
+  }
+
+  const root = resolveProjectRoot();
+  try {
+    return createRequire(path.join(root, 'package.json'));
+  } catch {
+    // fallback
+  }
+
+  try {
+    return createRequire(path.join(process.cwd(), 'package.json'));
+  } catch {
+    // fallback
+  }
+
+  return createRequire(import.meta.url);
 }
 
 export function loadPuppeteerCore(): typeof import('puppeteer-core') {
-  return projectRequire()('puppeteer-core');
+  const req = getModuleRequire();
+  const mod = req('puppeteer-core');
+  return (mod && typeof mod === 'object' && 'default' in mod && mod.default?.launch ? mod.default : mod) as typeof import('puppeteer-core');
 }
 
 export function loadBundledChromiumModule() {
-  const mod = projectRequire()('@sparticuz/chromium-min');
+  const req = getModuleRequire();
+  const mod = req('@sparticuz/chromium-min');
   return mod?.default ?? mod;
 }
 

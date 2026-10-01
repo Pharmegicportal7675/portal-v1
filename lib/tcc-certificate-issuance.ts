@@ -94,46 +94,53 @@ export async function upsertTccCertificateForApplication(
     chemical: application.chemicals as TccPdfChemical,
   });
 
-  const certFile = await buildTccCertificateStoredFile({
-    certNumber,
-    client: application.clients as never,
-    chemical,
-    application: application as never,
-    registrationNumber: registrationNumber ?? null,
-    validUntilDate: validUntilIso,
-    deliveryChallanNo: application.tracking_id,
-    issuedDate: issueDateRaw,
-  });
-  const clientName =
-    (application.clients as { company_name?: string | null } | null)?.company_name || 'client';
-  const clientFolder = await resolveClientStorageFolder(
-    supabase,
-    application.client_id,
-    clientName
-  );
-  const storagePath = resolveCertificateStorageRelativePath({
-    storedFileUrl: existingCert?.file_url,
-    folder: 'TCC',
-    clientFolder,
-    date: issueDateRaw,
-    fileName: certFile.fileName,
-  });
+  let publicUrl = existingCert?.file_url || null;
 
-  await ensureCertificatesBucket(supabase);
-  const { error: uploadError } = await supabase.storage
-    .from(CERTIFICATES_BUCKET)
-    .upload(storagePath, certFile.buffer, {
-      contentType: certFile.contentType,
-      upsert: true,
+  try {
+    const certFile = await buildTccCertificateStoredFile({
+      certNumber,
+      client: application.clients as never,
+      chemical,
+      application: application as never,
+      registrationNumber: registrationNumber ?? null,
+      validUntilDate: validUntilIso,
+      deliveryChallanNo: application.tracking_id,
+      issuedDate: issueDateRaw,
+    });
+    const clientName =
+      (application.clients as { company_name?: string | null } | null)?.company_name || 'client';
+    const clientFolder = await resolveClientStorageFolder(
+      supabase,
+      application.client_id,
+      clientName
+    );
+    const storagePath = resolveCertificateStorageRelativePath({
+      storedFileUrl: existingCert?.file_url,
+      folder: 'TCC',
+      clientFolder,
+      date: issueDateRaw,
+      fileName: certFile.fileName,
     });
 
-  if (uploadError) {
-    throw new Error(`Certificate upload failed: ${uploadError.message}`);
-  }
+    await ensureCertificatesBucket(supabase);
+    const { error: uploadError } = await supabase.storage
+      .from(CERTIFICATES_BUCKET)
+      .upload(storagePath, certFile.buffer, {
+        contentType: certFile.contentType,
+        upsert: true,
+      });
 
-  const {
-    data: { publicUrl },
-  } = supabase.storage.from(CERTIFICATES_BUCKET).getPublicUrl(storagePath);
+    if (uploadError) {
+      console.warn(`[TCC ISSUANCE] Certificate upload warning: ${uploadError.message}`);
+    } else {
+      const {
+        data: { publicUrl: uploadedUrl },
+      } = supabase.storage.from(CERTIFICATES_BUCKET).getPublicUrl(storagePath);
+      publicUrl = uploadedUrl;
+    }
+  } catch (pdfErr) {
+    console.error('[TCC ISSUANCE] PDF generation failed during approval, recording certificate without PDF first:', pdfErr);
+  }
 
   if (existingCert) {
     const { error: updateError } = await supabase
