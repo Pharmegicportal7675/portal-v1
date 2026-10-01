@@ -1,4 +1,4 @@
-import { prisma } from '@/lib/prisma';
+import { prisma, resetPrismaClient } from '@/lib/prisma';
 import { verifyStoredPassword } from '@/lib/auth/password';
 import { loginSchema } from '@/lib/validations';
 import type { SessionPayload } from '@/lib/auth/session';
@@ -61,12 +61,14 @@ export async function authenticateUser(
       lower.includes('max_connections_per_hour') ||
       lower.includes('er_user_limit_reached') ||
       lower.includes('pool timeout') ||
+      lower.includes('pool failed to retrieve') ||
       lower.includes('too many connections')
     ) {
+      resetPrismaClient();
       return {
         ok: false,
         error:
-          'Database is temporarily unavailable (connection limit). Wait a few minutes, then try again.',
+          'The database reached its hourly connection limit. Wait a little while, then sign in again.',
       };
     }
     return { ok: false, error: 'Invalid email or password.' };

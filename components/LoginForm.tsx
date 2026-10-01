@@ -17,7 +17,7 @@ export default function LoginForm() {
       : errorParam === 'Unauthorized'
         ? 'You are not authorized to access that area.'
         : errorParam === 'DatabaseUnavailable'
-          ? 'Database is temporarily unavailable (connection limit). Wait a few minutes, then try again.'
+          ? 'The database reached its hourly connection limit. Wait a little while, then sign in again.'
           : errorParam === 'InvalidCredentials'
             ? 'Invalid email or password.'
             : '';

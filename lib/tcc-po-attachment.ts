@@ -87,15 +87,33 @@ function getPoAttachmentFetchOrigins(): string[] {
   ];
 }
 
+function looksLikeErrorDocument(buffer: Buffer): boolean {
+  if (buffer.length === 0) return true;
+  const head = buffer.subarray(0, 80).toString('utf8').trimStart().toLowerCase();
+  return (
+    head.startsWith('<!doctype') ||
+    head.startsWith('<html') ||
+    head.startsWith('{') ||
+    head.startsWith('[')
+  );
+}
+
 async function fetchPoAttachmentViaPublicUrl(storedUrl: string): Promise<Buffer | null> {
   const publicPath = normalizePoAttachmentPublicUrl(storedUrl);
   if (!publicPath) return null;
 
   for (const base of getPoAttachmentFetchOrigins()) {
     try {
-      const response = await fetch(`${base}${publicPath}`, { cache: 'no-store' });
+      const response = await fetch(`${base}${publicPath}`, {
+        cache: 'no-store',
+        signal: AbortSignal.timeout(8000),
+      });
       if (!response.ok) continue;
-      return Buffer.from(await response.arrayBuffer());
+      const contentType = response.headers.get('content-type') || '';
+      if (contentType.includes('text/html') || contentType.includes('application/json')) continue;
+      const buffer = Buffer.from(await response.arrayBuffer());
+      if (looksLikeErrorDocument(buffer)) continue;
+      return buffer;
     } catch {
       // try next origin
     }
@@ -170,20 +188,6 @@ export async function loadPoAttachmentForApplication(
     path.basename(candidates[0] || '') ||
     'po-attachment';
 
-  // Fast path for production: static file is often served even when Node cwd differs.
-  const httpBufferEarly = await fetchPoAttachmentViaPublicUrl(app.bo_attachment_url);
-  if (httpBufferEarly) {
-    return {
-      ok: true,
-      clientId: app.client_id,
-      file: {
-        buffer: httpBufferEarly,
-        fileName: fallbackName,
-        contentType: guessContentType(fallbackName),
-      },
-    };
-  }
-
   for (const storagePath of candidates) {
     try {
       const file = await readPoAttachmentFile(storagePath, fallbackName);
@@ -222,6 +226,20 @@ export async function loadPoAttachmentForApplication(
     } catch {
       // fall through
     }
+  }
+
+  // Disk miss: the file may still be on the public host (local dev against the live DB).
+  const httpBuffer = await fetchPoAttachmentViaPublicUrl(app.bo_attachment_url);
+  if (httpBuffer) {
+    return {
+      ok: true,
+      clientId: app.client_id,
+      file: {
+        buffer: httpBuffer,
+        fileName: fallbackName,
+        contentType: guessContentType(fallbackName),
+      },
+    };
   }
 
   return {

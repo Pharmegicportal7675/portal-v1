@@ -50,6 +50,7 @@ import { canClientEditTccApplication } from '@/lib/tcc-application';
 import { formatErrorMessage } from '@/lib/format-error';
 import { upsertTccCertificateForApplication } from '@/lib/tcc-certificate-issuance';
 import { regenerateTccCertificateFile } from '@/lib/regenerate-tcc-certificate-file';
+import { restorePoAttachment, snapshotPoAttachment } from '@/lib/tcc-po-preserve';
 import {
   resendTccCertificateEmail,
   sendTccCertificateEmailFirst,
@@ -559,28 +560,33 @@ export async function updateTccApplicationAction(prevState: unknown, formData: F
         clientName: client.company_name || 'client',
         folderDate: euData.export_date,
         existingAttachmentUrl: existing.bo_attachment_url,
+        applicationId,
       });
       boUrl = uploaded.url;
       boName = uploaded.name;
     }
 
+    const applicationUpdate: Record<string, unknown> = {
+      chemical_id: euData.chemical_id,
+      client_chemical_id: authChemId,
+      reach_certificate_id: reachCertId,
+      regulatory_framework: euData.regulatory_framework,
+      quantity_mt: euData.quantity_mt,
+      registration_number: euData.registration_number || null,
+      export_date: euData.export_date,
+      remarks: euData.remarks || null,
+      ...euImporter,
+      updated_at: new Date().toISOString(),
+      ...(resetStatus ? { status: 'pending', rejection_reason: null } : {}),
+    };
+    if (hasNewBo) {
+      applicationUpdate.bo_attachment_url = boUrl;
+      applicationUpdate.bo_attachment_name = boName;
+    }
+
     const { error: updateError } = await adminSupabase
       .from('tcc_applications')
-      .update({
-        chemical_id: euData.chemical_id,
-        client_chemical_id: authChemId,
-        reach_certificate_id: reachCertId,
-        regulatory_framework: euData.regulatory_framework,
-        quantity_mt: euData.quantity_mt,
-        registration_number: euData.registration_number || null,
-        export_date: euData.export_date,
-        remarks: euData.remarks || null,
-        bo_attachment_url: boUrl,
-        bo_attachment_name: boName,
-        ...euImporter,
-        updated_at: new Date().toISOString(),
-        ...(resetStatus ? { status: 'pending', rejection_reason: null } : {}),
-      })
+      .update(applicationUpdate)
       .eq('id', applicationId);
 
     if (updateError) throw updateError;
@@ -984,7 +990,19 @@ export async function adminUpdateTccApplicationAction(prevState: unknown, formDa
     }
 
     if (certId) {
-      await regenerateTccCertificateFile(adminSupabase, certId);
+      const poSnapshot = await snapshotPoAttachment(applicationId).catch((snapshotError) => {
+        console.error('[tcc] Failed to snapshot PO attachment before certificate regeneration:', snapshotError);
+        return null;
+      });
+      try {
+        await regenerateTccCertificateFile(adminSupabase, certId);
+      } finally {
+        if (poSnapshot) {
+          await restorePoAttachment(applicationId, poSnapshot).catch((restoreError) => {
+            console.error('[tcc] Failed to restore PO attachment after certificate regeneration:', restoreError);
+          });
+        }
+      }
     }
 
     const afterSnapshot: Record<string, unknown> = {

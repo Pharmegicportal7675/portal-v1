@@ -133,12 +133,9 @@ function DetailItem({ label, children }: { label: string; children: React.ReactN
 }
 
 function isPdfUrl(url: string, fileName?: string | null) {
-  const haystack = `${url} ${fileName || ''}`;
-  return (
-    /\.pdf($|\?|\s)/i.test(haystack) ||
-    url.includes('application/pdf') ||
-    url.includes('/api/tcc/po-attachment')
-  );
+  const file = fileName || '';
+  const pathOnly = url.split('?')[0] || '';
+  return /\.pdf$/i.test(file) || /\.pdf$/i.test(pathOnly);
 }
 
 function isImageUrl(url: string, fileName?: string | null) {
@@ -181,6 +178,7 @@ export function TccApplicationViewDialog({
   const [displayApp, setDisplayApp] = useState<TccViewApplication | null>(app);
   const [isEditing, setIsEditing] = useState(false);
   const [previewVersion, setPreviewVersion] = useState(0);
+  const [poPreviewStatus, setPoPreviewStatus] = useState<'loading' | 'ready' | 'missing'>('loading');
   const [changeHistoryVersion, setChangeHistoryVersion] = useState(0);
   const [changeHistory, setChangeHistory] = useState<TccApplicationChangeLogEntry[]>([]);
   const [changeHistoryLoading, setChangeHistoryLoading] = useState(false);
@@ -199,7 +197,34 @@ export function TccApplicationViewDialog({
     setIsEditing(false);
     setPreviewVersion(0);
     setChangeHistoryVersion(0);
+    setPoPreviewStatus('loading');
   }, [app]);
+
+  useEffect(() => {
+    const applicationId = displayApp?.id;
+    const storedUrl = displayApp?.bo_attachment_url;
+    if (!applicationId || !storedUrl) {
+      setPoPreviewStatus('missing');
+      return;
+    }
+
+    let cancelled = false;
+    setPoPreviewStatus('loading');
+    void fetch(`/api/tcc/po-attachment?id=${encodeURIComponent(applicationId)}&meta=1`, {
+      headers: { Accept: 'application/json' },
+      cache: 'no-store',
+    })
+      .then((res) => {
+        if (!cancelled) setPoPreviewStatus(res.ok ? 'ready' : 'missing');
+      })
+      .catch(() => {
+        if (!cancelled) setPoPreviewStatus('missing');
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [displayApp?.id, displayApp?.bo_attachment_url, previewVersion]);
 
   useEffect(() => {
     if (!isOpen || !displayApp?.id) {
@@ -525,12 +550,19 @@ export function TccApplicationViewDialog({
               </div>
               {boUrl ? (
                 <div className="p-2 bg-white min-h-[200px]">
-                  {isImageUrl(boUrl, boFileName) ? (
+                  {poPreviewStatus === 'loading' ? (
+                    <p className="p-6 text-sm text-slate-400 text-center font-medium">Loading PO attachment…</p>
+                  ) : poPreviewStatus === 'missing' ? (
+                    <p className="p-6 text-sm text-slate-500 text-center font-medium">
+                      PO attachment file was not found on the server. Use Request Changes so the client can re-upload the PO.
+                    </p>
+                  ) : isImageUrl(boUrl, boFileName) ? (
                     // eslint-disable-next-line @next/next/no-img-element
                     <img
                       src={boUrl}
                       alt={boFileName || 'PO attachment'}
                       className="max-h-[280px] w-full object-contain rounded"
+                      onError={() => setPoPreviewStatus('missing')}
                     />
                   ) : isPdfUrl(boUrl, boFileName) ? (
                     <iframe
@@ -552,9 +584,6 @@ export function TccApplicationViewDialog({
                       </a>
                     </div>
                   )}
-                  <p className="px-2 pb-2 text-[11px] text-slate-500 font-medium">
-                    If preview shows unavailable, the PO file is missing on the server — use Request Changes so the client re-uploads.
-                  </p>
                 </div>
               ) : (
                 <p className="p-6 text-sm text-slate-400 text-center font-medium">

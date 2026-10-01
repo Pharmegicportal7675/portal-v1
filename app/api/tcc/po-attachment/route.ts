@@ -82,6 +82,14 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 403 });
     }
 
+    if (searchParams.get('meta') === '1') {
+      return NextResponse.json({
+        ok: true,
+        fileName: result.file.fileName,
+        contentType: result.file.contentType,
+      });
+    }
+
     const inline = searchParams.get('download') !== '1';
     return new NextResponse(new Uint8Array(result.file.buffer), {
       headers: {

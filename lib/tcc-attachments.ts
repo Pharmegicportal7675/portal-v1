@@ -2,6 +2,7 @@ import type { DbClient } from '@/lib/db/types';
 import { buildClientYearStoragePath } from '@/lib/storage-paths';
 import { resolveClientStorageFolder, extractClientFolderFromStorageUrl } from '@/lib/client-storage-folder';
 import { CERTIFICATES_BUCKET, ensureCertificatesBucket } from '@/lib/storage';
+import { resolveCertificatesFilePath } from '@/lib/certificates-upload-root';
 
 const MAX_BO_BYTES = 10 * 1024 * 1024; // 10 MB
 
@@ -54,6 +55,14 @@ export function validateBoAttachment(file: File): { ok: true } | { ok: false; er
   return { ok: true };
 }
 
+function withUniqueFileSuffix(storagePath: string): string {
+  const stamp = Date.now().toString(36);
+  const slash = storagePath.lastIndexOf('/');
+  const dot = storagePath.lastIndexOf('.');
+  if (dot <= slash) return `${storagePath}-${stamp}`;
+  return `${storagePath.slice(0, dot)}-${stamp}${storagePath.slice(dot)}`;
+}
+
 export async function uploadBoAttachment(
   supabase: DbClient,
   file: File,
@@ -62,6 +71,7 @@ export async function uploadBoAttachment(
     clientName: string;
     folderDate?: string | Date | null;
     existingAttachmentUrl?: string | null;
+    applicationId?: string;
   }
 ): Promise<{ url: string; name: string }> {
   const clientFolder = options.existingAttachmentUrl
@@ -69,12 +79,29 @@ export async function uploadBoAttachment(
       (await resolveClientStorageFolder(supabase, options.clientId, options.clientName))
     : await resolveClientStorageFolder(supabase, options.clientId, options.clientName);
 
-  const fileName = buildClientYearStoragePath(
+  let fileName = buildClientYearStoragePath(
     'PO',
     clientFolder,
     options.folderDate,
     file.name.replace(/[^a-zA-Z0-9._-]/g, '_')
   );
+
+  const {
+    data: { publicUrl: plannedUrl },
+  } = supabase.storage.from(CERTIFICATES_BUCKET).getPublicUrl(fileName);
+  const { data: sharedRows } = await supabase
+    .from('tcc_applications')
+    .select('id')
+    .eq('bo_attachment_url', plannedUrl)
+    .limit(5);
+  const usedByAnotherApplication = (sharedRows || []).some(
+    (row: { id?: string }) => row.id && row.id !== options.applicationId
+  );
+  const ownUrl = options.existingAttachmentUrl?.trim() || '';
+  const fileAlreadyStored = Boolean(resolveCertificatesFilePath(fileName));
+  if (usedByAnotherApplication || (fileAlreadyStored && plannedUrl !== ownUrl)) {
+    fileName = withUniqueFileSuffix(fileName);
+  }
   const buffer = Buffer.from(await file.arrayBuffer());
 
   await ensureCertificatesBucket(supabase);

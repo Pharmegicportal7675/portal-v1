@@ -7,13 +7,27 @@ import {
 
 const CERTIFICATES_BUCKET = 'certificates';
 
+function requestedIsPoPath(relative: string): boolean {
+  return relative.split('/').some((part) => part === 'PO' || part === 'bo');
+}
+
+function absoluteIsPoFile(filePath: string): boolean {
+  return /[/\\]PO[/\\]/i.test(filePath) || /[/\\]bo[/\\]/i.test(filePath);
+}
+
 function resolveStorageFilePath(fileName: string): string {
   const relative = fileName.replace(/\\/g, '/').replace(/^\/+/, '');
-  const existing = resolveCertificatesFilePath(relative);
-  if (existing) return existing;
-
   const uploadRoot = getPrimaryCertificatesUploadRoot();
-  return path.join(uploadRoot, ...relative.split('/').filter(Boolean));
+  const requestedPath = path.join(uploadRoot, ...relative.split('/').filter(Boolean));
+  const existing = resolveCertificatesFilePath(relative);
+
+  // Certificate regeneration must not replace a client PO that happens to resolve here.
+  if (existing && !requestedIsPoPath(relative) && absoluteIsPoFile(existing)) {
+    return requestedPath;
+  }
+
+  if (existing) return existing;
+  return requestedPath;
 }
 
 async function ensureDir(): Promise<void> {
@@ -81,7 +95,9 @@ export function createLocalStorage() {
         try {
           await Promise.all(
             paths.map(async (fileName) => {
+              const relative = fileName.replace(/\\/g, '/').replace(/^\/+/, '');
               const filePath = resolveStorageFilePath(fileName);
+              if (!requestedIsPoPath(relative) && absoluteIsPoFile(filePath)) return;
               await fs.unlink(filePath).catch(() => undefined);
             })
           );

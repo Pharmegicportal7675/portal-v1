@@ -2,6 +2,7 @@ import type { DbClient } from '@/lib/db/types';
 import { createAdminClient } from '@/lib/db/admin';
 import { CERTIFICATES_BUCKET, ensureCertificatesBucket } from '@/lib/storage';
 import {
+  buildClientYearStoragePath,
   extractStorageRelativePath,
   resolveCertificateStorageRelativePath,
 } from '@/lib/storage-paths';
@@ -124,13 +125,18 @@ export async function regenerateTccCertificateFile(
     input.validUntilDate ||
     new Date().toISOString().slice(0, 10);
 
-  const storagePath = resolveCertificateStorageRelativePath({
+  let storagePath = resolveCertificateStorageRelativePath({
     storedFileUrl: cert.file_url,
     folder: 'TCC',
     clientFolder,
     date: issuedDate,
     fileName: certFile.fileName,
   });
+
+  // A stored certificate URL must never be written back onto the client's PO file.
+  if (storagePath.split('/').some((part) => part === 'PO' || part === 'bo')) {
+    storagePath = buildClientYearStoragePath('TCC', clientFolder, issuedDate, certFile.fileName);
+  }
 
   await ensureCertificatesBucket(adminSupabase);
   const { error: uploadError } = await adminSupabase.storage
