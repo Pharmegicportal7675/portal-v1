@@ -30,6 +30,7 @@ import { writeActivityLog } from '@/lib/activity-log';
 import {
   computeTccQuotaForExportDate,
   getRemainingQuota,
+  roundQuantityMt,
   getRemainingQuotaForReachPeriod,
   getTonnageBandMaxQuota,
   sumApprovedExports,
@@ -1303,7 +1304,9 @@ export async function processTccAction(
         }
       }
 
-      const newExported = Number(app.chemicals.exported_quantity) + Number(app.quantity_mt);
+      const newExported = roundQuantityMt(
+        Number(app.chemicals.exported_quantity) + Number(app.quantity_mt)
+      );
       await adminSupabase
         .from('chemicals')
         .update({ exported_quantity: newExported })
@@ -1526,7 +1529,10 @@ export async function deleteTccApplicationAction(applicationId: string) {
     const cert = Array.isArray(certRaw) ? certRaw[0] : certRaw;
 
     if (app.status === 'approved' && chemical) {
-      const newExported = Math.max(0, Number(chemical.exported_quantity) - Number(app.quantity_mt));
+      const newExported = Math.max(
+        0,
+        roundQuantityMt(Number(chemical.exported_quantity) - Number(app.quantity_mt))
+      );
       await adminSupabase
         .from('chemicals')
         .update({ exported_quantity: newExported })

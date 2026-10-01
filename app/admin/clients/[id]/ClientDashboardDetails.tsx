@@ -31,7 +31,7 @@ import { formatErrorMessage } from '@/lib/format-error';
 import { formatMobileNumberInput } from '@/lib/mobile-number';
 import { formatActivityLogAction } from '@/lib/activity-log-labels';
 import { parseActivityFieldChanges } from '@/lib/activity-log-fields';
-import { resolveQuotaConsumption, sumApprovedExports, sumApprovedExportsInReachWindow, getRemainingQuota, getTonnageBandMaxQuota, getReachCertAllocatedQuota, resolveDisplayedTonnageBand } from '@/lib/quota';
+import { resolveQuotaConsumption, sumApprovedExports, sumApprovedExportsInReachWindow, getRemainingQuota, getTonnageBandMaxQuota, getReachCertAllocatedQuota, resolveDisplayedTonnageBand, formatQuantityMt } from '@/lib/quota';
 import { computeTccApplicationRcQuota } from '@/lib/tcc-application-quota';
 import { applyTccStatusUpdates } from '@/lib/tcc-status-sync';
 import { useTccStatusFeed } from '@/components/useTccStatusFeed';
@@ -658,7 +658,7 @@ export default function ClientDashboardDetails({
       tooltip: {
         shared: true,
         intersect: false,
-        y: { formatter: (v: number) => `${Number(v).toFixed(2)} MT` },
+        y: { formatter: (v: number) => `${formatQuantityMt(v)} MT` },
       },
     };
 
@@ -2287,7 +2287,7 @@ export default function ClientDashboardDetails({
                       </td>
                       <td className="px-6 py-4 text-slate-600 font-medium">{resolveChemical(app)}</td>
                       <td className="px-6 py-4 text-right font-medium text-slate-700">
-                        {Number(app.quantity_mt || 0).toFixed(2)} MT
+                        {formatQuantityMt(app.quantity_mt)} MT
                       </td>
                       <td className="px-6 py-4 text-slate-600 font-medium" suppressHydrationWarning>
                         {new Date(app.created_at).toLocaleDateString('en-GB')}

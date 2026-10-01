@@ -41,7 +41,7 @@ export function TableNumberRangeFilter({
         )}
         <input
           type="number"
-          step="0.01"
+          step="any"
           min="0"
           value={value.min}
           onChange={(e) => onChange({ ...value, min: e.target.value })}
@@ -52,7 +52,7 @@ export function TableNumberRangeFilter({
       </div>
       <input
         type="number"
-        step="0.01"
+        step="any"
         min={value.min || '0'}
         value={value.max}
         onChange={(e) => onChange({ ...value, max: e.target.value })}

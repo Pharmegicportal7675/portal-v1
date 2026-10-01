@@ -1,5 +1,24 @@
 import { z } from 'zod';
+import { parseQuantityMt } from '@/lib/quota';
 import { REGULATORY_REGISTRATIONS } from '@/lib/regulatory-registrations';
+
+const quantityMtSchema = z
+  .union([z.string(), z.number()])
+  .transform((value, ctx) => {
+    const parsed = parseQuantityMt(value);
+    if (parsed == null) {
+      const raw = String(value ?? '').trim();
+      ctx.addIssue({
+        code: 'custom',
+        message:
+          raw && Number(raw) > 0
+            ? 'Enter a quantity with up to 6 decimal places (for example 1.00056).'
+            : 'Quantity must be greater than 0',
+      });
+      return z.NEVER;
+    }
+    return parsed;
+  });
 
 const regulatoryRegistrationSchema = z.enum([
   REGULATORY_REGISTRATIONS.EU_REACH,
@@ -97,7 +116,7 @@ export const internalNoteSchema = z.object({
 // TCC APPLICATION
 // ============================================================================
 const tccApplicationCommonSchema = {
-  quantity_mt: z.coerce.number().positive({ message: 'Quantity must be greater than 0' }),
+  quantity_mt: quantityMtSchema,
   regulatory_framework: regulatoryRegistrationSchema,
   export_date: z.string().min(1, { message: 'PO date is required' }),
   eu_importer_company_name: z.string().min(1, { message: 'EU importer company name is required' }),
@@ -128,7 +147,7 @@ export const adminTccApplicationUpdateSchema = z.object({
   purchase_order_number: z.string().min(1, { message: 'Purchase order number is required' }),
   invoice_number: z
     .preprocess((val) => (val == null || val === '' ? undefined : String(val)), z.string().optional()),
-  quantity_mt: z.coerce.number().positive({ message: 'Quantity must be greater than 0' }),
+  quantity_mt: quantityMtSchema,
   export_date: z.string().min(1, { message: 'PO date is required' }),
   issue_date: z
     .preprocess((val) => (val == null || val === '' ? undefined : String(val)), z.string().optional()),

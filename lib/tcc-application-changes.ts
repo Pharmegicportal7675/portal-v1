@@ -1,4 +1,5 @@
 import { formatDisplayDate } from '@/lib/date-filter';
+import { formatQuantityMt } from '@/lib/quota';
 
 export type TccApplicationFieldChange = {
   field: string;
@@ -33,7 +34,7 @@ const TRACKED_FIELDS = Object.keys(TRACKED_FIELD_LABELS);
 
 function normalizeCompareValue(field: string, value: unknown): string {
   if (value == null || value === '') return '';
-  if (field === 'quantity_mt') return Number(value).toFixed(2);
+  if (field === 'quantity_mt') return formatQuantityMt(Number(value));
   if (field === 'certificate_issue_date' || field === 'export_date' || field === 'certificate_valid_until_date') {
     return String(value).split('T')[0];
   }

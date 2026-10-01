@@ -14,6 +14,7 @@ import { Dialog } from './ui/Dialog';
 import { Button } from './ui/Button';
 import { Badge } from './ui/Badge';
 import { formatDisplayDate } from '@/lib/date-filter';
+import { formatQuantityMt } from '@/lib/quota';
 import { getTccApplicationAvailableQuota, resolveTccApplicationCertificateYear, resolveTccApplicationRegistrationNumber, resolveTccApplicationTonnageBand } from '@/lib/tcc-application-quota';
 import {
   resolveTccApplicationCertificateNumber,
@@ -425,7 +426,7 @@ export function TccApplicationViewDialog({
                 {displayApp.invoice_number?.trim() || '—'}
               </DetailItem>
               <DetailItem label="Quantity requested">
-                <span className="text-lg font-black text-teal-800">{displayApp.quantity_mt} MT</span>
+                <span className="text-lg font-black text-teal-800">{formatQuantityMt(displayApp.quantity_mt)} MT</span>
               </DetailItem>
               <DetailItem label="Available quota (client)">
                 {availableQuota} MT

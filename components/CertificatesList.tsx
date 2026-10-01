@@ -23,6 +23,7 @@ import {
 import {
   buildTccCertificatePdfDownloadUrl,
 } from '@/lib/tcc-certificate-download';
+import { formatQuantityMt } from '@/lib/quota';
 import { CertificatePdfDownloadLink } from '@/components/CertificatePdfDownloadLink';
 import { formatDisplayDate } from '@/lib/date-filter';
 import { resolveDisplayedTonnageBand } from '@/lib/quota';
@@ -176,7 +177,7 @@ export default function CertificatesList({ initialCertificates }: CertificatesLi
                   const isReach = cert.type === 'REACH';
                   const authorizedWeight = isReach
                     ? resolveDisplayedTonnageBand(cert.tonnage_band, cert.chemicals?.tonnage_band, '') || '—'
-                    : `${cert.tcc_applications?.quantity_mt ?? '—'} MT`;
+                    : `${cert.tcc_applications?.quantity_mt != null ? formatQuantityMt(cert.tcc_applications.quantity_mt) : '—'} MT`;
 
                   return (
                   <tr key={cert.id} className="hover:bg-slate-50/50 transition-colors">

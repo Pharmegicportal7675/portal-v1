@@ -8,6 +8,7 @@ import {
 } from '@/lib/reach-certificate-data';
 import { resolveTccCertificateDateOfIssue } from '@/lib/tcc-certificate-dates';
 import { buildEuImporterFullAddress, splitEuImporterAddress } from '@/lib/tcc-eu-importer';
+import { formatQuantityMt } from '@/lib/quota';
 
 type TccPdfClient = {
   company_name: string;
@@ -189,7 +190,7 @@ function buildTccDocxFields(input: {
       euImporterAddr2,
       euImporterAddr3
     ),
-    volumeMt: `${Number(input.application.quantity_mt)} MT`,
+    volumeMt: `${formatQuantityMt(input.application.quantity_mt)} MT`,
     deliveryChallanNo:
       input.deliveryChallanNo?.trim() ||
       input.application.purchase_order_number?.trim() ||

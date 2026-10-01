@@ -43,7 +43,7 @@ function certificateNumber(certificates: unknown): string {
 function quantityKey(value: unknown): string {
   const numeric = Number(value);
   if (!Number.isFinite(numeric)) return '';
-  return numeric.toFixed(2);
+  return numeric.toFixed(6);
 }
 
 function dateKey(value: unknown): string {

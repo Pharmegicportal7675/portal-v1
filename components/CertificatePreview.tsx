@@ -6,6 +6,7 @@ import { sendCertificateEmailAction, resendCertificateEmailAction } from '@/acti
 import { Button } from '@/components/ui/Button';
 import { Badge } from '@/components/ui/Badge';
 import { toast } from '@/store/toast';
+import { formatQuantityMt } from '@/lib/quota';
 import {
   Download,
   ArrowLeft,
@@ -372,7 +373,7 @@ export default function CertificatePreviewClient({
                     </div>
                     <div>
                       <p className="text-xs text-slate-400 font-bold uppercase tracking-wider mb-0.5">Quantity</p>
-                      <p className="text-lg font-black text-slate-800">{tccApp.quantity_mt} MT</p>
+                      <p className="text-lg font-black text-slate-800">{formatQuantityMt(tccApp.quantity_mt)} MT</p>
                     </div>
                     {tccApp.purchase_order_number && (
                       <div>

@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useTransition, useEffect, useMemo } from 'react';
-import { computeTccQuotaForExportDate } from '@/lib/quota';
+import { computeTccQuotaForExportDate, formatQuantityMt, parseQuantityMt, roundQuantityMt } from '@/lib/quota';
 import type { TccExportRecord } from '@/lib/quota';
 import type { ReachCertificateRecord } from '@/lib/reach-certificate';
 import { useRouter } from 'next/navigation';
@@ -111,7 +111,7 @@ export default function TccApplicationForm({
 
   const [chemicalId, setChemicalId] = useState(editApplication?.chemical_id ?? '');
   const [quantity, setQuantity] = useState(
-    editApplication ? String(editApplication.quantity_mt) : ''
+    editApplication ? formatQuantityMt(editApplication.quantity_mt) : ''
   );
   const [exportDate, setExportDate] = useState(formatDateInput(editApplication?.export_date));
   const [euImporterCompanyName, setEuImporterCompanyName] = useState(
@@ -143,7 +143,7 @@ export default function TccApplicationForm({
   useEffect(() => {
     if (!editApplication) return;
     setChemicalId(editApplication.chemical_id);
-    setQuantity(String(editApplication.quantity_mt));
+    setQuantity(formatQuantityMt(editApplication.quantity_mt));
     setExportDate(formatDateInput(editApplication.export_date));
     setEuImporterCompanyName(editApplication.eu_importer_company_name?.trim() ?? '');
     setEuImporterAddress(editApplication.eu_importer_address ?? '');
@@ -199,8 +199,8 @@ export default function TccApplicationForm({
 
   const matchedReachCert = quotaContext?.reachCert ?? null;
   const initialQuota = quotaContext?.remainingQuota ?? 0;
-  const requestedAmt = Number(quantity) || 0;
-  const finalQuota = initialQuota - requestedAmt;
+  const requestedAmt = roundQuantityMt(Number(quantity) || 0);
+  const finalQuota = roundQuantityMt(initialQuota - requestedAmt);
   const quotaExceeded = requestedAmt > 0 && requestedAmt > initialQuota;
   const noQuotaLeft =
     selectedSubstance != null && exportDate !== '' && quotaContext != null && initialQuota <= 0;
@@ -271,6 +271,10 @@ export default function TccApplicationForm({
       return 'Please specify a positive quantity in metric tons (MT).';
     }
 
+    if (parseQuantityMt(quantity) == null) {
+      return 'Export tonnage can include up to 6 decimal places (for example 1.00056).';
+    }
+
     if (!exportDate) {
       return 'PO date is required.';
     }
@@ -285,7 +289,7 @@ export default function TccApplicationForm({
       }
 
       if (selectedSubstance && Number(quantity) > initialQuota) {
-        return `Quantity exceeds available quota. Maximum allowed: ${initialQuota} MT.`;
+        return `Quantity exceeds available quota. Maximum allowed: ${formatQuantityMt(initialQuota)} MT.`;
       }
     }
 
@@ -619,13 +623,13 @@ export default function TccApplicationForm({
                   <FormLabel required>Export Tonnage (Metric Tons - MT)</FormLabel>
                   <Input
                     type="number"
-                    step="0.01"
-                    min="0.01"
+                    step="any"
+                    min="0.000001"
                     max={isEuReach && exportDate && initialQuota > 0 ? initialQuota : undefined}
                     placeholder={
                       isEuReach && exportDate && initialQuota > 0
-                        ? `Max ${initialQuota} MT`
-                        : 'e.g. 25.50'
+                        ? `Max ${formatQuantityMt(initialQuota)} MT`
+                        : 'e.g. 1.00056'
                     }
                     value={quantity}
                     onChange={(e) => handleQuantityChange(e.target.value)}
@@ -639,13 +643,13 @@ export default function TccApplicationForm({
                   {isEuReach && selectedSubstance && exportDate && matchedReachCert && (
                     <p className="text-[10px] text-slate-500 font-medium">
                       Available for this CT period:{' '}
-                      <span className="font-bold text-slate-700">{initialQuota} MT</span>
+                      <span className="font-bold text-slate-700">{formatQuantityMt(initialQuota)} MT</span>
                     </p>
                   )}
                   {isEuReach && quotaExceeded && (
                     <p className="text-[11px] text-rose-600 font-semibold flex items-center gap-1">
                       <AlertCircle className="h-3.5 w-3.5 shrink-0" />
-                      Request exceeds available quota by {(requestedAmt - initialQuota).toFixed(2)} MT.
+                      Request exceeds available quota by {formatQuantityMt(requestedAmt - initialQuota)} MT.
                     </p>
                   )}
                 </div>
@@ -753,22 +757,22 @@ export default function TccApplicationForm({
                     <div className="space-y-2">
                       <div className="flex justify-between font-medium">
                         <span className="text-slate-500">Current Available:</span>
-                        <span className="font-bold text-slate-800">{initialQuota} MT</span>
+                        <span className="font-bold text-slate-800">{formatQuantityMt(initialQuota)} MT</span>
                       </div>
                       <div className="flex justify-between font-medium text-rose-600">
                         <span className="flex items-center gap-1">
                           <Scale className="h-3.5 w-3.5" /> Requested:
                         </span>
-                        <span className="font-bold">- {requestedAmt} MT</span>
+                        <span className="font-bold">- {formatQuantityMt(requestedAmt)} MT</span>
                       </div>
                       <div className="border-t border-dashed border-slate-200 my-2" />
                       <div className={`flex justify-between font-bold ${quotaExceeded ? 'text-rose-600' : 'text-primary'}`}>
                         <span>Projected Balance:</span>
-                        <span>{quotaExceeded ? 'Quota exceeded' : `${Math.max(0, finalQuota)} MT`}</span>
+                        <span>{quotaExceeded ? 'Quota exceeded' : `${formatQuantityMt(Math.max(0, finalQuota))} MT`}</span>
                       </div>
                       {quotaExceeded && (
                         <p className="text-[10px] text-rose-600 font-semibold">
-                          Only {initialQuota} MT remaining — reduce requested tonnage to continue.
+                          Only {formatQuantityMt(initialQuota)} MT remaining — reduce requested tonnage to continue.
                         </p>
                       )}
                     </div>

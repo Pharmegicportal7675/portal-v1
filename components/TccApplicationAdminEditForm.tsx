@@ -10,6 +10,7 @@ import { ModalErrorBox } from './ui/ModalErrorBox';
 import { toast } from '@/store/toast';
 import type { TccViewApplication } from './TccApplicationViewDialog';
 import { getTccCertificateValidUntilIso } from '@/lib/tcc-certificate-dates';
+import { formatQuantityMt } from '@/lib/quota';
 
 export type TccAdminEditValues = {
   applicationId: string;
@@ -53,7 +54,7 @@ export function buildTccAdminEditValues(app: TccViewApplication): TccAdminEditVa
     eu_importer_address: app.eu_importer_address?.trim() ?? '',
     purchase_order_number: app.purchase_order_number?.trim() ?? '',
     invoice_number: app.invoice_number?.trim() ?? '',
-    quantity_mt: String(app.quantity_mt ?? ''),
+    quantity_mt: app.quantity_mt == null ? '' : formatQuantityMt(app.quantity_mt),
     valid_until_date: resolveCertificateValidUntil(app),
     export_date: formatDateInput(app.export_date),
     registration_number: app.registration_number?.trim() ?? '',
@@ -214,8 +215,8 @@ export function TccApplicationAdminEditForm({
             <FormLabel required>Quantity (MT)</FormLabel>
             <Input
               type="number"
-              step="0.01"
-              min="0.01"
+              step="any"
+              min="0.000001"
               value={form.quantity_mt}
               onChange={(e) => updateField('quantity_mt', e.target.value)}
               required

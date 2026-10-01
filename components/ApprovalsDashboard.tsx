@@ -13,6 +13,7 @@ import { TableDateRangeFilter, type DateRangeValue } from './ui/TableDateRangeFi
 import { TableNumberRangeFilter, type NumberRangeValue } from './ui/TableNumberRangeFilter';
 import { matchesDateRange, formatDisplayDate } from '@/lib/date-filter';
 import { matchesNumberRange } from '@/lib/number-filter';
+import { formatQuantityMt } from '@/lib/quota';
 import { getTccApplicationAvailableQuota, resolveTccApplicationRegistrationNumber } from '@/lib/tcc-application-quota';
 import {
   resolveTccApplicationCertificateNumber,
@@ -612,7 +613,7 @@ export default function ApprovalsDashboard({ initialApplications, emailDefaults 
                           </div>
                         </div>
                       </td>
-                      <td className="p-4 font-extrabold text-slate-800">{app.quantity_mt} MT</td>
+                      <td className="p-4 font-extrabold text-slate-800">{formatQuantityMt(app.quantity_mt)} MT</td>
                       <td className="p-4 text-slate-600 font-medium text-xs">
                         <div className="flex items-center gap-1.5">
                           <Calendar className="h-3.5 w-3.5 text-slate-400 shrink-0" />
@@ -729,7 +730,7 @@ export default function ApprovalsDashboard({ initialApplications, emailDefaults 
                 <div className="grid grid-cols-2 gap-4">
                   <div>
                     <span className="font-bold text-slate-400 uppercase tracking-wider block text-[9px]">Requested</span>
-                    <span className="font-bold text-slate-800">{selectedApp?.quantity_mt} MT</span>
+                    <span className="font-bold text-slate-800">{formatQuantityMt(selectedApp?.quantity_mt)} MT</span>
                   </div>
                   <div>
                     <span className="font-bold text-slate-400 uppercase tracking-wider block text-[9px]">Available Quota</span>
