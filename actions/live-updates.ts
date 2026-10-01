@@ -81,10 +81,16 @@ export async function fetchTccStatusFeed(): Promise<
     where: clientWhere,
     select: {
       id: true,
+      client_id: true,
       status: true,
+      created_at: true,
       updated_at: true,
       quantity_mt: true,
       export_date: true,
+      registration_number: true,
+      regulatory_framework: true,
+      chemicals: { select: { chemical_name: true, cas_number: true, ec_number: true } },
+      clients: { select: { company_name: true, email: true } },
       certificates_certificates_tcc_application_idTotcc_applications: {
         select: {
           id: true,
@@ -103,10 +109,19 @@ export async function fetchTccStatusFeed(): Promise<
       const certificate = row.certificates_certificates_tcc_application_idTotcc_applications;
       return {
         id: row.id,
+        client_id: row.client_id,
         status: row.status ?? 'pending',
+        created_at: stamp(row.created_at),
         updated_at: stamp(row.updated_at),
         quantity_mt: Number(String(row.quantity_mt ?? 0)),
         export_date: row.export_date ? stamp(row.export_date) : null,
+        registration_number: row.registration_number,
+        regulatory_framework: row.regulatory_framework,
+        chemical_name: row.chemicals?.chemical_name || 'N/A',
+        cas_number: row.chemicals?.cas_number || '',
+        ec_number: row.chemicals?.ec_number ?? null,
+        company_name: row.clients?.company_name || 'Client',
+        client_email: row.clients?.email ?? null,
         certificate: certificate
           ? {
               id: certificate.id,

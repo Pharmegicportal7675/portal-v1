@@ -159,8 +159,8 @@ export default function ClientDashboardDetails({
   const [isMounted, setIsMounted] = useState(false);
   const statusUpdates = useTccStatusFeed();
   const tccHistory = useMemo(
-    () => applyTccStatusUpdates(tccHistoryFromServer, statusUpdates),
-    [tccHistoryFromServer, statusUpdates]
+    () => applyTccStatusUpdates(tccHistoryFromServer, statusUpdates, { insertMissing: 'all', clientId: client.id }),
+    [tccHistoryFromServer, statusUpdates, client.id]
   );
 
   useEffect(() => {

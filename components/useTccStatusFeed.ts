@@ -10,7 +10,7 @@ function feedKey(rows: TccStatusUpdate[]) {
   return rows
     .map(
       (row) =>
-        `${row.id}:${row.status}:${row.updated_at}:${row.quantity_mt}:${row.export_date ?? ''}:${row.certificate?.certificate_number ?? ''}`
+        `${row.id}:${row.status}:${row.created_at}:${row.updated_at}:${row.quantity_mt}:${row.export_date ?? ''}:${row.certificate?.certificate_number ?? ''}`
     )
     .join('|');
 }
