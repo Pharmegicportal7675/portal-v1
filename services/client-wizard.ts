@@ -17,6 +17,7 @@ import {
   writeActivityLog,
 } from '@/lib/activity-log';
 import { normalizeRegulatoryRegistrations } from '@/lib/regulatory-registrations';
+import { notifyAllAdmins } from '@/lib/notifications';
 
 async function requireAdmin() {
   const session = await getSession();
@@ -428,10 +429,24 @@ export async function updateClientWizard(clientId: string, data: unknown) {
       },
     });
 
+    if (createdLoginUser) {
+      try {
+        await notifyAllAdmins(
+          adminSupabase,
+          'New client',
+          `${updatePayload.company_name} was added to the client directory.`,
+          `/admin/clients/${clientId}`
+        );
+      } catch (notifyError) {
+        console.error('[CLIENT CREATE] Failed to send notification:', notifyError);
+      }
+    }
+
     revalidatePath(`/admin/clients/${clientId}`);
     revalidatePath(`/admin/clients/${clientId}/edit`);
     revalidatePath('/admin/clients');
     revalidatePath('/admin/activity-logs');
+    revalidatePath('/admin', 'layout');
     return {
       success: true,
       message: createdLoginUser

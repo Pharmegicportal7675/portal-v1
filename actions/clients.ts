@@ -26,6 +26,7 @@ import {
   formatActivityFieldChangesDescription,
   writeActivityLog,
 } from '@/lib/activity-log';
+import { notifyAllAdmins } from '@/lib/notifications';
 
 // ============================================================================
 // HELPER: Verify admin session
@@ -272,6 +273,19 @@ export async function deleteClientAction(clientId: string) {
     revalidatePath('/admin/approvals');
     revalidatePath('/admin/activity-logs');
     revalidatePath(`/admin/clients/${clientId}`);
+    revalidatePath('/admin', 'layout');
+
+    try {
+      await notifyAllAdmins(
+        adminSupabase,
+        'Client deleted',
+        `${client.company_name} was removed from the client directory.`,
+        '/admin/clients'
+      );
+    } catch (notifyError) {
+      console.error('[CLIENT DELETE] Failed to send notification:', notifyError);
+    }
+
     return {
       success: true,
       message: `${client.company_name}, assigned substances, certificate files, and storage folders deleted permanently.`,
@@ -335,6 +349,17 @@ export async function deleteSelectedClientsAction(clientIds: string[]) {
           bulk: true,
         },
       });
+
+      try {
+        await notifyAllAdmins(
+          adminSupabase,
+          'Client deleted',
+          `${client.company_name} was removed from the client directory.`,
+          '/admin/clients'
+        );
+      } catch (notifyError) {
+        console.error('[CLIENT DELETE] Failed to send notification:', notifyError);
+      }
     } catch (err) {
       const message = err instanceof Error ? err.message : String(err);
       failed.push(`${clientId}: ${message}`);
@@ -346,6 +371,7 @@ export async function deleteSelectedClientsAction(clientIds: string[]) {
   revalidatePath('/admin/rc-certificates');
   revalidatePath('/admin/approvals');
   revalidatePath('/admin/activity-logs');
+  revalidatePath('/admin', 'layout');
 
   if (failed.length > 0) {
     return {

@@ -12,6 +12,10 @@ export function resolveNotificationLink(
   const message = notification.message.toLowerCase();
   const isAdmin = role === 'MASTER_ADMIN' || role === 'SUPER_ADMIN';
 
+  if (title.includes('new client') || title.includes('client deleted')) {
+    return isAdmin ? '/admin/clients' : '/client';
+  }
+
   if (title.includes('new tcc application') || message.includes('review in approvals')) {
     return isAdmin ? '/admin/approvals' : '/client';
   }
