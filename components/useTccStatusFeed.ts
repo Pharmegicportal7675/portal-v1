@@ -8,7 +8,10 @@ const POLL_MS = 4000;
 
 function feedKey(rows: TccStatusUpdate[]) {
   return rows
-    .map((row) => `${row.id}:${row.status}:${row.updated_at}:${row.certificate?.certificate_number ?? ''}`)
+    .map(
+      (row) =>
+        `${row.id}:${row.status}:${row.updated_at}:${row.quantity_mt}:${row.export_date ?? ''}:${row.certificate?.certificate_number ?? ''}`
+    )
     .join('|');
 }
 

@@ -36,7 +36,8 @@ export async function fetchPortalLiveState(): Promise<
   const clientWhere =
     session.role === 'CLIENT' && session.clientId ? { client_id: session.clientId } : undefined;
 
-  const [{ notifications, unreadCount }, applicationGroups, certificateGroups] = await Promise.all([
+  const [{ notifications, unreadCount }, applicationGroups, certificateGroups, activityStamp] =
+    await Promise.all([
     getUserNotificationFeed(session.userId),
     prisma.tcc_applications.groupBy({
       by: ['status'],
@@ -50,6 +51,11 @@ export async function fetchPortalLiveState(): Promise<
       _count: { _all: true },
       _max: { updated_at: true },
     }),
+    prisma.activity_logs.aggregate({
+      where: clientWhere,
+      _count: { _all: true },
+      _max: { created_at: true },
+    }),
   ]);
 
   return {
@@ -57,7 +63,7 @@ export async function fetchPortalLiveState(): Promise<
     data: {
       notifications,
       unreadCount,
-      statusToken: `tcc:${statusTokenFromGroups(applicationGroups)};cert:${statusTokenFromGroups(certificateGroups)}`,
+      statusToken: `tcc:${statusTokenFromGroups(applicationGroups)};cert:${statusTokenFromGroups(certificateGroups)};act:${activityStamp._count._all}:${stamp(activityStamp._max.created_at)}`,
     },
   };
 }
@@ -77,6 +83,8 @@ export async function fetchTccStatusFeed(): Promise<
       id: true,
       status: true,
       updated_at: true,
+      quantity_mt: true,
+      export_date: true,
       certificates_certificates_tcc_application_idTotcc_applications: {
         select: {
           id: true,
@@ -97,6 +105,8 @@ export async function fetchTccStatusFeed(): Promise<
         id: row.id,
         status: row.status ?? 'pending',
         updated_at: stamp(row.updated_at),
+        quantity_mt: Number(String(row.quantity_mt ?? 0)),
+        export_date: row.export_date ? stamp(row.export_date) : null,
         certificate: certificate
           ? {
               id: certificate.id,

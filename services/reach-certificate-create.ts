@@ -5,7 +5,7 @@ import { resolveClientStorageFolder } from '@/lib/client-storage-folder';
 import { CERTIFICATES_BUCKET, ensureCertificatesBucket } from '@/lib/storage';
 import { clearReachCertificateStorageFiles } from '@/lib/reach-certificate-storage';
 import { revalidatePath } from 'next/cache';
-import { notifyUser } from '@/lib/notifications';
+import { writeActivityLog } from '@/lib/activity-log';
 import {
   REACH_CERTIFICATE_TYPE,
   findReachCertificatePeriodConflict,
@@ -287,7 +287,7 @@ export async function createReachCertificate(input: CreateReachCertificateInput)
     .eq('client_id', clientId)
     .eq('chemical_id', chemicalId);
 
-  await adminSupabase.from('activity_logs').insert({
+  await writeActivityLog(adminSupabase, {
     client_id: clientId,
     user_id: userId,
     action: 'REACH_CERTIFICATE_ISSUED',
@@ -295,22 +295,6 @@ export async function createReachCertificate(input: CreateReachCertificateInput)
     entity_id: cert.id,
     description: `CT Certificate ${certNumber} issued for ${chemical.chemical_name}`,
   });
-
-  const { data: clientUser } = await adminSupabase
-    .from('users')
-    .select('id')
-    .eq('client_id', clientId)
-    .maybeSingle();
-
-  if (clientUser) {
-    await notifyUser(
-      adminSupabase,
-      clientUser.id,
-      'CT Compliance Certificate Issued',
-      `Your CT certificate ${certNumber} for ${chemical.chemical_name} is valid until ${expiryDate.toLocaleDateString('en-GB')}. You may now apply for TCC permits for this substance.`,
-      '/client'
-    );
-  }
 
   revalidatePath(`/admin/clients/${clientId}`);
   revalidatePath(`/admin/clients/${clientId}/chemicals`);

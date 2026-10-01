@@ -1,4 +1,5 @@
 import type { DbClient } from '@/lib/db/types';
+import { writeActivityLog } from '@/lib/activity-log';
 import { buildCertificateRecipients } from '@/lib/certificate-email-recipients';
 import { appendMailSentHistory } from '@/lib/certificate-mail-history';
 import { buildTccSmtpConfig } from '@/lib/certificate-smtp-settings';
@@ -137,7 +138,7 @@ export async function sendTccCertificateEmailFirst(
       })
       .eq('id', certificateId);
 
-    await supabase.from('activity_logs').insert({
+    await writeActivityLog(supabase, {
       client_id: cert.client_id,
       user_id: sentByUserId,
       action: 'CERTIFICATE_EMAIL_SENT',
@@ -210,7 +211,7 @@ export async function resendTccCertificateEmail(
       })
       .eq('id', certificateId);
 
-    await supabase.from('activity_logs').insert({
+    await writeActivityLog(supabase, {
       client_id: cert.client_id,
       user_id: sentByUserId,
       action: 'CERTIFICATE_EMAIL_RESENT',

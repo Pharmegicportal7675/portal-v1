@@ -2,8 +2,9 @@ import 'server-only';
 
 import { prisma } from '@/lib/prisma';
 import {
-  NEW_TCC_APPLICATION_TITLE,
+  TCC_REVIEW_NOTIFICATION_TITLES,
   newTccApplicationMessage,
+  updatedTccApplicationMessage,
   type NotificationRow,
 } from '@/lib/notifications';
 
@@ -50,18 +51,20 @@ export async function markNewTccApplicationNotificationsRead(input: {
   quantityMt?: unknown;
   chemicalName?: string | null;
 }) {
-  const message =
-    input.chemicalName
-      ? newTccApplicationMessage(input.companyName || 'A client', input.quantityMt, input.chemicalName)
-      : null;
+  const messages = input.chemicalName
+    ? [
+        newTccApplicationMessage(input.companyName || 'A client', input.quantityMt, input.chemicalName),
+        updatedTccApplicationMessage(input.companyName || 'A client', input.quantityMt, input.chemicalName),
+      ]
+    : [];
 
   await prisma.notifications.updateMany({
     where: {
       read: false,
-      title: NEW_TCC_APPLICATION_TITLE,
+      title: { in: [...TCC_REVIEW_NOTIFICATION_TITLES] },
       OR: [
         { link: { contains: input.applicationId } },
-        ...(message ? [{ message }] : []),
+        ...messages.map((message) => ({ message })),
       ],
     },
     data: { read: true },
@@ -81,7 +84,7 @@ export async function clearResolvedTccReviewNotifications() {
       },
     }),
     prisma.notifications.findMany({
-      where: { title: NEW_TCC_APPLICATION_TITLE, read: false },
+      where: { title: { in: [...TCC_REVIEW_NOTIFICATION_TITLES] }, read: false },
       select: { id: true, message: true, link: true },
     }),
   ]);
@@ -90,13 +93,14 @@ export async function clearResolvedTccReviewNotifications() {
 
   const pendingIds = new Set(pending.map((app) => app.id));
   const pendingMessages = new Set(
-    pending.map((app) =>
-      newTccApplicationMessage(
-        app.clients?.company_name || 'A client',
-        app.quantity_mt,
-        app.chemicals?.chemical_name || ''
-      )
-    )
+    pending.flatMap((app) => {
+      const company = app.clients?.company_name || 'A client';
+      const chemical = app.chemicals?.chemical_name || '';
+      return [
+        newTccApplicationMessage(company, app.quantity_mt, chemical),
+        updatedTccApplicationMessage(company, app.quantity_mt, chemical),
+      ];
+    })
   );
 
   const staleIds = unread

@@ -1568,7 +1568,7 @@ export default function ClientDashboardDetails({
     setViewTccApp((current) => {
       if (!current) return current;
       const next = tccHistory.find((app) => app.id === current.id);
-      if (!next || next.status === current.status) return current;
+      if (!next || (next.status === current.status && next.updated_at === current.updated_at)) return current;
       return buildViewApplication(next);
     });
   }, [tccHistory]);

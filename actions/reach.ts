@@ -8,6 +8,7 @@ import { buildRcSmtpConfig } from '@/lib/certificate-smtp-settings';
 import { resolveReachCertificateDownloadFile } from '@/lib/reach-certificate-pdf';
 import { CERTIFICATES_BUCKET } from '@/lib/storage';
 import { revalidatePath } from 'next/cache';
+import { writeActivityLog } from '@/lib/activity-log';
 import { getTonnageBandMaxQuota } from '@/lib/quota';
 import { sendBulkReachCertificatesEmail, sendCertificateEmail as sendCertEmail } from '@/services/email';
 import {
@@ -182,7 +183,7 @@ export async function renewReachCertificateAction(
       notes: `CT renewed — quota set to ${data.available_quantity} MT`,
     });
 
-    await adminSupabase.from('activity_logs').insert({
+    await writeActivityLog(adminSupabase, {
       client_id: clientId,
       user_id: session.userId,
       action: 'REACH_CERTIFICATE_RENEWED',
@@ -328,7 +329,7 @@ export async function updateReachCertificateAction(
 
     const regen = await regenerateReachCertificateFile(certId);
 
-    await adminSupabase.from('activity_logs').insert({
+    await writeActivityLog(adminSupabase, {
       client_id: cert.client_id,
       user_id: session.userId,
       action: 'REACH_CERTIFICATE_UPDATED',
@@ -555,7 +556,7 @@ export async function sendReachCertificateEmailAction(certificateId: string) {
       })
       .eq('id', certificateId);
 
-    await adminSupabase.from('activity_logs').insert({
+    await writeActivityLog(adminSupabase, {
       client_id: cert.client_id,
       user_id: session.userId,
       action: 'REACH_CERTIFICATE_EMAIL_SENT',
@@ -617,7 +618,7 @@ export async function resendReachCertificateEmailAction(certificateId: string) {
       })
       .eq('id', certificateId);
 
-    await adminSupabase.from('activity_logs').insert({
+    await writeActivityLog(adminSupabase, {
       client_id: cert.client_id,
       user_id: session.userId,
       action: 'REACH_CERTIFICATE_EMAIL_RESENT',
@@ -753,7 +754,7 @@ export async function sendBulkReachCertificatesEmailAction(
         )
         .eq('id', cert.id);
 
-      await adminSupabase.from('activity_logs').insert({
+      await writeActivityLog(adminSupabase, {
         client_id: clientId,
         user_id: session.userId,
         action: alreadySent ? 'REACH_CERTIFICATE_EMAIL_RESENT' : 'REACH_CERTIFICATE_EMAIL_SENT',
@@ -892,7 +893,7 @@ export async function deleteReachCertificateAction(certificateId: string, client
     const chemicalName =
       (cert.chemicals as { chemical_name?: string } | null)?.chemical_name || 'Unknown';
 
-    await adminSupabase.from('activity_logs').insert({
+    await writeActivityLog(adminSupabase, {
       client_id: clientId,
       user_id: session.userId,
       action: 'REACH_CERTIFICATE_DELETED',

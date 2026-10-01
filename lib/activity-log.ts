@@ -2,6 +2,7 @@ import 'server-only';
 
 import type { DbClient } from '@/lib/db/types';
 import { getActivityRequestContext } from '@/lib/activity-request-context';
+import { notifyPortalActivity } from '@/lib/notifications';
 
 export {
   buildActivityFieldChanges,
@@ -32,7 +33,7 @@ export async function writeActivityLog(
         }
       : await getActivityRequestContext();
 
-  const { error } = await supabase.from('activity_logs').insert({
+  const payload = {
     client_id: entry.client_id ?? null,
     user_id: entry.user_id ?? null,
     action: entry.action,
@@ -40,26 +41,40 @@ export async function writeActivityLog(
     entity_id: entry.entity_id ?? null,
     description: entry.description,
     metadata: entry.metadata ?? null,
+  };
+
+  const publish = async () => {
+    try {
+      await notifyPortalActivity(supabase, {
+        action: entry.action,
+        description: entry.description,
+        client_id: entry.client_id,
+        entity_id: entry.entity_id,
+      });
+    } catch (notifyError) {
+      console.error('[notifications]', entry.action, notifyError);
+    }
+  };
+
+  const { error } = await supabase.from('activity_logs').insert({
+    ...payload,
     ip_address: requestCtx.ip_address,
     location: requestCtx.location,
   });
   if (error) {
     // Older DBs without ip/location columns — retry without them so logging never breaks the app.
     if (/unknown column|does not exist|ip_address|location/i.test(error.message || '')) {
-      const retry = await supabase.from('activity_logs').insert({
-        client_id: entry.client_id ?? null,
-        user_id: entry.user_id ?? null,
-        action: entry.action,
-        entity_type: entry.entity_type ?? null,
-        entity_id: entry.entity_id ?? null,
-        description: entry.description,
-        metadata: entry.metadata ?? null,
-      });
+      const retry = await supabase.from('activity_logs').insert(payload);
       if (retry.error) {
         console.error('[activity_logs]', entry.action, retry.error.message || retry.error);
+        return;
       }
+      await publish();
       return;
     }
     console.error('[activity_logs]', entry.action, error.message || error);
+    return;
   }
+
+  await publish();
 }

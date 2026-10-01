@@ -10,6 +10,8 @@ export type TccStatusUpdate = {
   id: string;
   status: string;
   updated_at: string;
+  quantity_mt: number;
+  export_date: string | null;
   certificate: TccStatusCertificate | null;
 };
 
@@ -17,7 +19,10 @@ type StatusRow = {
   id: string;
   status: string;
   updated_at?: string | null;
+  quantity_mt?: unknown;
+  export_date?: string | null;
   certificates?: unknown;
+  rejection_reason?: string | null;
 };
 
 function certificateNumber(certificates: unknown): string {
@@ -26,7 +31,19 @@ function certificateNumber(certificates: unknown): string {
   return String((cert as { certificate_number?: string | null }).certificate_number ?? '');
 }
 
-/** Overlay the latest TCC status and certificate onto rows the screen already has. */
+function quantityKey(value: unknown): string {
+  const numeric = Number(value);
+  if (!Number.isFinite(numeric)) return '';
+  return numeric.toFixed(2);
+}
+
+function dateKey(value: unknown): string {
+  if (!value) return '';
+  const raw = value instanceof Date ? value.toISOString() : String(value);
+  return raw.slice(0, 10);
+}
+
+/** Overlay the latest TCC status, quantity, and certificate onto rows the screen already has. */
 export function applyTccStatusUpdates<T extends StatusRow>(rows: T[], updates: TccStatusUpdate[]): T[] {
   if (updates.length === 0 || rows.length === 0) return rows;
 
@@ -38,9 +55,12 @@ export function applyTccStatusUpdates<T extends StatusRow>(rows: T[], updates: T
     if (!update) return row;
 
     const nextNumber = update.certificate?.certificate_number ?? '';
-    if (update.status === row.status && certificateNumber(row.certificates) === nextNumber) {
-      return row;
-    }
+    const sameRow =
+      update.status === row.status &&
+      certificateNumber(row.certificates) === nextNumber &&
+      quantityKey(row.quantity_mt) === quantityKey(update.quantity_mt) &&
+      dateKey(row.export_date) === dateKey(update.export_date);
+    if (sameRow) return row;
 
     changed = true;
     const currentCert = Array.isArray(row.certificates) ? row.certificates[0] : row.certificates;
@@ -55,6 +75,9 @@ export function applyTccStatusUpdates<T extends StatusRow>(rows: T[], updates: T
       ...row,
       status: update.status,
       updated_at: update.updated_at,
+      quantity_mt: update.quantity_mt,
+      export_date: update.export_date ?? row.export_date,
+      ...(update.status === 'pending' ? { rejection_reason: null } : {}),
       certificates,
     };
   });

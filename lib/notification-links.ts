@@ -16,7 +16,11 @@ export function resolveNotificationLink(
     return isAdmin ? '/admin/clients' : '/client';
   }
 
-  if (title.includes('new tcc application') || message.includes('review in approvals')) {
+  if (
+    title.includes('new tcc application') ||
+    title.includes('tcc application updated') ||
+    message.includes('review in approvals')
+  ) {
     return isAdmin ? '/admin/approvals' : '/client';
   }
 

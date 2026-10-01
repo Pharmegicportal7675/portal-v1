@@ -31,6 +31,7 @@ const ACTION_LABELS: Record<string, string> = {
   REACH_CERTIFICATE_EMAIL_SENT: 'CT certificate email sent',
   REACH_CERTIFICATE_EMAIL_RESENT: 'CT certificate email resent',
   CREATE_TCC_APPLICATION: 'TCC application submitted',
+  TCC_FRAMEWORK_NOTIFICATION: 'Regulatory notification submitted',
   UPDATE_TCC_APPLICATION: 'TCC application updated',
   TCC_ADMIN_EDIT: 'TCC application edited (admin)',
   TCC_APPROVED: 'TCC approved & certificate issued',

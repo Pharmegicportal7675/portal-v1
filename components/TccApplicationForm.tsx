@@ -408,6 +408,7 @@ export default function TccApplicationForm({
 
       toast.success(res.message || (isEditing ? 'Application updated.' : 'TCC application submitted.'));
       router.push('/client');
+      router.refresh();
     });
   };
 

@@ -26,7 +26,6 @@ import {
   formatActivityFieldChangesDescription,
   writeActivityLog,
 } from '@/lib/activity-log';
-import { notifyAllAdmins } from '@/lib/notifications';
 
 // ============================================================================
 // HELPER: Verify admin session
@@ -90,7 +89,7 @@ export async function updateClientAction(clientId: string, profile: Record<strin
       }
     }
 
-    await adminSupabase.from('activity_logs').insert({
+    await writeActivityLog(adminSupabase, {
       client_id: clientId,
       user_id: session.userId,
       action: 'CLIENT_UPDATED',
@@ -142,7 +141,7 @@ export async function changeClientEmailAction(clientId: string, newEmail: string
     const { error: uErr } = await adminSupabase.from('users').update({ email: emailLower }).eq('client_id', clientId);
     if (uErr) throw uErr;
 
-    await adminSupabase.from('activity_logs').insert({
+    await writeActivityLog(adminSupabase, {
       client_id: clientId,
       user_id: session.userId,
       action: 'EMAIL_CHANGED',
@@ -177,7 +176,7 @@ export async function changeClientPasswordAction(clientId: string, newPassword: 
       .eq('client_id', clientId);
     if (error) throw error;
 
-    await adminSupabase.from('activity_logs').insert({
+    await writeActivityLog(adminSupabase, {
       client_id: clientId,
       user_id: session.userId,
       action: 'PASSWORD_CHANGED',
@@ -206,7 +205,7 @@ export async function toggleClientLoginAction(clientId: string, disable: boolean
     const { error } = await adminSupabase.from('users').update({ is_disabled: disable }).eq('client_id', clientId);
     if (error) throw error;
 
-    await adminSupabase.from('activity_logs').insert({
+    await writeActivityLog(adminSupabase, {
       client_id: clientId,
       user_id: session.userId,
       action: disable ? 'LOGIN_DISABLED' : 'LOGIN_ENABLED',
@@ -275,17 +274,6 @@ export async function deleteClientAction(clientId: string) {
     revalidatePath(`/admin/clients/${clientId}`);
     revalidatePath('/admin', 'layout');
 
-    try {
-      await notifyAllAdmins(
-        adminSupabase,
-        'Client deleted',
-        `${client.company_name} was removed from the client directory.`,
-        '/admin/clients'
-      );
-    } catch (notifyError) {
-      console.error('[CLIENT DELETE] Failed to send notification:', notifyError);
-    }
-
     return {
       success: true,
       message: `${client.company_name}, assigned substances, certificate files, and storage folders deleted permanently.`,
@@ -350,16 +338,6 @@ export async function deleteSelectedClientsAction(clientIds: string[]) {
         },
       });
 
-      try {
-        await notifyAllAdmins(
-          adminSupabase,
-          'Client deleted',
-          `${client.company_name} was removed from the client directory.`,
-          '/admin/clients'
-        );
-      } catch (notifyError) {
-        console.error('[CLIENT DELETE] Failed to send notification:', notifyError);
-      }
     } catch (err) {
       const message = err instanceof Error ? err.message : String(err);
       failed.push(`${clientId}: ${message}`);
@@ -587,7 +565,7 @@ export async function addNewChemicalToClientAction(clientId: string, data: any) 
         is_intermediate_substance: Boolean(data.is_intermediate_substance),
       }).eq('id', chemicalId);
 
-      await adminSupabase.from('activity_logs').insert({
+      await writeActivityLog(adminSupabase, {
         client_id: clientId,
         user_id: session.userId,
         action: 'REACH_CERTIFICATE_ISSUED',
@@ -635,7 +613,7 @@ export async function addNewChemicalToClientAction(clientId: string, data: any) 
       if (assignErr) throw assignErr;
     }
 
-    await adminSupabase.from('activity_logs').insert({
+    await writeActivityLog(adminSupabase, {
       client_id: clientId,
       user_id: session.userId,
       action: 'CHEMICAL_ASSIGNED',
@@ -717,7 +695,7 @@ export async function removeChemicalFromClientAction(clientId: string, chemicalI
       return { success: false, error: 'Substance assignment not found or already removed.' };
     }
     
-    await adminSupabase.from('activity_logs').insert({
+    await writeActivityLog(adminSupabase, {
       client_id: clientId,
       user_id: session.userId,
       action: 'CHEMICAL_TRASHED',
@@ -762,7 +740,7 @@ export async function restoreClientChemicalAction(clientId: string, chemicalId: 
 
     if (error) throw error;
 
-    await adminSupabase.from('activity_logs').insert({
+    await writeActivityLog(adminSupabase, {
       client_id: clientId,
       user_id: session.userId,
       action: 'CHEMICAL_RESTORED',
@@ -801,7 +779,7 @@ export async function permanentDeleteClientChemicalAction(clientId: string, chem
 
     if (error) throw error;
 
-    await adminSupabase.from('activity_logs').insert({
+    await writeActivityLog(adminSupabase, {
       client_id: clientId,
       user_id: session.userId,
       action: 'CHEMICAL_PERMANENTLY_DELETED',
@@ -907,7 +885,7 @@ export async function editClientChemicalAction(clientId: string, chemicalId: str
 
     if (error) throw error;
 
-    await adminSupabase.from('activity_logs').insert({
+    await writeActivityLog(adminSupabase, {
       client_id: clientId,
       user_id: session.userId,
       action: 'CHEMICAL_EDITED',
