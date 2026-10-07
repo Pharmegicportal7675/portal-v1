@@ -300,7 +300,15 @@ async function main() {
   }
 
   appendLog(`pdf bytes=${pdf.length}`);
-  fs.writeSync(1, pdf);
+  // Hostinger copies worker stderr onto stdout. Writing the PDF to a file
+  // keeps those log lines out of the document Chrome tries to open.
+  const pdfOutPath = process.argv[4];
+  if (pdfOutPath) {
+    fs.writeFileSync(pdfOutPath, pdf);
+    appendLog(`wrote ${pdfOutPath}`);
+  } else {
+    fs.writeSync(1, pdf);
+  }
 }
 
 process.on('uncaughtException', (err) => exitWithError(err));

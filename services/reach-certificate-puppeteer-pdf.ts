@@ -192,11 +192,24 @@ export async function runPdfWorkerCheck(): Promise<string> {
   }
 }
 
+/** Drop Hostinger log lines that get prefixed onto the worker's PDF bytes. */
+function extractPdfBuffer(buffer: Buffer): Buffer | null {
+  const signature = Buffer.from('%PDF');
+  const start = buffer.indexOf(signature);
+  if (start < 0) return null;
+  const sliced = start === 0 ? buffer : buffer.subarray(start);
+  const eof = Buffer.from('%%EOF');
+  const end = sliced.lastIndexOf(eof);
+  if (end < 0) return null;
+  return Buffer.from(sliced.subarray(0, end + eof.length));
+}
+
 async function runPdfWorkerWithSpawn(
   context: { scriptPath: string; workerRoot: string; nodePath: string },
   args: string[],
   logPath: string,
-  workerTimeoutMs: number
+  workerTimeoutMs: number,
+  pdfOutPath: string
 ): Promise<Buffer> {
   const env = await buildWorkerEnv(logPath, context.nodePath);
 
@@ -229,8 +242,18 @@ async function runPdfWorkerWithSpawn(
         const stderr = Buffer.concat(stderrChunks).toString('utf8');
         const detail = await readWorkerDiagnostics(logPath, stderr);
 
-        if (code === 0 && stdout.length > 0) {
-          resolve(stdout);
+        let pdfSource = stdout;
+        try {
+          if (fs.existsSync(pdfOutPath)) {
+            pdfSource = await readFile(pdfOutPath);
+          }
+        } catch {
+          pdfSource = stdout;
+        }
+
+        const pdf = extractPdfBuffer(pdfSource);
+        if (code === 0 && pdf && pdf.length > 0) {
+          resolve(pdf);
           return;
         }
 
@@ -252,13 +275,20 @@ async function runPdfWorker(html: string, format: 'reach' | 'tcc'): Promise<Buff
   const runtimeDir = ensureChromiumRuntimeDir();
   const htmlPath = path.join(runtimeDir, `reach-pdf-${randomUUID()}.html`);
   const logPath = `${htmlPath}.log`;
+  const pdfOutPath = `${htmlPath}.out.pdf`;
   const context = resolveWorkerContext();
   const workerTimeoutMs = Number(process.env.REACH_PDF_WORKER_TIMEOUT_MS || '110000');
 
   await writeFile(htmlPath, html, 'utf8');
 
   try {
-    return await runPdfWorkerWithSpawn(context, [htmlPath, format], logPath, workerTimeoutMs);
+    return await runPdfWorkerWithSpawn(
+      context,
+      [htmlPath, format, pdfOutPath],
+      logPath,
+      workerTimeoutMs,
+      pdfOutPath
+    );
   } catch (err: unknown) {
     const execErr = err as { message?: string; code?: string | number; signal?: string };
     const detail = await readWorkerDiagnostics(logPath, execErr.message || String(err));
@@ -266,6 +296,7 @@ async function runPdfWorker(html: string, format: 'reach' | 'tcc'): Promise<Buff
   } finally {
     await unlink(htmlPath).catch(() => {});
     await unlink(logPath).catch(() => {});
+    await unlink(pdfOutPath).catch(() => {});
   }
 }
 
