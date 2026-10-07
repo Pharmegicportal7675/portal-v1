@@ -22,15 +22,19 @@ const RC_PDF_SETUP_MESSAGE =
   'PDF download failed. Ensure the server has Puppeteer/Chromium installed.';
 
 function triggerBlobDownload(blob: Blob, fileName: string) {
-  const url = URL.createObjectURL(blob);
-  window.open(url, '_blank', 'noopener,noreferrer');
+  const safeName = fileName.toLowerCase().endsWith('.pdf') ? fileName : `${fileName}.pdf`;
+  // application/pdf makes Chrome display the file instead of saving it, and a
+  // popup opened after the fetch is blocked. octet-stream keeps the .pdf name
+  // and starts a real download.
+  const file = new Blob([blob], { type: 'application/octet-stream' });
+  const url = URL.createObjectURL(file);
   const anchor = document.createElement('a');
   anchor.href = url;
-  anchor.download = fileName;
-  anchor.style.display = 'none';
+  anchor.download = safeName;
+  anchor.rel = 'noopener';
   document.body.appendChild(anchor);
   anchor.click();
-  document.body.removeChild(anchor);
+  anchor.remove();
   window.setTimeout(() => URL.revokeObjectURL(url), 60_000);
 }
 

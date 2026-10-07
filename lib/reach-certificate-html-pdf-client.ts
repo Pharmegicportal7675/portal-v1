@@ -17,15 +17,16 @@ import type { ReachCertificateHtmlData } from '@/lib/reach-certificate-html-data
 
 
 function triggerBlobDownload(blob: Blob, fileName: string) {
-  const url = URL.createObjectURL(blob);
-  window.open(url, '_blank', 'noopener,noreferrer');
+  const safeName = fileName.toLowerCase().endsWith('.pdf') ? fileName : `${fileName}.pdf`;
+  const file = new Blob([blob], { type: 'application/octet-stream' });
+  const url = URL.createObjectURL(file);
   const anchor = document.createElement('a');
   anchor.href = url;
-  anchor.download = fileName;
-  anchor.style.display = 'none';
+  anchor.download = safeName;
+  anchor.rel = 'noopener';
   document.body.appendChild(anchor);
   anchor.click();
-  document.body.removeChild(anchor);
+  anchor.remove();
   window.setTimeout(() => URL.revokeObjectURL(url), 60_000);
 }
 
