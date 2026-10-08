@@ -105,9 +105,22 @@ export async function updateTccSmtpSettingsAction(smtpData: SmtpFormPayload) {
 
   const adminSupabase = createAdminClient();
   try {
+    // Empty password on Save means "keep existing" — never wipe stored credentials.
+    const payload: Record<string, unknown> = {
+      smtp_host: smtpData.smtp_host,
+      smtp_port: smtpData.smtp_port,
+      smtp_user: smtpData.smtp_user,
+      smtp_from: smtpData.smtp_from,
+      smtp_cc_default: smtpData.smtp_cc_default,
+      updated_at: new Date().toISOString(),
+    };
+    if (smtpData.smtp_pass?.trim()) {
+      payload.smtp_pass = smtpData.smtp_pass;
+    }
+
     const { error } = await adminSupabase
       .from('admin_settings')
-      .upsert({ id: 1, ...smtpData, updated_at: new Date().toISOString() }, { onConflict: 'id' });
+      .upsert({ id: 1, ...payload }, { onConflict: 'id' });
 
     if (error) throw error;
 
@@ -138,21 +151,22 @@ export async function updateRcSmtpSettingsAction(smtpData: SmtpFormPayload) {
 
   const adminSupabase = createAdminClient();
   try {
+    const payload: Record<string, unknown> = {
+      id: 1,
+      rc_smtp_host: smtpData.smtp_host,
+      rc_smtp_port: smtpData.smtp_port,
+      rc_smtp_user: smtpData.smtp_user,
+      rc_smtp_from: smtpData.smtp_from,
+      rc_smtp_cc_default: smtpData.smtp_cc_default,
+      updated_at: new Date().toISOString(),
+    };
+    if (smtpData.smtp_pass?.trim()) {
+      payload.rc_smtp_pass = smtpData.smtp_pass;
+    }
+
     const { error } = await adminSupabase
       .from('admin_settings')
-      .upsert(
-        {
-          id: 1,
-          rc_smtp_host: smtpData.smtp_host,
-          rc_smtp_port: smtpData.smtp_port,
-          rc_smtp_user: smtpData.smtp_user,
-          rc_smtp_pass: smtpData.smtp_pass,
-          rc_smtp_from: smtpData.smtp_from,
-          rc_smtp_cc_default: smtpData.smtp_cc_default,
-          updated_at: new Date().toISOString(),
-        },
-        { onConflict: 'id' }
-      );
+      .upsert(payload, { onConflict: 'id' });
 
     if (error) throw error;
 

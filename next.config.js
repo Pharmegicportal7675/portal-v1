@@ -80,8 +80,11 @@ const nextConfig = {
       ...PDF_FONT_TRACE,
       ...PRISMA_TRACE,
     ],
+    '/api/health/pdf-worker': [...CHROMIUM_TRACE, ...PUPPETEER_TRACE, ...PRISMA_TRACE],
+    '/api/health/pdf-converter': [...CHROMIUM_TRACE, ...PUPPETEER_TRACE, ...PRISMA_TRACE],
     '/api/tcc-certificate/html-data': [...PDF_FONT_TRACE, ...PRISMA_TRACE],
   },
+
   // Runtime-generated certificate files must never be bundled into the build.
   // Excluding them stops NFT from tracing/copying stale uploads (fixes ENOENT copy errors).
   outputFileTracingExcludes: {

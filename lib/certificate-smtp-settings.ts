@@ -53,7 +53,8 @@ export function mapTccSmtpFormFromSettings(row?: AdminSmtpSettingsRow | null): C
     smtp_host: row?.smtp_host || '',
     smtp_port: row?.smtp_port ?? 587,
     smtp_user: row?.smtp_user || '',
-    smtp_pass: row?.smtp_pass || '',
+    // Never prefill password into the browser form — blank Save keeps the stored value.
+    smtp_pass: '',
     smtp_from: row?.smtp_from || '',
     smtp_cc_default: row?.smtp_cc_default || '',
   };
@@ -64,7 +65,8 @@ export function mapRcSmtpFormFromSettings(row?: AdminSmtpSettingsRow | null): Ce
     smtp_host: row?.rc_smtp_host || '',
     smtp_port: row?.rc_smtp_port ?? 587,
     smtp_user: row?.rc_smtp_user || '',
-    smtp_pass: row?.rc_smtp_pass || '',
+    // Never prefill password into the browser form — blank Save keeps the stored value.
+    smtp_pass: '',
     smtp_from: row?.rc_smtp_from || '',
     smtp_cc_default: row?.rc_smtp_cc_default || '',
   };

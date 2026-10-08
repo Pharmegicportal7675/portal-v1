@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { resolvePuppeteerProjectRoot } from '@/lib/puppeteer-runtime';
 import { runInProcessPdfCheck, runPdfWorkerCheck } from '@/services/reach-certificate-puppeteer-pdf';
 
 export const dynamic = 'force-dynamic';
@@ -6,6 +7,8 @@ export const runtime = 'nodejs';
 export const maxDuration = 120;
 
 export async function GET(request: NextRequest) {
+  const pdfRoot = resolvePuppeteerProjectRoot();
+
   try {
     if (request.nextUrl.searchParams.get('launch') === '1') {
       process.env.REACH_PDF_HEALTH_LAUNCH = '1';
@@ -26,6 +29,8 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({
       ok: true,
       mode: process.env.REACH_PDF_USE_WORKER === '1' ? 'worker' : 'in-process',
+      pdfRoot,
+      cwd: process.cwd(),
       inProcess,
       worker,
       workerError,
@@ -33,6 +38,9 @@ export async function GET(request: NextRequest) {
   } catch (error) {
     const message = error instanceof Error ? error.message : 'PDF check failed';
     console.error('[health/pdf-worker]', message);
-    return NextResponse.json({ ok: false, error: message }, { status: 500 });
+    return NextResponse.json(
+      { ok: false, error: message, pdfRoot, cwd: process.cwd() },
+      { status: 500 }
+    );
   }
 }

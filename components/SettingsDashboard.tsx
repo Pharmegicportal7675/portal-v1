@@ -365,7 +365,7 @@ export default function SettingsDashboard({
       <Input
         type="password"
         label="SMTP Password"
-        placeholder="••••••••"
+        placeholder="Leave blank to keep current password"
         value={smtp.smtp_pass}
         onChange={(e) => setSmtp({ ...smtp, smtp_pass: e.target.value })}
       />
