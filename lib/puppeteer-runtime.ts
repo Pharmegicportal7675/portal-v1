@@ -2,6 +2,10 @@ import fs from 'node:fs';
 import path from 'node:path';
 import type { createRequire as CreateRequireFn } from 'node:module';
 
+type NodeModuleApi = {
+  createRequire: typeof CreateRequireFn;
+};
+
 function hasPdfDeps(root: string): boolean {
   return (
     fs.existsSync(path.join(root, 'node_modules', 'puppeteer-core')) &&
@@ -63,74 +67,79 @@ function resolveProjectRoot(): string {
   return withPackageJson[0] || cwd;
 }
 
+function resolveBridgePath(root: string): string | null {
+  const candidates = [
+    path.join(root, 'scripts', 'load-pdf-native.cjs'),
+    path.join(process.cwd(), 'scripts', 'load-pdf-native.cjs'),
+    path.join(process.cwd(), '.next', 'standalone', 'scripts', 'load-pdf-native.cjs'),
+  ];
+
+  for (const candidate of candidates) {
+    if (fs.existsSync(candidate)) return candidate;
+  }
+  return null;
+}
+
 /**
- * Real Node createRequire — never use the webpack-injected `createRequire` import.
- * On Hostinger that import becomes a non-function (`c is not a function`).
+ * Obtain native Module.createRequire without relying on webpack's broken
+ * `import { createRequire } from 'node:module'` binding (shows up as "c is not a function")
+ * and without eval('require') which fails in pure ESM ("require is not defined").
  */
 function getNativeCreateRequire(): typeof CreateRequireFn {
-  // webpack must not rewrite this call
-  const nodeRequire = (0, eval)('require') as NodeRequire;
-  const nodeModule = nodeRequire('module') as {
-    createRequire?: typeof CreateRequireFn;
+  const proc = process as NodeJS.Process & {
+    getBuiltinModule?: (id: string) => NodeModuleApi | undefined;
   };
-  if (typeof nodeModule.createRequire !== 'function') {
-    throw new Error('Native module.createRequire is unavailable in this runtime');
-  }
-  return nodeModule.createRequire.bind(nodeModule) as typeof CreateRequireFn;
-}
 
-function getModuleRequire(root = resolveProjectRoot()): NodeRequire {
-  const createRequire = getNativeCreateRequire();
-  const pkgJson = path.join(root, 'package.json');
-  if (fs.existsSync(pkgJson)) {
-    return createRequire(pkgJson);
+  if (typeof proc.getBuiltinModule === 'function') {
+    const builtin = proc.getBuiltinModule('module');
+    if (builtin && typeof builtin.createRequire === 'function') {
+      return builtin.createRequire.bind(builtin) as typeof CreateRequireFn;
+    }
   }
 
-  const cwdPkg = path.join(process.cwd(), 'package.json');
-  if (fs.existsSync(cwdPkg)) {
-    return createRequire(cwdPkg);
-  }
-
-  // createRequire only needs a path inside the resolve root
-  return createRequire(path.join(root || process.cwd(), 'package.json'));
-}
-
-function loadFromRoot(root: string, packageName: string): unknown {
-  const req = getModuleRequire(root);
-  const absPackage = path.join(root, 'node_modules', packageName);
-
+  // Last resort: dynamic import is async, so try a Function that only works if CJS globals exist
   try {
-    return req(packageName);
-  } catch (namedError) {
-    if (fs.existsSync(absPackage)) {
-      try {
-        return req(absPackage);
-      } catch {
-        // fall through with original error
+    // eslint-disable-next-line no-new-func
+    const nodeRequire = new Function(
+      'return (typeof require !== "undefined" && require) || (typeof globalThis !== "undefined" && globalThis.require) || null'
+    )() as NodeRequire | null;
+    if (nodeRequire) {
+      const nodeModule = nodeRequire('module') as NodeModuleApi;
+      if (typeof nodeModule.createRequire === 'function') {
+        return nodeModule.createRequire.bind(nodeModule) as typeof CreateRequireFn;
       }
     }
-    throw namedError;
+  } catch {
+    // ignore
   }
+
+  throw new Error(
+    'Native module.createRequire unavailable (ESM bundle). PDF will use the CJS worker process.'
+  );
+}
+
+type PdfNativeBridge = {
+  loadPuppeteerCore: (root: string) => typeof import('puppeteer-core');
+  loadChromiumMin: (root: string) => BundledChromiumModule;
+};
+
+function loadBridge(root: string): PdfNativeBridge {
+  const createRequire = getNativeCreateRequire();
+  const bridgePath = resolveBridgePath(root);
+  if (!bridgePath) {
+    throw new Error(`scripts/load-pdf-native.cjs not found (root=${root}, cwd=${process.cwd()})`);
+  }
+  return createRequire(bridgePath)(bridgePath) as PdfNativeBridge;
 }
 
 export function loadPuppeteerCore(): typeof import('puppeteer-core') {
   const root = resolveProjectRoot();
   try {
-    const mod = loadFromRoot(root, 'puppeteer-core') as {
-      launch?: unknown;
-      default?: { launch?: unknown };
-    };
-    const puppeteer =
-      mod && typeof mod === 'object' && mod.default?.launch ? mod.default : mod;
-    if (puppeteer && typeof puppeteer.launch === 'function') {
-      return puppeteer as typeof import('puppeteer-core');
-    }
-    throw new Error('puppeteer-core loaded but launch() is missing');
+    return loadBridge(root).loadPuppeteerCore(root);
   } catch (err) {
     const message = err instanceof Error ? err.message : String(err);
-    const depsPresent = hasPdfDeps(root);
     throw new Error(
-      `Cannot find module 'puppeteer-core' (root=${root}, cwd=${process.cwd()}, depsOnDisk=${depsPresent}). ${message}`
+      `Cannot find module 'puppeteer-core' (root=${root}, cwd=${process.cwd()}, depsOnDisk=${hasPdfDeps(root)}). ${message}`
     );
   }
 }
@@ -144,13 +153,7 @@ type BundledChromiumModule = {
 export function loadBundledChromiumModule(): BundledChromiumModule {
   const root = resolveProjectRoot();
   try {
-    const mod = loadFromRoot(root, '@sparticuz/chromium-min') as
-      | BundledChromiumModule
-      | { default: BundledChromiumModule };
-    if (mod && typeof mod === 'object' && 'default' in mod && mod.default) {
-      return mod.default;
-    }
-    return mod as BundledChromiumModule;
+    return loadBridge(root).loadChromiumMin(root);
   } catch (err) {
     const message = err instanceof Error ? err.message : String(err);
     throw new Error(
@@ -161,4 +164,12 @@ export function loadBundledChromiumModule(): BundledChromiumModule {
 
 export function resolvePuppeteerProjectRoot(): string {
   return resolveProjectRoot();
+}
+
+/** True when this host should prefer the CJS PDF worker over in-process puppeteer. */
+export function shouldPreferPdfWorker(): boolean {
+  if (process.env.REACH_PDF_USE_WORKER === '1') return true;
+  if (process.env.REACH_PDF_USE_WORKER === '0') return false;
+  const cwd = process.cwd().replace(/\\/g, '/');
+  return cwd.includes('/hbuilds/') || cwd.includes('/domains/');
 }

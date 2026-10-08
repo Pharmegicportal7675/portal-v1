@@ -15,7 +15,11 @@ import {
   usesBundledChromiumFallback,
 } from '@/lib/reach-pdf-environment';
 import { withPdfGenerationLock } from '@/lib/pdf-generation-lock';
-import { loadBundledChromiumModule, loadPuppeteerCore } from '@/lib/puppeteer-runtime';
+import {
+  loadBundledChromiumModule,
+  loadPuppeteerCore,
+  shouldPreferPdfWorker,
+} from '@/lib/puppeteer-runtime';
 import { launchBundledChromiumBrowser } from '@/services/reach-certificate-bundled-chromium';
 
 export { isReachPuppeteerPdfAvailable };
@@ -23,7 +27,7 @@ export { isReachPuppeteerPdfAvailable };
 const execFileAsync = promisify(execFile);
 
 function usePdfWorker(): boolean {
-  return process.env.REACH_PDF_USE_WORKER === '1';
+  return shouldPreferPdfWorker();
 }
 
 function isModuleLoadError(message: string): boolean {
@@ -37,10 +41,16 @@ function isModuleLoadError(message: string): boolean {
 }
 
 function resolveWorkerContext(): { scriptPath: string; workerRoot: string; nodePath: string } {
+  const cwd = process.cwd();
   const roots = [
-    process.cwd(),
-    path.join(process.cwd(), '..', '..'),
+    cwd,
+    path.join(cwd, '.next', 'standalone'),
+    path.join(cwd, '..'),
+    path.join(cwd, '..', '.next', 'standalone'),
+    path.join(cwd, '..', '..'),
     path.join(__dirname, '..', '..'),
+    path.join(__dirname, '..', '..', '..'),
+    path.join(__dirname, '..', '..', '..', '.next', 'standalone'),
   ];
 
   const seen = new Set<string>();
@@ -57,6 +67,7 @@ function resolveWorkerContext(): { scriptPath: string; workerRoot: string; nodeP
     let score = 0;
     if (fs.existsSync(path.join(normalized, 'node_modules', 'puppeteer-core'))) score += 10;
     if (fs.existsSync(path.join(normalized, 'node_modules', '@sparticuz', 'chromium-min'))) score += 10;
+    if (fs.existsSync(path.join(normalized, 'scripts', 'load-pdf-native.cjs'))) score += 5;
 
     const inStandalone =
       normalized.includes(`${path.sep}standalone${path.sep}`) || normalized.endsWith(`${path.sep}standalone`);

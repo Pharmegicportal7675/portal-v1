@@ -96,17 +96,20 @@ for (const fileName of certificateCssFiles) {
   }
 }
 
-const workerScript = path.join(root, 'scripts', 'reach-html-to-pdf.cjs');
-const workerDest = path.join(standaloneDir, 'scripts', 'reach-html-to-pdf.cjs');
-const chromiumHelper = path.join(root, 'scripts', 'bundled-chromium-executable.cjs');
-const chromiumHelperDest = path.join(standaloneDir, 'scripts', 'bundled-chromium-executable.cjs');
-if (fs.existsSync(workerScript)) {
-  fs.mkdirSync(path.dirname(workerDest), { recursive: true });
-  fs.copyFileSync(workerScript, workerDest);
-}
-if (fs.existsSync(chromiumHelper)) {
-  fs.mkdirSync(path.dirname(chromiumHelperDest), { recursive: true });
-  fs.copyFileSync(chromiumHelper, chromiumHelperDest);
+const scriptCopies = [
+  'reach-html-to-pdf.cjs',
+  'bundled-chromium-executable.cjs',
+  'load-pdf-native.cjs',
+];
+for (const fileName of scriptCopies) {
+  const src = path.join(root, 'scripts', fileName);
+  const dest = path.join(standaloneDir, 'scripts', fileName);
+  if (!fs.existsSync(src)) {
+    console.warn(`[postbuild] Missing script: scripts/${fileName}`);
+    continue;
+  }
+  fs.mkdirSync(path.dirname(dest), { recursive: true });
+  fs.copyFileSync(src, dest);
 }
 
 console.info('[postbuild] Ensuring PDF packages in standalone/node_modules…');
