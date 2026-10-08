@@ -93,6 +93,25 @@ if (!fs.existsSync(standaloneServer)) {
 }
 
 linkRuntimeUploads();
+
+// PDF packages are copied into standalone/node_modules by postbuild. Keep them
+// resolvable even if Passenger leaves cwd at the nodejs app root.
+const standaloneNodeModules = path.join(standaloneDir, 'node_modules');
+const rootNodeModules = path.join(root, 'node_modules');
+const nodePathParts = [
+  standaloneNodeModules,
+  rootNodeModules,
+  process.env.NODE_PATH || '',
+].filter(Boolean);
+process.env.NODE_PATH = nodePathParts.join(path.delimiter);
+try {
+  require('module').Module._initPaths();
+} catch (_) {}
+
+const pdfReady =
+  fs.existsSync(path.join(standaloneNodeModules, 'puppeteer-core')) &&
+  fs.existsSync(path.join(standaloneNodeModules, '@sparticuz', 'chromium-min'));
+console.info('[portal] PDF deps in standalone/node_modules:', pdfReady ? 'found' : 'MISSING');
 console.info(`[portal] Starting Next.js standalone on 0.0.0.0:${port}`);
 
 try {

@@ -1,6 +1,6 @@
-import { createRequire } from 'node:module';
 import fs from 'node:fs';
 import path from 'node:path';
+import type { createRequire as CreateRequireFn } from 'node:module';
 
 function hasPdfDeps(root: string): boolean {
   return (
@@ -19,21 +19,27 @@ function addCandidate(roots: string[], seen: Set<string>, candidate: string | nu
 
 /**
  * Find a folder that has package.json + puppeteer-core on disk.
- * Hostinger runs from `.next/standalone` after server.js chdir; also search parents.
+ * Hostinger may keep cwd at `nodejs/` even when the app is served from
+ * `.next/standalone`, so always search that folder explicitly.
  */
 function resolveProjectRoot(): string {
   const seen = new Set<string>();
   const candidates: string[] = [];
+  const cwd = process.cwd();
 
-  addCandidate(candidates, seen, process.cwd());
-  addCandidate(candidates, seen, path.join(process.cwd(), '..'));
-  addCandidate(candidates, seen, path.join(process.cwd(), '..', '..'));
-  addCandidate(candidates, seen, path.join(process.cwd(), '..', '..', '..'));
+  addCandidate(candidates, seen, cwd);
+  addCandidate(candidates, seen, path.join(cwd, '.next', 'standalone'));
+  addCandidate(candidates, seen, path.join(cwd, 'nodejs', '.next', 'standalone'));
+  addCandidate(candidates, seen, path.join(cwd, '..'));
+  addCandidate(candidates, seen, path.join(cwd, '..', '.next', 'standalone'));
+  addCandidate(candidates, seen, path.join(cwd, '..', '..'));
+  addCandidate(candidates, seen, path.join(cwd, '..', '..', '.next', 'standalone'));
 
   try {
     addCandidate(candidates, seen, path.join(__dirname, '..'));
     addCandidate(candidates, seen, path.join(__dirname, '..', '..'));
     addCandidate(candidates, seen, path.join(__dirname, '..', '..', '..'));
+    addCandidate(candidates, seen, path.join(__dirname, '..', '..', '..', '.next', 'standalone'));
   } catch {
     // __dirname may be unavailable in some bundles
   }
@@ -54,27 +60,39 @@ function resolveProjectRoot(): string {
     return standalone || withPdfDeps[0]!;
   }
 
-  return withPackageJson[0] || process.cwd();
+  return withPackageJson[0] || cwd;
 }
 
 /**
- * Always use Node createRequire from a real package.json.
- * Never use ambient `require` — Next.js webpack injects one that cannot resolve
- * external packages like puppeteer-core on Hostinger.
+ * Real Node createRequire — never use the webpack-injected `createRequire` import.
+ * On Hostinger that import becomes a non-function (`c is not a function`).
  */
+function getNativeCreateRequire(): typeof CreateRequireFn {
+  // webpack must not rewrite this call
+  const nodeRequire = (0, eval)('require') as NodeRequire;
+  const nodeModule = nodeRequire('module') as {
+    createRequire?: typeof CreateRequireFn;
+  };
+  if (typeof nodeModule.createRequire !== 'function') {
+    throw new Error('Native module.createRequire is unavailable in this runtime');
+  }
+  return nodeModule.createRequire.bind(nodeModule) as typeof CreateRequireFn;
+}
+
 function getModuleRequire(root = resolveProjectRoot()): NodeRequire {
+  const createRequire = getNativeCreateRequire();
   const pkgJson = path.join(root, 'package.json');
   if (fs.existsSync(pkgJson)) {
     return createRequire(pkgJson);
   }
 
-  try {
-    return createRequire(path.join(process.cwd(), 'package.json'));
-  } catch {
-    // fallback
+  const cwdPkg = path.join(process.cwd(), 'package.json');
+  if (fs.existsSync(cwdPkg)) {
+    return createRequire(cwdPkg);
   }
 
-  return createRequire(import.meta.url);
+  // createRequire only needs a path inside the resolve root
+  return createRequire(path.join(root || process.cwd(), 'package.json'));
 }
 
 function loadFromRoot(root: string, packageName: string): unknown {
@@ -110,8 +128,9 @@ export function loadPuppeteerCore(): typeof import('puppeteer-core') {
     throw new Error('puppeteer-core loaded but launch() is missing');
   } catch (err) {
     const message = err instanceof Error ? err.message : String(err);
+    const depsPresent = hasPdfDeps(root);
     throw new Error(
-      `Cannot find module 'puppeteer-core' (root=${root}, cwd=${process.cwd()}). ${message}`
+      `Cannot find module 'puppeteer-core' (root=${root}, cwd=${process.cwd()}, depsOnDisk=${depsPresent}). ${message}`
     );
   }
 }
