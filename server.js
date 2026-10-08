@@ -19,13 +19,18 @@ process.env.PORT = port;
 delete process.env.HOSTNAME;
 process.env.HOSTNAME = '0.0.0.0';
 
+function defaultCertificatesRoot(appRoot) {
+  const normalized = appRoot.replace(/\\/g, '/');
+  const marker = '/hbuilds/versions/';
+  const idx = normalized.indexOf(marker);
+  if (idx >= 0) {
+    return path.join(appRoot.slice(0, idx), 'public', 'uploads', 'certificates');
+  }
+  return path.join(appRoot, 'public', 'uploads', 'certificates');
+}
+
 if (!process.env.CERTIFICATES_UPLOAD_ROOT) {
-  process.env.CERTIFICATES_UPLOAD_ROOT = path.join(
-    root,
-    'public',
-    'uploads',
-    'certificates'
-  );
+  process.env.CERTIFICATES_UPLOAD_ROOT = defaultCertificatesRoot(root);
 }
 try {
   fs.mkdirSync(process.env.CERTIFICATES_UPLOAD_ROOT, { recursive: true });
@@ -45,7 +50,9 @@ console.info(
 
 function linkRuntimeUploads() {
   try {
-    const uploadsSrc = path.join(root, 'public', 'uploads');
+    const uploadsSrc = process.env.CERTIFICATES_UPLOAD_ROOT
+      ? path.dirname(process.env.CERTIFICATES_UPLOAD_ROOT)
+      : path.join(root, 'public', 'uploads');
     const uploadsDest = path.join(standaloneDir, 'public', 'uploads');
     fs.mkdirSync(uploadsSrc, { recursive: true });
     fs.mkdirSync(path.join(uploadsSrc, 'certificates'), { recursive: true });

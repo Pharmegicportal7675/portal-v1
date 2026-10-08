@@ -1148,12 +1148,37 @@ export async function processTccAction(
       return { success: false, error: EU_REACH_CERTIFICATE_REQUIRED_MESSAGE };
     }
 
+    const currentStatus = String(app.status || '');
+    const reviewableStatuses = new Set([
+      'pending',
+      'changes_required',
+      'modification_requested',
+      'rejected',
+    ]);
+    if (!reviewableStatuses.has(currentStatus)) {
+      return {
+        success: false,
+        error:
+          currentStatus === 'approved'
+            ? 'This application is already approved. Approving again would change the quota twice.'
+            : `This application is already ${currentStatus} and cannot be processed again.`,
+      };
+    }
+
     let matchedReachCert: {
       id: string;
       registration_number?: string | null;
       allocated_quantity?: number | null;
       tonnage_band?: string | null;
     } | null = null;
+
+    const approvalIssueDateIso = app.certificate_issue_date
+      ? String(app.certificate_issue_date).split('T')[0]
+      : new Date().toISOString().split('T')[0];
+
+    let approvedCertId: string | null = null;
+    let approvedCertNumber: string | null = null;
+    let approvedCertCreated = false;
 
     if (status === 'approved') {
       if (!app.bo_attachment_url?.trim()) {
@@ -1237,13 +1262,30 @@ export async function processTccAction(
           .update({ reach_certificate_id: reachCert.id })
           .eq('id', applicationId);
       }
+
+      // Certificate PDF must exist on disk before status/quota change.
+      try {
+        const certResult = await upsertTccCertificateForApplication(adminSupabase, {
+          application: app,
+          issueDateIso: approvalIssueDateIso,
+          registrationNumber: matchedReachCert?.registration_number || null,
+          validUntilDateIso: readTccApplicationValidUntilDate(app),
+          requireStoredPdf: true,
+        });
+        approvedCertId = certResult.certId;
+        approvedCertNumber = certResult.certNumber;
+        approvedCertCreated = certResult.created;
+      } catch (certErr: unknown) {
+        const detail =
+          certErr instanceof Error ? certErr.message : 'Certificate PDF could not be saved.';
+        return {
+          success: false,
+          error: `Cannot approve: ${detail}`,
+        };
+      }
     }
 
-    const approvalIssueDateIso = app.certificate_issue_date
-      ? String(app.certificate_issue_date).split('T')[0]
-      : new Date().toISOString().split('T')[0];
-
-    // 2. Update application status
+    // Update application status only after approve-time PDF succeeded (or for reject/changes).
     const { error: updateError } = await adminSupabase
       .from('tcc_applications')
       .update({
@@ -1272,7 +1314,7 @@ export async function processTccAction(
     }
 
     if (status === 'approved') {
-      // 3. Deduct client-assigned quota (admin allocation on client_chemicals)
+      // Deduct client-assigned quota (admin allocation on client_chemicals)
       let clientChemId = app.client_chemical_id as string | null;
       let clientChemAvailable: number | null = null;
 
@@ -1330,7 +1372,6 @@ export async function processTccAction(
         .update({ exported_quantity: newExported })
         .eq('id', app.chemical_id);
 
-      // 4. Record quota transaction
       await adminSupabase.from('quota_transactions').insert({
         client_id: app.client_id,
         chemical_id: app.chemical_id,
@@ -1341,17 +1382,10 @@ export async function processTccAction(
         notes: `TCC approved — ${app.chemicals.chemical_name}`,
       });
 
-      const { certId, certNumber, created: certCreated } = await upsertTccCertificateForApplication(
-        adminSupabase,
-        {
-          application: app,
-          issueDateIso: approvalIssueDateIso,
-          registrationNumber: matchedReachCert?.registration_number || null,
-          validUntilDateIso: readTccApplicationValidUntilDate(app),
-        }
-      );
+      const certId = approvedCertId!;
+      const certNumber = approvedCertNumber!;
+      const certCreated = approvedCertCreated;
 
-      // 10. Activity log
       await writeActivityLog(adminSupabase, {
         client_id: app.client_id,
         user_id: session.userId,
@@ -1360,7 +1394,7 @@ export async function processTccAction(
         entity_id: applicationId,
         description: certCreated
           ? `TCC approved — Certificate ${certNumber} generated`
-          : `TCC re-approved — Certificate ${certNumber} updated`,
+          : `TCC approved — Certificate ${certNumber} updated`,
       });
 
       revalidatePath('/admin/approvals');

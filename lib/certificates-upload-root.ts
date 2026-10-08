@@ -2,13 +2,62 @@ import fs from 'node:fs';
 import path from 'node:path';
 
 const CERTIFICATES_RELATIVE = path.join('public', 'uploads', 'certificates');
+const HOSTINGER_VERSIONS_MARKER = '/hbuilds/versions/';
+
+/** Hostinger replaces hbuilds/versions/<id> on each deploy. Keep uploads beside that folder. */
+function persistentCertificatesRoot(fromPath: string | undefined): string | null {
+  if (!fromPath) return null;
+  const normalized = fromPath.replace(/\\/g, '/');
+  const idx = normalized.indexOf(HOSTINGER_VERSIONS_MARKER);
+  if (idx < 0) return null;
+  return path.resolve(path.join(fromPath.slice(0, idx), 'public', 'uploads', 'certificates'));
+}
+
+function addIfPresent(roots: Set<string>, candidate: string | null | undefined) {
+  if (!candidate) return;
+  roots.add(path.resolve(candidate));
+}
+
+/** Previous deploy folders still hold PO files written before the latest upload. */
+function addHostingerDeployRoots(roots: Set<string>) {
+  const hints = [process.cwd(), process.env.CERTIFICATES_UPLOAD_ROOT, ...roots];
+  for (const hint of hints) {
+    if (!hint) continue;
+    const normalized = String(hint).replace(/\\/g, '/');
+    const idx = normalized.indexOf(HOSTINGER_VERSIONS_MARKER);
+    if (idx < 0) continue;
+
+    const domainRoot = String(hint).slice(0, idx);
+    addIfPresent(roots, path.join(domainRoot, 'public', 'uploads', 'certificates'));
+    addIfPresent(roots, path.join(domainRoot, 'nodejs', 'public', 'uploads', 'certificates'));
+
+    const versionsDir = path.join(domainRoot, 'hbuilds', 'versions');
+    let versions: string[] = [];
+    try {
+      versions = fs.readdirSync(versionsDir);
+    } catch {
+      continue;
+    }
+    for (const version of versions) {
+      addIfPresent(
+        roots,
+        path.join(versionsDir, version, 'nodejs', 'public', 'uploads', 'certificates')
+      );
+      addIfPresent(
+        roots,
+        path.join(versionsDir, version, 'nodejs', '.next', 'standalone', 'public', 'uploads', 'certificates')
+      );
+    }
+  }
+}
 
 /** Resolve every directory that may hold certificate / PO files on this host. */
 function getCertificatesUploadRoots(): string[] {
   const roots = new Set<string>();
 
   const envRoot = process.env.CERTIFICATES_UPLOAD_ROOT?.trim();
-  if (envRoot) roots.add(path.resolve(envRoot));
+  addIfPresent(roots, envRoot);
+  addIfPresent(roots, persistentCertificatesRoot(envRoot || process.cwd()));
 
   const cwd = process.cwd();
   const candidates = [
@@ -20,8 +69,10 @@ function getCertificatesUploadRoots(): string[] {
   ];
 
   for (const candidate of candidates) {
-    roots.add(path.resolve(candidate));
+    addIfPresent(roots, candidate);
   }
+
+  addHostingerDeployRoots(roots);
 
   return [...roots].filter((root) => {
     try {
@@ -35,6 +86,8 @@ function getCertificatesUploadRoots(): string[] {
 /** Primary upload root used for new writes. Prefer Hostinger public/uploads, not standalone. */
 export function getPrimaryCertificatesUploadRoot(): string {
   const envRoot = process.env.CERTIFICATES_UPLOAD_ROOT?.trim();
+  const persistent = persistentCertificatesRoot(envRoot || process.cwd());
+  if (persistent) return persistent;
   if (envRoot) return path.resolve(envRoot);
 
   const roots = getCertificatesUploadRoots();
@@ -54,6 +107,26 @@ function normalizeRelativePath(relative: string): string {
 /** Same rules as upload — spaces and special chars become underscores. */
 function sanitizeStorageFileName(fileName: string): string {
   return fileName.replace(/[^a-zA-Z0-9._-]/g, '_');
+}
+
+/** Copy a file found in an old deploy folder into the folder that survives the next deploy. */
+function keepCertificateFileInPrimaryRoot(relative: string, foundPath: string): string {
+  if (!foundPath.replace(/\\/g, '/').includes(HOSTINGER_VERSIONS_MARKER)) return foundPath;
+
+  const segments = normalizeRelativePath(relative).split('/').filter(Boolean);
+  if (segments.length === 0) return foundPath;
+
+  const primaryPath = path.join(getPrimaryCertificatesUploadRoot(), ...segments);
+  if (path.resolve(foundPath) === path.resolve(primaryPath)) return foundPath;
+
+  try {
+    if (fs.existsSync(primaryPath) && fs.statSync(primaryPath).isFile()) return foundPath;
+    fs.mkdirSync(path.dirname(primaryPath), { recursive: true });
+    fs.copyFileSync(foundPath, primaryPath);
+    return primaryPath;
+  } catch {
+    return foundPath;
+  }
 }
 
 function fileNameVariants(fileName: string): string[] {
@@ -89,7 +162,7 @@ export function resolveCertificatesFilePath(relativePath: string): string | null
       const fullPath = path.join(root, ...parentSegments, name);
       try {
         if (fs.existsSync(fullPath) && fs.statSync(fullPath).isFile()) {
-          return fullPath;
+          return keepCertificateFileInPrimaryRoot(relative, fullPath);
         }
       } catch {
         // try next candidate

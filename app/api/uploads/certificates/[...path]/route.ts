@@ -5,6 +5,10 @@ import {
   findCertificatesFileByNames,
   resolveCertificatesFilePath,
 } from '@/lib/certificates-upload-root';
+import { getSession } from '@/lib/auth/session';
+import { createAdminClient } from '@/lib/db/admin';
+import { extractStorageRelativePath } from '@/lib/storage-paths';
+import { resolveClientStorageFolder } from '@/lib/client-storage-folder';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -52,19 +56,75 @@ function resolveSafeRelative(parts: string[]): string | null {
   return decoded.join('/');
 }
 
-/** Serve certificate/PO files from disk (standalone public/uploads is often empty on Hostinger). */
+function normalizeRelative(value: string): string {
+  return value.replace(/\\/g, '/').replace(/^\/+/, '');
+}
+
+async function clientOwnsRelativePath(
+  clientId: string,
+  relative: string
+): Promise<boolean> {
+  const needle = normalizeRelative(relative);
+  const admin = createAdminClient();
+
+  const [{ data: apps }, { data: certs }, { data: client }] = await Promise.all([
+    admin
+      .from('tcc_applications')
+      .select('bo_attachment_url')
+      .eq('client_id', clientId)
+      .limit(200),
+    admin.from('certificates').select('file_url').eq('client_id', clientId).limit(400),
+    admin.from('clients').select('company_name').eq('id', clientId).maybeSingle(),
+  ]);
+
+  for (const row of apps || []) {
+    const pathFromUrl = extractStorageRelativePath(row.bo_attachment_url || '');
+    if (pathFromUrl && normalizeRelative(pathFromUrl) === needle) return true;
+    if ((row.bo_attachment_url || '').includes(needle)) return true;
+  }
+
+  for (const row of certs || []) {
+    const pathFromUrl = extractStorageRelativePath(row.file_url || '');
+    if (pathFromUrl && normalizeRelative(pathFromUrl) === needle) return true;
+    if ((row.file_url || '').includes(needle)) return true;
+  }
+
+  const companyName = client?.company_name || 'client';
+  const folder = await resolveClientStorageFolder(admin, clientId, companyName);
+  const first = needle.split('/').filter(Boolean)[0] || '';
+  return Boolean(folder && first && first === folder);
+}
+
+/** Serve certificate/PO files from disk. Requires a signed-in session. */
 export async function GET(
   _request: NextRequest,
   context: { params: Promise<{ path: string[] }> }
 ) {
+  const session = await getSession();
+  if (!session) {
+    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+  }
+
   const { path: parts } = await context.params;
   const relative = resolveSafeRelative(parts || []);
   if (!relative) {
     return NextResponse.json({ error: 'Invalid path.' }, { status: 400 });
   }
 
+  const isAdmin = session.role === 'MASTER_ADMIN' || session.role === 'SUPER_ADMIN';
+  if (!isAdmin) {
+    if (!session.clientId) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 403 });
+    }
+    const allowed = await clientOwnsRelativePath(session.clientId, relative);
+    if (!allowed) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 403 });
+    }
+  }
+
   let diskPath = resolveCertificatesFilePath(relative);
-  if (!diskPath) {
+  // Basename search can hit another client's file — only allow for admins.
+  if (!diskPath && isAdmin) {
     const baseName = path.basename(relative);
     diskPath = findCertificatesFileByNames([baseName]);
   }
